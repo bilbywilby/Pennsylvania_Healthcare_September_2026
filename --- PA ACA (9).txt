@@ -1,0 +1,743 @@
+"""
+PA ACA 2026 Market Forensic Studio - Database Schema & API Layer
+SQLAlchemy models, Redis schemas, and FastAPI endpoints
+"""
+
+from sqlalchemy import (
+    Column, Integer, String, Numeric, DateTime, Boolean, 
+    ForeignKey, Text, JSON, Index, UniqueConstraint, CheckConstraint
+)
+from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, validator
+from enum import Enum
+import uuid
+
+Base = declarative_base()
+
+# ============================================================================
+# DATABASE MODELS (PostgreSQL with SQLAlchemy)
+# ============================================================================
+
+class PayerModel(Base):
+    """Payer registry table"""
+    __tablename__ = "payers"
+    
+    id = Column(Integer, primary_key=True)
+    payer_id = Column(String(50), unique=True, nullable=False, index=True)
+    payer_name = Column(String(255), nullable=False)
+    payer_type = Column(String(100))
+    market_share_percent = Column(Numeric(5, 2))
+    
+    # Contact
+    contact_phone = Column(String(20))
+    claims_phone = Column(String(20))
+    appeals_phone = Column(String(20))
+    website = Column(String(255))
+    claims_address = Column(Text)
+    appeals_address = Column(Text)
+    
+    # Metadata
+    typical_policy_prefix = Column(String(20))
+    avg_claim_processing_days = Column(Integer)
+    appeal_success_rate = Column(Numeric(5, 4))
+    
+    # JSON fields
+    coverage_regions = Column(JSONB)
+    plan_types = Column(ARRAY(String))
+    common_denial_reasons = Column(ARRAY(String))
+    requires_prior_auth_for = Column(ARRAY(String))
+    special_notes = Column(Text)
+    
+    # Relationships
+    contracts = relationship("ContractModel", back_populates="payer")
+    claims = relationship("ClaimModel", back_populates="payer")
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_payer_name', 'payer_name'),
+    )
+
+
+class ContractModel(Base):
+    """Insurance contract table"""
+    __tablename__ = "contracts"
+    
+    id = Column(Integer, primary_key=True)
+    contract_id = Column(String(50), unique=True, nullable=False, index=True)
+    payer_id = Column(Integer, ForeignKey("payers.id"), nullable=False)
+    
+    # Contract details
+    plan_name = Column(String(255), nullable=False)
+    plan_year = Column(Integer, nullable=False)
+    effective_date = Column(DateTime, nullable=False)
+    termination_date = Column(DateTime)
+    renewal_date = Column(DateTime)
+    status = Column(String(50), nullable=False, index=True)
+    
+    # Financial terms
+    individual_deductible = Column(Numeric(10, 2))
+    family_deductible = Column(Numeric(10, 2))
+    individual_oop_max = Column(Numeric(10, 2))
+    family_oop_max = Column(Numeric(10, 2))
+    in_network_coinsurance = Column(Numeric(5, 4))
+    out_of_network_coinsurance = Column(Numeric(5, 4))
+    primary_copay = Column(Numeric(10, 2))
+    specialist_copay = Column(Numeric(10, 2))
+    er_copay = Column(Numeric(10, 2))
+    
+    # Complex data
+    clauses = Column(JSONB)
+    deductible_traps = Column(JSONB)
+    network_restrictions = Column(JSONB)
+    rate_schedules = Column(JSONB)
+    excluded_services = Column(ARRAY(String))
+    limited_services = Column(JSONB)
+    prior_auth_required = Column(ARRAY(String))
+    
+    # Risk assessment
+    overall_risk_score = Column(Numeric(5, 4))
+    risk_factors = Column(ARRAY(String))
+    recommended_action = Column(Text)
+    
+    # Metadata
+    parsed_at = Column(DateTime)
+    parser_version = Column(String(20))
+    ocr_source = Column(String(50))
+    source_document_hash = Column(String(64))
+    
+    # Relationships
+    payer = relationship("PayerModel", back_populates="contracts")
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_contract_payer_year', 'payer_id', 'plan_year'),
+        Index('idx_contract_dates', 'effective_date', 'termination_date'),
+    )
+
+
+class ClaimModel(Base):
+    """Healthcare claims table"""
+    __tablename__ = "claims"
+    
+    id = Column(Integer, primary_key=True)
+    claim_id = Column(String(50), unique=True, nullable=False, index=True)
+    claim_type = Column(String(50), nullable=False)
+    
+    # Parties (scrubbed)
+    patient_id = Column(String(50), nullable=False, index=True)
+    provider_id = Column(String(50), nullable=False, index=True)
+    payer_id = Column(Integer, ForeignKey("payers.id"), nullable=False)
+    
+    # Provider details
+    provider_npi = Column(String(10))
+    billing_provider_npi = Column(String(10))
+    
+    # Payer details
+    subscriber_id = Column(String(50))
+    policy_number = Column(String(50), index=True)
+    group_number = Column(String(50))
+    
+    # Dates
+    service_date_start = Column(DateTime, nullable=False, index=True)
+    service_date_end = Column(DateTime)
+    submission_date = Column(DateTime, index=True)
+    received_date = Column(DateTime)
+    adjudication_date = Column(DateTime, index=True)
+    
+    # Status
+    status = Column(String(50), nullable=False, index=True)
+    
+    # Clinical
+    diagnosis_codes = Column(ARRAY(String))
+    line_items = Column(JSONB, nullable=False)
+    
+    # Financial
+    total_billed = Column(Numeric(12, 2), nullable=False)
+    total_allowed = Column(Numeric(12, 2))
+    total_paid = Column(Numeric(12, 2))
+    patient_responsibility = Column(Numeric(12, 2))
+    
+    # Additional
+    place_of_service = Column(String(10))
+    prior_authorization = Column(String(50))
+    referral_number = Column(String(50))
+    claim_control_number = Column(String(50))
+    icn = Column(String(50))
+    
+    # Relationships
+    payer = relationship("PayerModel", back_populates="claims")
+    eobs = relationship("EOBModel", back_populates="claim")
+    audits = relationship("AuditReportModel", secondary="audit_claims")
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_claim_patient_date', 'patient_id', 'service_date_start'),
+        Index('idx_claim_provider_date', 'provider_id', 'service_date_start'),
+        Index('idx_claim_status_date', 'status', 'adjudication_date'),
+    )
+
+
+class EOBModel(Base):
+    """Explanation of Benefits table"""
+    __tablename__ = "eobs"
+    
+    id = Column(Integer, primary_key=True)
+    eob_id = Column(String(50), unique=True, nullable=False, index=True)
+    claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)
+    
+    # Header data
+    eob_date = Column(DateTime, nullable=False)
+    eob_number = Column(String(50))
+    member_id = Column(String(50), nullable=False)
+    policy_number = Column(String(50), nullable=False)
+    
+    # Patient (scrubbed)
+    patient_id = Column(String(50), nullable=False)
+    
+    # Payer
+    payer_name = Column(String(255), nullable=False)
+    plan_name = Column(String(255))
+    plan_type = Column(String(50))
+    network_status = Column(String(50))
+    
+    # Service lines
+    service_lines = Column(JSONB, nullable=False)
+    
+    # Financial totals
+    total_billed = Column(Numeric(12, 2), nullable=False)
+    total_allowed = Column(Numeric(12, 2), nullable=False)
+    total_network_savings = Column(Numeric(12, 2))
+    total_plan_paid = Column(Numeric(12, 2), nullable=False)
+    total_patient_responsibility = Column(Numeric(12, 2), nullable=False)
+    
+    # Benefit summary
+    benefit_summary = Column(JSONB)
+    
+    # Codes
+    remark_codes = Column(JSONB)
+    
+    # Important dates
+    claim_received_date = Column(DateTime)
+    claim_processed_date = Column(DateTime)
+    appeal_deadline = Column(DateTime, index=True)
+    check_number = Column(String(50))
+    check_date = Column(DateTime)
+    
+    # Validation
+    math_validated = Column(Boolean, default=False)
+    validation_errors = Column(JSONB)
+    
+    # Relationships
+    claim = relationship("ClaimModel", back_populates="eobs")
+    audits = relationship("AuditReportModel", secondary="audit_eobs")
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_eob_claim', 'claim_id'),
+        Index('idx_eob_date', 'eob_date'),
+        Index('idx_eob_appeal_deadline', 'appeal_deadline'),
+    )
+
+
+class AuditReportModel(Base):
+    """Forensic audit reports table"""
+    __tablename__ = "audit_reports"
+    
+    id = Column(Integer, primary_key=True)
+    audit_id = Column(String(50), unique=True, nullable=False, index=True)
+    audit_type = Column(String(50), nullable=False)
+    
+    # Scope
+    date_range_start = Column(DateTime)
+    date_range_end = Column(DateTime)
+    
+    # Auditor
+    auditor_id = Column(String(50), nullable=False)
+    audit_date = Column(DateTime, nullable=False, index=True)
+    
+    # Status
+    status = Column(String(50), nullable=False, index=True)
+    
+    # Findings
+    findings = Column(JSONB, nullable=False)
+    
+    # Summary
+    total_claims_reviewed = Column(Integer, default=0)
+    total_variance = Column(Numeric(12, 2), default=0)
+    total_recoverable = Column(Numeric(12, 2), default=0)
+    high_priority_count = Column(Integer, default=0)
+    critical_count = Column(Integer, default=0)
+    
+    # Validation
+    validation_passed = Column(Boolean, default=True)
+    validation_errors = Column(JSONB)
+    
+    # Recommendations
+    executive_summary = Column(Text)
+    recommended_actions = Column(ARRAY(String))
+    
+    # Pattern detection
+    patterns_detected = Column(JSONB)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_audit_date_status', 'audit_date', 'status'),
+        Index('idx_audit_type', 'audit_type'),
+    )
+
+
+# Association tables
+class AuditClaimsAssociation(Base):
+    """Many-to-many: Audits <-> Claims"""
+    __tablename__ = "audit_claims"
+    
+    audit_id = Column(Integer, ForeignKey("audit_reports.id"), primary_key=True)
+    claim_id = Column(Integer, ForeignKey("claims.id"), primary_key=True)
+    
+    __table_args__ = (
+        Index('idx_audit_claims', 'audit_id', 'claim_id'),
+    )
+
+
+class AuditEOBsAssociation(Base):
+    """Many-to-many: Audits <-> EOBs"""
+    __tablename__ = "audit_eobs"
+    
+    audit_id = Column(Integer, ForeignKey("audit_reports.id"), primary_key=True)
+    eob_id = Column(Integer, ForeignKey("eobs.id"), primary_key=True)
+    
+    __table_args__ = (
+        Index('idx_audit_eobs', 'audit_id', 'eob_id'),
+    )
+
+
+class AppealLetterModel(Base):
+    """Appeal letters table"""
+    __tablename__ = "appeal_letters"
+    
+    id = Column(Integer, primary_key=True)
+    appeal_id = Column(String(50), unique=True, nullable=False, index=True)
+    claim_id = Column(Integer, ForeignKey("claims.id"), nullable=False)
+    eob_id = Column(Integer, ForeignKey("eobs.id"))
+    
+    # Template
+    template_id = Column(String(50), nullable=False)
+    template_name = Column(String(255))
+    
+    # Content
+    generated_html = Column(Text)
+    generated_text = Column(Text)
+    subject_line = Column(String(255))
+    
+    # Recipients
+    payer_id = Column(Integer, ForeignKey("payers.id"), nullable=False)
+    appeal_address = Column(Text)
+    appeal_fax = Column(String(20))
+    appeal_email = Column(String(255))
+    
+    # Attachments
+    attachments = Column(ARRAY(String))
+    audit_report_id = Column(Integer, ForeignKey("audit_reports.id"))
+    clinical_docs = Column(ARRAY(String))
+    
+    # Status
+    status = Column(String(50), nullable=False, index=True)
+    
+    # Dates
+    generated_at = Column(DateTime, default=datetime.now)
+    reviewed_at = Column(DateTime)
+    sent_at = Column(DateTime, index=True)
+    deadline = Column(DateTime, index=True)
+    response_received = Column(DateTime)
+    
+    # Outcome
+    outcome = Column(String(50))
+    outcome_amount = Column(Numeric(12, 2))
+    outcome_notes = Column(Text)
+    
+    # Tracking
+    tracking_number = Column(String(100))
+    confirmation_number = Column(String(100))
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_appeal_status_deadline', 'status', 'deadline'),
+        Index('idx_appeal_sent', 'sent_at'),
+    )
+
+
+class ProcedureCodeModel(Base):
+    """CPT/HCPCS codes with RVU data"""
+    __tablename__ = "procedure_codes"
+    
+    id = Column(Integer, primary_key=True)
+    code = Column(String(10), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    code_type = Column(String(20), nullable=False)
+    category = Column(String(100))
+    
+    # RVU components
+    work_rvu = Column(Numeric(10, 2), nullable=False)
+    practice_expense_rvu = Column(Numeric(10, 2), nullable=False)
+    malpractice_rvu = Column(Numeric(10, 2), nullable=False)
+    total_rvu = Column(Numeric(10, 2), nullable=False)
+    
+    # Conversion factor
+    conversion_factor = Column(Numeric(10, 4), default=33.2875)
+    
+    # Status
+    status = Column(String(20), default='active')
+    modifier_required = Column(Boolean, default=False)
+    bilateral_surgery = Column(Boolean, default=False)
+    
+    # Modifiers
+    common_modifiers = Column(ARRAY(String))
+    
+    # Global period
+    global_period = Column(Integer)
+    
+    # Dates
+    effective_date = Column(DateTime, default=datetime.now)
+    termination_date = Column(DateTime)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_procedure_code', 'code'),
+        Index('idx_procedure_status', 'status'),
+    )
+
+
+class DocumentModel(Base):
+    """Document storage and tracking"""
+    __tablename__ = "documents"
+    
+    id = Column(Integer, primary_key=True)
+    document_id = Column(String(50), unique=True, nullable=False, index=True)
+    document_type = Column(String(50), nullable=False)
+    
+    # File info
+    filename = Column(String(255))
+    file_path = Column(String(500))
+    file_size_bytes = Column(Integer)
+    mime_type = Column(String(100))
+    
+    # OCR results
+    ocr_engine = Column(String(50))
+    raw_text = Column(Text)
+    ocr_confidence = Column(Numeric(5, 4))
+    ocr_processed_at = Column(DateTime)
+    detected_tables = Column(JSONB)
+    detected_fields = Column(JSONB)
+    
+    # PHI scrubbing
+    is_scrubbed = Column(Boolean, default=False)
+    scrubbed_document_id = Column(String(50))
+    redaction_count = Column(Integer, default=0)
+    fields_scrubbed = Column(ARRAY(String))
+    
+    # Hashes
+    content_hash = Column(String(64), index=True)
+    
+    # Related entities
+    contract_id = Column(Integer, ForeignKey("contracts.id"))
+    claim_id = Column(Integer, ForeignKey("claims.id"))
+    eob_id = Column(Integer, ForeignKey("eobs.id"))
+    
+    # Timestamps
+    uploaded_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_document_type', 'document_type'),
+        Index('idx_document_hash', 'content_hash'),
+    )
+
+
+# ============================================================================
+# REDIS SCHEMAS (For caching and real-time data)
+# ============================================================================
+
+class RedisSchemas:
+    """Redis key patterns and data structures"""
+    
+    # Cache keys
+    GPCI_CACHE = "gpci:{locality_code}:{year}"
+    PROCEDURE_RATE_CACHE = "rate:{code}:{locality}:{payer}"
+    CONTRACT_CACHE = "contract:{contract_id}"
+    PAYER_CACHE = "payer:{payer_id}"
+    
+    # Session data
+    PIPELINE_JOB = "pipeline:{job_id}"
+    UPLOAD_SESSION = "upload:{session_id}"
+    
+    # Real-time analytics
+    CLAIM_STATS = "stats:claims:{date}"
+    AUDIT_STATS = "stats:audits:{date}"
+    PAYER_PERFORMANCE = "perf:payer:{payer_id}:{month}"
+    
+    # Rate limiting
+    API_RATE_LIMIT = "ratelimit:{user_id}:{endpoint}"
+    
+    # Locks
+    PROCESSING_LOCK = "lock:processing:{document_id}"
+    
+    # Queues
+    OCR_QUEUE = "queue:ocr"
+    AUDIT_QUEUE = "queue:audit"
+    APPEAL_QUEUE = "queue:appeal"
+    
+    @staticmethod
+    def gpci_key(locality_code: str, year: int = 2026) -> str:
+        return f"gpci:{locality_code}:{year}"
+    
+    @staticmethod
+    def procedure_rate_key(code: str, locality: str, payer: str = "medicare") -> str:
+        return f"rate:{code}:{locality}:{payer}"
+    
+    @staticmethod
+    def pipeline_key(job_id: str) -> str:
+        return f"pipeline:{job_id}"
+
+
+# ============================================================================
+# PYDANTIC API MODELS (FastAPI)
+# ============================================================================
+
+class PayerResponse(BaseModel):
+    """API response model for payer"""
+    payer_id: str
+    payer_name: str
+    payer_type: str
+    market_share_percent: Optional[float]
+    contact_phone: Optional[str]
+    website: Optional[str]
+    avg_claim_processing_days: Optional[int]
+    appeal_success_rate: Optional[float]
+    
+    class Config:
+        from_attributes = True
+
+
+class ContractSummary(BaseModel):
+    """API response for contract summary"""
+    contract_id: str
+    payer_name: str
+    plan_name: str
+    plan_year: int
+    status: str
+    overall_risk_score: Optional[float]
+    individual_deductible: Optional[float]
+    family_deductible: Optional[float]
+    individual_oop_max: Optional[float]
+    deductible_traps_count: int = 0
+    
+    class Config:
+        from_attributes = True
+
+
+class ClaimSummary(BaseModel):
+    """API response for claim summary"""
+    claim_id: str
+    patient_id: str
+    provider_id: str
+    payer_name: str
+    service_date_start: datetime
+    status: str
+    total_billed: float
+    total_paid: Optional[float]
+    patient_responsibility: Optional[float]
+    
+    class Config:
+        from_attributes = True
+
+
+class EOBSummary(BaseModel):
+    """API response for EOB summary"""
+    eob_id: str
+    eob_date: datetime
+    payer_name: str
+    total_billed: float
+    total_allowed: float
+    total_plan_paid: float
+    total_patient_responsibility: float
+    math_validated: bool
+    appeal_deadline: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+
+class AuditSummary(BaseModel):
+    """API response for audit summary"""
+    audit_id: str
+    audit_type: str
+    audit_date: datetime
+    status: str
+    total_claims_reviewed: int
+    total_variance: float
+    total_recoverable: float
+    high_priority_count: int
+    critical_count: int
+    
+    class Config:
+        from_attributes = True
+
+
+class CreateClaimRequest(BaseModel):
+    """API request to create claim"""
+    claim_type: str = Field(..., pattern="^(professional|institutional)$")
+    patient_id: str
+    provider_id: str
+    payer_id: str
+    subscriber_id: str
+    policy_number: str
+    service_date_start: datetime
+    diagnosis_codes: List[str]
+    line_items: List[Dict[str, Any]]
+    
+    @validator('line_items')
+    def validate_line_items(cls, v):
+        if not v:
+            raise ValueError("At least one line item required")
+        return v
+
+
+class TriggerAuditRequest(BaseModel):
+    """API request to trigger audit"""
+    claim_ids: Optional[List[str]] = None
+    eob_ids: Optional[List[str]] = None
+    date_range_start: Optional[datetime] = None
+    date_range_end: Optional[datetime] = None
+    audit_type: str = Field(default="eob", pattern="^(claim|eob|contract|pattern_analysis)$")
+    priority: int = Field(default=3, ge=1, le=5)
+
+
+class GenerateAppealRequest(BaseModel):
+    """API request to generate appeal"""
+    claim_id: str
+    eob_id: Optional[str] = None
+    denial_reasons: List[str]
+    template_id: Optional[str] = None
+    include_audit_report: bool = True
+    expedited: bool = False
+
+
+class UploadDocumentRequest(BaseModel):
+    """API request for document upload"""
+    document_type: str = Field(..., pattern="^(contract|eob|claim_form|appeal_letter|authorization|medical_record)$")
+    filename: str
+    ocr_engine: str = Field(default="textract", pattern="^(tesseract|textract|doctr)$")
+    scrub_phi: bool = True
+    link_to_claim_id: Optional[str] = None
+
+
+# ============================================================================
+# EXAMPLE QUERIES & OPERATIONS
+# ============================================================================
+
+class DatabaseQueries:
+    """Common database queries"""
+    
+    @staticmethod
+    def get_high_risk_contracts():
+        """Get contracts with high risk scores"""
+        return """
+        SELECT c.contract_id, c.plan_name, p.payer_name, c.overall_risk_score,
+               jsonb_array_length(c.deductible_traps) as trap_count
+        FROM contracts c
+        JOIN payers p ON c.payer_id = p.id
+        WHERE c.overall_risk_score > 0.7
+        AND c.status = 'flagged'
+        ORDER BY c.overall_risk_score DESC
+        LIMIT 50;
+        """
+    
+    @staticmethod
+    def get_underpaid_claims(min_variance: float = 100.0):
+        """Get claims with significant underpayment"""
+        return f"""
+        SELECT c.claim_id, c.policy_number, p.payer_name,
+               c.total_billed, c.total_paid,
+               (c.total_billed - c.total_paid) as variance
+        FROM claims c
+        JOIN payers p ON c.payer_id = p.id
+        WHERE c.status = 'paid'
+        AND (c.total_billed - COALESCE(c.total_paid, 0)) > {min_variance}
+        ORDER BY variance DESC;
+        """
+    
+    @staticmethod
+    def get_appeals_due_soon(days: int = 30):
+        """Get appeals approaching deadline"""
+        return f"""
+        SELECT al.appeal_id, al.subject_line, c.claim_id, p.payer_name,
+               al.deadline, al.status
+        FROM appeal_letters al
+        JOIN claims c ON al.claim_id = c.id
+        JOIN payers p ON al.payer_id = p.id
+        WHERE al.deadline <= NOW() + INTERVAL '{days} days'
+        AND al.status IN ('draft', 'ready')
+        ORDER BY al.deadline ASC;
+        """
+    
+    @staticmethod
+    def get_payer_performance_summary(payer_id: str, start_date: str, end_date: str):
+        """Aggregate payer performance"""
+        return f"""
+        SELECT 
+            p.payer_name,
+            COUNT(DISTINCT c.id) as total_claims,
+            SUM(c.total_billed) as total_billed,
+            SUM(c.total_paid) as total_paid,
+            AVG(EXTRACT(EPOCH FROM (c.adjudication_date - c.submission_date)) / 86400) as avg_days_to_payment,
+            COUNT(CASE WHEN c.status = 'denied' THEN 1 END) as denied_claims,
+            COUNT(CASE WHEN c.status = 'denied' THEN 1 END)::float / COUNT(*) as denial_rate
+        FROM claims c
+        JOIN payers p ON c.payer_id = p.id
+        WHERE p.payer_id = '{payer_id}'
+        AND c.service_date_start BETWEEN '{start_date}' AND '{end_date}'
+        GROUP BY p.payer_name;
+        """
+
+
+if __name__ == "__main__":
+    print("PA Market Forensic Studio - Database Schema")
+    print("=" * 60)
+    print("\nTables defined:")
+    print("  - payers")
+    print("  - contracts")
+    print("  - claims")
+    print("  - eobs")
+    print("  - audit_reports")
+    print("  - appeal_letters")
+    print("  - procedure_codes")
+    print("  - documents")
+    print("\nRedis patterns defined")
+    print("Pydantic API models defined")
+    print("Common queries available")
+    print("\n✓ Database schema ready for deployment!")
