@@ -1,0 +1,31 @@
+**Neighboring County Rate Comparisons (2026 ACA Individual Market)**
+
+Lehigh County (your area in Fountain Hill) sees similar **PID-approved gross rate increases** as its neighbors, since most carriers use regional or statewide pricing with minor variations by rating area. The **real consumer impact** (net premiums after expired enhanced subsidies) varies more by county due to demographics, income levels, and plan choices on Pennie.
+
+### Approved Gross Rate Changes (PID Final, Oct 2025)
+- Statewide individual market average: **+21.5%** (weighted; before subsidies).
+- Lehigh Valley region (including Lehigh, Northampton, Carbon, Monroe): Typically aligns with statewide, as major carriers like Highmark, Geisinger, UPMC, Capital Advantage, and Ambetter cover these counties with similar filings.
+  - No major county-specific deviations reported for approved rates in Lehigh vs. Northampton/Berks/Carbon/Schuylkill/Monroe.
+  - Example carriers serving multiple counties (e.g., Ambetter +37.85%, UPMC ~20-25%, Geisinger ~11-14%) apply broadly.
+
+All neighboring counties have overlapping carrier availability (e.g., Geisinger, Highmark, Keystone serve most; Ambetter covers Lehigh/Northampton/Berks/Carbon/Monroe).
+
+### Net Premium Shock (Pennie Marketplace, Post-Subsidy Expiration)
+This is where differences appear — net increases (after loss of enhanced tax credits) hit harder in some rural/lower-income areas.
+
+From Pennie reports and state analyses (Oct-Dec 2025 data):
+- **Lehigh County**: Average net increase **+205%** / **+$330/month** (high dollar impact).
+- **Northampton County**: Average net increase ~**+200%** / **+$317/month** (similar to Lehigh; high termination rates).
+- **Berks County**: Around **+150-200%** range (slightly lower than Lehigh Valley; part of Reading-area trends).
+- **Schuylkill County**: **+186%** / **+$347/month** (higher dollar jump than Lehigh).
+- **Carbon County**: ~**+$303/month** (comparable to Lehigh).
+- **Monroe County**: ~**+$284/month** (somewhat lower).
+
+**Highest statewide net shocks**: Rural counties like Juniata (+485%), Fulton (+411%), Northumberland (+280%) — Lehigh/Northampton are mid-to-high in dollar terms but not the extreme % outliers.
+
+**Key takeaway for Lehigh neighbors**:
+- Gross approved rates are comparable across the region (~20-38% hikes).
+- Net reality (your bill) is driven more by subsidy loss → Lehigh and Northampton saw among the **highest monthly dollar jumps** in eastern PA (~$317–$330), with Schuylkill close behind.
+- ~85,000 statewide dropped Pennie coverage; terminations high in Northampton/Schuylkill/Lehigh areas.
+
+If you want a quick visual comparison (e.g., bar chart of net $ increases for Lehigh + neighbors), or details on a specific carrier/county, let me know! 🦆

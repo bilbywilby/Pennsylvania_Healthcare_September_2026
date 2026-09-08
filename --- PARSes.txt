@@ -1,0 +1,69 @@
+"""
+PARSes PENNIE PUBLIC AFFORDABILITY PDFs - 2026 county-level impacts
+Handles missing text/pages, safe casting, logging
+"""
+import logging
+import io
+import re
+import hashlib
+import time
+from pathlib import Path
+import pdfplumber
+import requests
+from config import REQUEST_DELAY_SEC
+
+class PennieAffordabilityParser:
+    PDF_URLS = {
+        "premium_pct": "https://pennie.com/wp-content/uploads/2026/02/Net-Premium-Change-in-Dollar-Percentage-for-Pre-Renewal-Run-02.pdf",
+        "premium_dollar": "https://pennie.com/wp-content/uploads/2026/02/Net-Premium-Change-in-Dollar-Percentage-for-Pre-Renewal-Run-01.pdf",
+        "terminations": "https://pennie.com/wp-content/uploads/2026/02/Open-Enrollment-Comparison-2021-2026-43-Terminations-by-County-OE-2026-1.pdf"
+    }
+
+    def fetch_and_parse(self) -> dict:
+        data = {}
+        combined_hash = hashlib.sha256()
+        for key, url in self.PDF_URLS.items():
+            time.sleep(REQUEST_DELAY_SEC)
+            try:
+                resp = requests.get(url, timeout=30)
+                resp.raise_for_status()
+                pdf_bytes = resp.content
+                combined_hash.update(pdf_bytes)
+
+                with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                    text = ""
+                    for page in pdf.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text += page_text + "\n"
+                    if not text.strip():
+                        logging.warning(f"No extractable text in {key} PDF")
+                        continue
+                    data[key] = self._extract_county_values(text, key)
+            except Exception as e:
+                logging.error(f"Failed to process {key} PDF ({url}): {e}")
+                data[key] = {}
+
+        data["source_hash"] = combined_hash.hexdigest()
+        return data
+
+    @staticmethod
+    def _extract_county_values(text: str, key: str) -> dict[str, float | int]:
+        county_map = {}
+        lines = text.split("\n")
+        for line in lines:
+            # Flexible match: County Name: value or County Name value% or similar
+            match = re.search(r'([A-Za-z\s]+?)\s*[:\-]?\s*([\d.,]+)%?', line.strip())
+            if match:
+                county = match.group(1).strip().title()
+                val_str = match.group(2).replace(',', '')
+                try:
+                    val = float(val_str)
+                    if "terminations" in key:
+                        val = int(val)  # safe cast
+                    county_map[county] = val
+                    if "Lehigh" in county:
+                        logging.info(f"Pennie Lehigh {key}: {val}")
+                except ValueError:
+                    continue
+        return county_map

@@ -1,0 +1,242 @@
+"""SQLite Schema for PA Insurance Audit Pipeline"""
+
+import sqlite3
+import json
+from pathlib import Path
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+SCHEMA_DDL = """
+-- Sources: track all ingested files and their origin
+CREATE TABLE IF NOT EXISTS sources (
+    id TEXT PRIMARY KEY,                    -- SHA256 hash of URL + timestamp
+    source_url TEXT NOT NULL,
+    source_type TEXT NOT NULL,              -- 'pid_filing', 'pid_complaint', 'local_file', 'public_api'
+    fetched_at TEXT NOT NULL,
+    file_path TEXT,
+    file_hash TEXT,                         -- SHA256 of file content
+    file_size INTEGER,
+    mime_type TEXT,
+    http_status INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Documents: individual parsed documents with extracted metadata
+CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,                    -- UUID
+    source_id TEXT NOT NULL REFERENCES sources(id),
+    doc_type TEXT,                          -- 'policy', 'eob', 'filing', 'notice', 'complaint'
+    doc_subtype TEXT,                       -- e.g., 'rate_filing', 'medical_denial'
+    carrier TEXT,
+    carrier_naic_code TEXT,
+    policy_number TEXT,
+    group_number TEXT,
+    member_name TEXT,
+    member_dob TEXT,
+    service_date TEXT,
+    received_date TEXT,
+    extracted_text TEXT,                    -- full OCR/extracted text
+    raw_text BLOB,                          -- binary for full preservation
+    metadata JSON,                          -- structured extraction: {claim_id, billed_amt, allowed_amt, etc.}
+    extraction_confidence REAL,             -- 0.0-1.0
+    processing_status TEXT DEFAULT 'new',   -- 'new', 'processed', 'reviewed', 'error'
+    processing_error TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Extractions: detailed parsed line items (claims, rate changes, etc.)
+CREATE TABLE IF NOT EXISTS extractions (
+    id TEXT PRIMARY KEY,                    -- UUID
+    document_id TEXT NOT NULL REFERENCES documents(id),
+    extraction_type TEXT NOT NULL,          -- 'claim_line_item', 'rate_change', 'provider_ref', 'diagnosis', 'procedure'
+    raw_value TEXT,                         -- original text
+    normalized_value TEXT,                  -- cleaned/standardized
+    field_name TEXT,                        -- e.g., 'cpt_code', 'billing_amount', 'member_coinsurance'
+    field_value TEXT,
+    confidence REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Alerts: detected anomalies and findings
+CREATE TABLE IF NOT EXISTS alerts (
+    id TEXT PRIMARY KEY,                    -- UUID
+    alert_type TEXT NOT NULL,               -- 'billing_anomaly', 'rate_increase', 'missing_clause', 'complaint_spike', 'data_error'
+    severity TEXT DEFAULT 'medium',         -- 'low', 'medium', 'high', 'critical'
+    document_id TEXT REFERENCES documents(id),
+    carrier TEXT,
+    policy_number TEXT,
+    issue_summary TEXT,
+    detailed_finding TEXT,
+    evidence JSON,                          -- {document_ids, metrics, baseline}
+    recommended_action TEXT,
+    status TEXT DEFAULT 'open',             -- 'open', 'reviewing', 'resolved', 'escalated'
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TEXT
+);
+
+-- Processing log: audit trail of all operations
+CREATE TABLE IF NOT EXISTS processing_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id TEXT,                            -- correlate multiple operations
+    operation_type TEXT,                    -- 'fetch', 'parse', 'extract', 'analyze'
+    resource_id TEXT,                       -- source_id or document_id
+    status TEXT,                            -- 'started', 'completed', 'failed'
+    started_at TEXT,
+    completed_at TEXT,
+    duration_ms INTEGER,
+    error_message TEXT,
+    metadata JSON,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_documents_carrier ON documents(carrier);
+CREATE INDEX IF NOT EXISTS idx_documents_policy ON documents(policy_number);
+CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
+CREATE INDEX IF NOT EXISTS idx_documents_received ON documents(received_date);
+CREATE INDEX IF NOT EXISTS idx_extractions_document ON extractions(document_id);
+CREATE INDEX IF NOT EXISTS idx_extractions_field ON extractions(field_name);
+CREATE INDEX IF NOT EXISTS idx_alerts_carrier ON alerts(carrier);
+CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
+CREATE INDEX IF NOT EXISTS idx_sources_url ON sources(source_url);
+CREATE INDEX IF NOT EXISTS idx_processing_log_job ON processing_log(job_id);
+"""
+
+
+class DatabaseManager:
+    """Manage SQLite database initialization and connections"""
+
+    def __init__(self, db_path):
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger(__name__)
+
+    def init_schema(self):
+        """Initialize database schema"""
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            cursor.executescript(SCHEMA_DDL)
+            conn.commit()
+            conn.close()
+            self.logger.info(f"Database schema initialized at {self.db_path}")
+            return True
+        except sqlite3.Error as e:
+            self.logger.error(f"Database init error: {e}")
+            return False
+
+    def get_connection(self):
+        """Get a database connection"""
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def insert_source(self, source_id, source_url, source_type, file_hash=None, mime_type=None, file_size=None):
+        """Insert a source record"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO sources 
+                   (id, source_url, source_type, fetched_at, file_hash, mime_type, file_size)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (source_id, source_url, source_type, datetime.utcnow().isoformat(), file_hash, mime_type, file_size)
+            )
+            conn.commit()
+            conn.close()
+            return source_id
+        except sqlite3.IntegrityError:
+            self.logger.debug(f"Source {source_id} already exists")
+            return source_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Insert source error: {e}")
+            return None
+
+    def insert_document(self, doc_id, source_id, doc_type, extracted_text, metadata, confidence=1.0):
+        """Insert a document record"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
+            cursor.execute(
+                """INSERT INTO documents 
+                   (id, source_id, doc_type, extracted_text, metadata, extraction_confidence)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (doc_id, source_id, doc_type, extracted_text, metadata_json, confidence)
+            )
+            conn.commit()
+            conn.close()
+            return doc_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Insert document error: {e}")
+            return None
+
+    def insert_extraction(self, extraction_id, document_id, extraction_type, field_name, field_value, confidence=1.0):
+        """Insert an extraction record"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO extractions 
+                   (id, document_id, extraction_type, field_name, field_value, confidence)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (extraction_id, document_id, extraction_type, field_name, field_value, confidence)
+            )
+            conn.commit()
+            conn.close()
+            return extraction_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Insert extraction error: {e}")
+            return None
+
+    def insert_alert(self, alert_id, alert_type, severity, carrier, issue_summary, detailed_finding):
+        """Insert an alert record"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO alerts 
+                   (id, alert_type, severity, carrier, issue_summary, detailed_finding)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (alert_id, alert_type, severity, carrier, issue_summary, detailed_finding)
+            )
+            conn.commit()
+            conn.close()
+            return alert_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Insert alert error: {e}")
+            return None
+
+    def query(self, sql, params=None):
+        """Execute a query and return results"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            if params:
+                cursor.execute(sql, params)
+            else:
+                cursor.execute(sql)
+            results = cursor.fetchall()
+            conn.close()
+            return results
+        except sqlite3.Error as e:
+            self.logger.error(f"Query error: {e}")
+            return []
+
+    def get_stats(self):
+        """Get database statistics"""
+        stats = {}
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            for table in ['sources', 'documents', 'extractions', 'alerts']:
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                stats[table] = cursor.fetchone()[0]
+            conn.close()
+        except sqlite3.Error as e:
+            self.logger.error(f"Stats error: {e}")
+        return stats

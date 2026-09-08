@@ -1,0 +1,243 @@
+"""Document processing: PDF extraction, OCR, and structured parsing"""
+
+import pdfplumber
+import pytesseract
+import logging
+import re
+from pathlib import Path
+from PIL import Image, ImageOps, ImageFilter
+from datetime import datetime
+import uuid
+
+logger = logging.getLogger(__name__)
+
+
+class DocumentProcessor:
+    """Process documents: extract text, run OCR, parse structure"""
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
+    def extract_pdf_text(self, filepath):
+        """Extract text from PDF using pdfplumber"""
+        try:
+            with pdfplumber.open(filepath) as pdf:
+                text = ""
+                metadata = {
+                    'pages': len(pdf.pages),
+                    'has_tables': False,
+                    'tables_count': 0
+                }
+                
+                for page_num, page in enumerate(pdf.pages):
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += f"\n--- PAGE {page_num + 1} ---\n{page_text}\n"
+                    
+                    # Check for tables
+                    tables = page.extract_tables()
+                    if tables:
+                        metadata['has_tables'] = True
+                        metadata['tables_count'] = metadata.get('tables_count', 0) + len(tables)
+                
+                self.logger.info(f"Extracted text from {filepath} ({metadata['pages']} pages)")
+                return text, metadata
+        except Exception as e:
+            self.logger.error(f"PDF extraction failed for {filepath}: {e}")
+            return None, None
+
+    def preprocess_image(self, filepath):
+        """Preprocess image for OCR: grayscale, denoise, contrast"""
+        try:
+            img = Image.open(filepath)
+            
+            # Convert to grayscale
+            img = ImageOps.grayscale(img)
+            
+            # Denoise with median filter
+            img = img.filter(ImageFilter.MedianFilter(3))
+            
+            # Auto-contrast
+            img = ImageOps.autocontrast(img)
+            
+            return img
+        except Exception as e:
+            self.logger.error(f"Image preprocessing failed for {filepath}: {e}")
+            return None
+
+    def ocr_image(self, filepath):
+        """Run OCR on image file"""
+        try:
+            img = self.preprocess_image(filepath)
+            if img is None:
+                return None
+            
+            text = pytesseract.image_to_string(img, lang='eng')
+            self.logger.info(f"OCR extracted {len(text)} characters from {filepath}")
+            return text
+        except pytesseract.TesseractNotFoundError:
+            self.logger.error("Tesseract not installed. Install via: sudo apt-get install tesseract-ocr")
+            return None
+        except Exception as e:
+            self.logger.error(f"OCR failed for {filepath}: {e}")
+            return None
+
+    def process_document(self, filepath):
+        """Process any document file (PDF, image, etc.)"""
+        filepath = Path(filepath)
+        
+        if not filepath.exists():
+            self.logger.error(f"File not found: {filepath}")
+            return None
+        
+        suffix = filepath.suffix.lower()
+        text = None
+        metadata = {}
+        
+        if suffix == '.pdf':
+            text, metadata = self.extract_pdf_text(filepath)
+        elif suffix in ['.png', '.jpg', '.jpeg', '.tiff', '.bmp']:
+            text = self.ocr_image(filepath)
+            metadata = {'ocr': True}
+        elif suffix in ['.txt']:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    text = f.read()
+                metadata = {'text_file': True}
+            except Exception as e:
+                self.logger.error(f"Text file read failed: {e}")
+                return None
+        else:
+            self.logger.warning(f"Unsupported file type: {suffix}")
+            return None
+        
+        if text is None:
+            return None
+        
+        return {
+            'text': text,
+            'metadata': metadata,
+            'filepath': str(filepath),
+            'filename': filepath.name,
+            'processed_at': datetime.utcnow().isoformat()
+        }
+
+
+class DocumentParser:
+    """Parse structured data from extracted text"""
+
+    # Regex patterns for common fields
+    PATTERNS = {
+        'policy_number': r'(?:Policy\s+#|Policy\s+Number|Policy#)[\s:]*([A-Z0-9\-]{5,20})',
+        'group_number': r'(?:Group\s+#|Group\s+Number|Group#)[\s:]*([A-Z0-9\-]{5,20})',
+        'member_name': r'(?:Member\s+Name|Patient\s+Name)[\s:]*([A-Z][a-z]+[\s,]+[A-Z][a-z]+)',
+        'claim_id': r'(?:Claim\s+ID|Claim\s+Number|Claim#)[\s:]*([A-Z0-9\-]{5,15})',
+        'service_date': r'(?:Service\s+Date|Date\s+of\s+Service)[\s:]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})',
+        'billed_amount': r'(?:Billed|Charged)[\s:]*\$?([\d,]+\.\d{2})',
+        'allowed_amount': r'(?:Allowed|Approved)[\s:]*\$?([\d,]+\.\d{2})',
+        'paid_amount': r'(?:Paid|Payment)[\s:]*\$?([\d,]+\.\d{2})',
+        'provider_npi': r'(?:Provider\s+NPI|NPI#?)[\s:]*(\d{10})',
+        'cpt_code': r'(?:CPT|Procedure\s+Code)[\s:]*(\d{5}[A-Z]?)',
+        'icd_code': r'(?:ICD|Diagnosis\s+Code)[\s:]*([A-Z]\d{1,2}[A-Z]?\d{0,2})',
+    }
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
+    def extract_fields(self, text):
+        """Extract common fields from text using regex"""
+        extracted = {}
+        
+        for field_name, pattern in self.PATTERNS.items():
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            if matches:
+                extracted[field_name] = matches[0] if len(matches) == 1 else matches
+        
+        return extracted
+
+    def classify_document(self, text, filename=""):
+        """Classify document type based on content and filename"""
+        text_lower = text.lower()
+        
+        doc_types = {
+            'eob': ['explanation of benefits', 'eob', 'claim summary', 'member responsibility'],
+            'policy': ['policy', 'coverage', 'benefits', 'effective date', 'plan year'],
+            'filing': ['rate filing', 'actuarial', 'medical loss ratio', 'rate increase'],
+            'notice': ['notice', 'department', 'bulletin', 'regulatory'],
+            'complaint': ['complaint', 'grievance', 'consumer', 'dispute'],
+        }
+        
+        scores = {}
+        for doc_type, keywords in doc_types.items():
+            score = sum(1 for kw in keywords if kw in text_lower)
+            scores[doc_type] = score
+        
+        if max(scores.values()) > 0:
+            return max(scores, key=scores.get)
+        
+        return 'unknown'
+
+    def extract_claim_lines(self, text):
+        """Extract individual claim line items from EOB text"""
+        # This is a simplified example; real implementation needs more sophistication
+        lines = []
+        
+        # Look for patterns like: "CPT Code | Amount | Status"
+        pattern = r'(\d{5}[A-Z]?)\s+\|\s+\$?([\d,]+\.\d{2})\s+\|\s+([A-Z\s]+)'
+        matches = re.findall(pattern, text)
+        
+        for match in matches:
+            lines.append({
+                'cpt_code': match[0],
+                'billed_amount': float(match[1].replace(',', '')),
+                'status': match[2].strip()
+            })
+        
+        return lines
+
+    def parse_document(self, text, filename=""):
+        """Full document parsing pipeline"""
+        if not text:
+            return None
+        
+        doc_type = self.classify_document(text, filename)
+        fields = self.extract_fields(text)
+        
+        # Confidence based on number of fields extracted
+        confidence = min(len(fields) / 10.0, 1.0)
+        
+        parsed = {
+            'doc_type': doc_type,
+            'extracted_fields': fields,
+            'confidence': confidence,
+            'parsed_at': datetime.utcnow().isoformat()
+        }
+        
+        # Additional parsing based on doc type
+        if doc_type == 'eob':
+            parsed['claim_lines'] = self.extract_claim_lines(text)
+        
+        return parsed
+
+
+def main():
+    """Example usage"""
+    import config
+    logging.basicConfig(level=logging.INFO, format=config.LOG_FORMAT)
+    
+    processor = DocumentProcessor()
+    parser = DocumentParser()
+    
+    # Example: process a PDF if available
+    test_pdf = config.DOWNLOAD_DIR / "test.pdf"
+    if test_pdf.exists():
+        result = processor.process_document(test_pdf)
+        if result:
+            print(f"Extracted {len(result['text'])} characters")
+            parsed = parser.parse_document(result['text'])
+            print(f"Document type: {parsed['doc_type']}")
+            print(f"Extracted fields: {parsed['extracted_fields']}")
+
+
+if __name__ == "__main__":
+    main()

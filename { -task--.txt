@@ -1,0 +1,26 @@
+{
+  "task": "Lehigh County ACA Rate Audit Dashboard",
+  "description": "Simple web app displaying 2026 approved ACA rate changes for all carriers offering individual/small group plans in Lehigh County (public PA.gov data only). Table with columns: carrier, market, approved %, PDF link to decision summary. Filter by market, sort by rate. No auth, no storage, static or client-fetch data. User flow: open app → see full Lehigh 2026 table → click PDF links → view official decisions. Acceptance: table matches current PID listings (15 individual + 10 small group carriers in Lehigh, accurate rates like Ambetter 37.85%, Partners -10.12%). Include note on Pennie Marketplace availability for individual plans.",
+  "tech": {
+    "frontend": "svelte",
+    "backend": "none",
+    "database": "none"
+  },
+  "constraints": {
+    "timebox": "4h",
+    "budget": "free",
+    "must_haves": ["responsive table", "direct PDF links", "market filter", "mobile-friendly"],
+    "no_go": ["auth", "server-side fetch", "third-party libs beyond Svelte"]
+  },
+  "output": {
+    "format": "files",
+    "level_of_detail": "high",
+    "phases": 3
+  },
+  "examples": [],
+  "settings": {
+    "ai_model": "default",
+    "sandbox_preview": true,
+    "deploy_target": "workers"
+  }
+}

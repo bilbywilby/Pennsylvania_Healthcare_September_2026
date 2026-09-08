@@ -1,0 +1,462 @@
+# PA Insurance Audit Pipeline
+
+**End-to-end automated crawler, OCR, and analysis pipeline for Pennsylvania health insurance data**
+
+## Overview
+
+This pipeline ingests public Pennsylvania Insurance Department (PID) filings and documents, extracts structured data via OCR and parsing, stores everything in an audit-grade SQLite database, and produces actionable findings.
+
+### Key Features
+
+- ✅ **Automated Crawling**: Fetch ACA rate filings from PA Insurance Department
+- ✅ **Robust OCR**: Extract text from PDFs and scanned images
+- ✅ **Structured Parsing**: Automatically extract fields (policy #, claim ID, amounts, etc.)
+- ✅ **Audit-Grade Storage**: SQLite with full provenance tracking and indexing
+- ✅ **Processing Log**: Complete audit trail of all operations
+- ✅ **Extensible**: Easy to add anomaly detection, alerts, reporting
+
+---
+
+## System Requirements
+
+### Python
+- Python 3.9+
+
+### External Dependencies (Linux/macOS)
+```bash
+# macOS (via Homebrew)
+brew install tesseract
+
+# Ubuntu/Debian
+sudo apt-get install tesseract-ocr libmagic1
+
+# If you need PDF support improvements:
+pip install pdfminer.six
+```
+
+### Verify Installation
+```bash
+tesseract --version
+python --version
+```
+
+---
+
+## Installation
+
+### 1. Clone or Extract Project
+```bash
+cd pa_insurance_audit
+```
+
+### 2. Create Virtual Environment (Recommended)
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Verify Setup
+```bash
+python -c "import pdfplumber, pytesseract; print('✓ Dependencies OK')"
+```
+
+---
+
+## Quick Start
+
+### Run the Full Pipeline
+```bash
+python main.py
+```
+
+This will:
+1. Initialize SQLite database (`pa_insurance_audit.db`)
+2. Crawl PA Insurance Department ACA filings page
+3. Download all PDFs/spreadsheets found
+4. Extract text via OCR and PDF parsing
+5. Parse structured fields (policy numbers, claim IDs, amounts, etc.)
+6. Store everything in database with full audit trail
+7. Generate summary report
+
+### Expected Output
+```
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    PA INSURANCE AUDIT PIPELINE                             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+========================================================================
+STAGE 1: CRAWLING PA INSURANCE DEPARTMENT
+========================================================================
+INFO:__main__:Crawling ACA filings from https://www.pa.gov/agencies/insurance/...
+INFO:__main__:Downloaded filing_12345.pdf (2.3 MB)
+...
+✓ Pipeline completed successfully
+```
+
+### Output Files
+After running, you'll have:
+
+```
+pa_insurance_audit/
+├── pa_insurance_audit.db          # Main SQLite database
+├── pipeline.log                   # Detailed operation log
+├── report_[job_id].txt           # Summary report
+├── downloads/                     # Downloaded files from PID
+│   ├── abc123def_rate_filing_2025.pdf
+│   ├── xyz789_aca_form.xlsx
+│   └── ...
+└── extracted/                     # Extracted text (optional)
+```
+
+---
+
+## Database Schema
+
+The SQLite database contains these tables:
+
+### `sources`
+Metadata for each ingested file/URL.
+
+```
+id (PRIMARY KEY)      - SHA256 hash of URL
+source_url           - Original URL
+source_type          - 'pid_filing', 'pid_complaint', 'local_file'
+fetched_at           - ISO timestamp
+file_hash            - SHA256 of file content
+file_size            - Bytes
+mime_type            - Content type
+```
+
+### `documents`
+Parsed documents with extracted text and metadata.
+
+```
+id (PRIMARY KEY)              - UUID
+source_id (FOREIGN KEY)       - Reference to sources.id
+doc_type                      - 'policy', 'eob', 'filing', 'notice', 'complaint'
+extracted_text                - Full OCR/parsed text
+metadata (JSON)               - Structured fields {policy_number, claim_id, ...}
+extraction_confidence         - 0.0-1.0 confidence score
+processing_status             - 'new', 'processed', 'reviewed', 'error'
+```
+
+### `extractions`
+Individual parsed fields from documents.
+
+```
+id (PRIMARY KEY)              - UUID
+document_id (FOREIGN KEY)     - Reference to documents.id
+extraction_type               - 'claim_line_item', 'rate_change', 'diagnosis', etc.
+field_name                    - 'policy_number', 'cpt_code', 'allowed_amount'
+field_value                   - Extracted value
+confidence                    - 0.0-1.0
+```
+
+### `alerts`
+Detected anomalies and findings.
+
+```
+id (PRIMARY KEY)              - UUID
+alert_type                    - 'billing_anomaly', 'rate_increase', 'missing_clause'
+severity                      - 'low', 'medium', 'high', 'critical'
+carrier                       - Insurance company name
+issue_summary                 - Brief description
+detailed_finding              - Full explanation
+status                        - 'open', 'reviewing', 'resolved'
+```
+
+### `processing_log`
+Complete audit trail of all operations.
+
+```
+job_id                        - Correlate related operations
+operation_type                - 'fetch', 'parse', 'extract', 'analyze'
+resource_id                   - source_id or document_id
+status                        - 'started', 'completed', 'failed'
+duration_ms                   - Execution time
+error_message                 - If failed
+```
+
+---
+
+## Working with the Database
+
+### Query with Python
+```python
+from schema import DatabaseManager
+import config
+
+db = DatabaseManager(config.DATABASE_PATH)
+
+# Get all documents by carrier
+results = db.query(
+    "SELECT id, doc_type, carrier FROM documents WHERE carrier = ?",
+    ("Aetna",)
+)
+
+for row in results:
+    print(f"{row['id']}: {row['doc_type']} from {row['carrier']}")
+```
+
+### Query with SQLite CLI
+```bash
+sqlite3 pa_insurance_audit.db
+
+# View document count by type
+SELECT doc_type, COUNT(*) as count FROM documents GROUP BY doc_type;
+
+# Find all extracted policy numbers
+SELECT DISTINCT field_value FROM extractions WHERE field_name = 'policy_number';
+
+# Export to CSV
+.mode csv
+.output report.csv
+SELECT id, doc_type, carrier, extracted_text FROM documents LIMIT 100;
+```
+
+---
+
+## Advanced Usage
+
+### Add Local Documents
+
+Process your own EOBs, policies, correspondence:
+
+```python
+from processor import DocumentProcessor, DocumentParser
+from schema import DatabaseManager
+import config
+import uuid
+import hashlib
+
+processor = DocumentProcessor()
+db = DatabaseManager(config.DATABASE_PATH)
+
+# Process your PDF
+result = processor.process_document("path/to/my_eob.pdf")
+parser = DocumentParser()
+parsed = parser.parse_document(result['text'])
+
+# Store in database
+doc_id = str(uuid.uuid4())
+source_id = hashlib.sha256(b"local_file").hexdigest()
+db.insert_source(source_id, "file://local_file", "local_file")
+db.insert_document(doc_id, source_id, parsed['doc_type'], 
+                   result['text'], parsed['extracted_fields'])
+```
+
+### Custom Crawling
+
+Add your own data sources:
+
+```python
+from crawler import PAInsuranceCrawler
+import config
+
+crawler = PAInsuranceCrawler(config.DOWNLOAD_DIR)
+
+# Fetch a specific URL
+filings = crawler.crawl_aca_filings("https://your-data-source.com")
+```
+
+### Implement Anomaly Detection
+
+```python
+from sklearn.ensemble import IsolationForest
+import numpy as np
+
+# Extract claim amounts from database
+results = db.query("""
+    SELECT field_value FROM extractions 
+    WHERE field_name = 'billed_amount'
+""")
+
+amounts = [float(r['field_value']) for r in results if r['field_value']]
+X = np.array(amounts).reshape(-1, 1)
+
+# Train model
+iso_forest = IsolationForest(contamination=0.05)
+predictions = iso_forest.fit_predict(X)
+
+# Flag anomalies
+anomalies = [amounts[i] for i, pred in enumerate(predictions) if pred == -1]
+```
+
+---
+
+## Configuration
+
+Edit `config.py` to customize:
+
+```python
+# Directories
+DOWNLOAD_DIR = Path("./downloads")
+DATABASE_PATH = Path("./pa_insurance_audit.db")
+
+# Crawler
+FETCH_TIMEOUT = 30
+POLITE_DELAY = 1  # seconds between requests
+
+# Document processing
+TESSERACT_LANG = "eng"
+
+# Database batch size
+BATCH_INSERT_SIZE = 100
+```
+
+---
+
+## Troubleshooting
+
+### Tesseract Not Found
+```
+TesseractNotFoundError: tesseract is not installed or it's not in your PATH
+```
+**Solution**: Install tesseract (see System Requirements above)
+
+### PDF Extraction Fails
+```
+PdfReadError: Could not extract text from PDF
+```
+**Solution**: Try alternative extraction with pdfminer:
+```python
+# In processor.py, fallback to pdfminer.six for complex PDFs
+from pdfminer.high_level import extract_text
+text = extract_text(filepath)
+```
+
+### Out of Memory with Large PDFs
+**Solution**: Process in chunks:
+```python
+def process_large_pdf(filepath, chunk_pages=10):
+    with pdfplumber.open(filepath) as pdf:
+        for i in range(0, len(pdf.pages), chunk_pages):
+            chunk = pdf.pages[i:i+chunk_pages]
+            # process chunk
+```
+
+### Network Timeout
+```
+requests.exceptions.ConnectTimeout
+```
+**Solution**: Increase timeout in config.py:
+```python
+FETCH_TIMEOUT = 60  # seconds
+MAX_RETRIES = 5
+```
+
+---
+
+## Performance Tips
+
+1. **Batch Processing**: Process documents in parallel
+```python
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=4) as executor:
+    executor.map(processor.process_document, filepaths)
+```
+
+2. **Database Indexing**: Already included; queries on indexed fields are fast
+```
+CREATE INDEX idx_documents_carrier ON documents(carrier);
+CREATE INDEX idx_extractions_field ON extractions(field_name);
+```
+
+3. **OCR Optimization**: Skip OCR for text-searchable PDFs
+```python
+if pdf_is_searchable(filepath):
+    text = extract_pdf_text(filepath)
+else:
+    text = ocr_image(filepath)
+```
+
+4. **Parallel Crawling**: Use concurrent fetches (respecting robots.txt)
+```python
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=2) as executor:
+    futures = [executor.submit(crawler.download_file, url) for url in urls]
+```
+
+---
+
+## Security & Privacy
+
+⚠️ **PII Handling**
+
+This pipeline may process sensitive personal information (names, SSNs, policy numbers). For production use:
+
+1. **Encrypt at rest**: Use SQLite encryption extensions or envelope encryption
+2. **Field-level encryption**: AES-GCM for PII fields
+3. **Access control**: Role-based access to database
+4. **Audit logging**: All queries logged (already implemented)
+
+Example encrypted storage:
+```python
+from cryptography.fernet import Fernet
+
+cipher = Fernet(key)
+encrypted_name = cipher.encrypt(member_name.encode())
+db.insert_document(..., metadata={'member_name_encrypted': encrypted_name})
+```
+
+---
+
+## Next Steps
+
+1. **Run the pipeline** on a sample of filings:
+   ```bash
+   python main.py
+   ```
+
+2. **Explore the database**:
+   ```bash
+   sqlite3 pa_insurance_audit.db
+   SELECT COUNT(*) as total_documents FROM documents;
+   ```
+
+3. **Implement custom anomaly detection** for your use case
+
+4. **Generate reports** and export findings to CSV:
+   ```python
+   results = db.query("SELECT * FROM alerts WHERE severity = 'high'")
+   # Export to CSV, create evidence bundles, etc.
+   ```
+
+5. **Automate with cron** or GitHub Actions:
+   ```bash
+   0 2 * * * cd /path/to/pa_insurance_audit && python main.py
+   ```
+
+---
+
+## References
+
+- [PA Insurance Department](https://www.pa.gov/agencies/insurance/)
+- [ACA Rate Filings](https://www.pa.gov/agencies/insurance/posted-filings-reports-company-orders/product-and-rate-filings/aca-health-rate-filings)
+- [Consumer Services Portal](https://www.pa.gov/agencies/insurance/consumer-help-center/complaints-questions-help/consumer-services-portal-faq)
+- [Pennsylvania Bulletin / PA Code](https://www.pacodeandbulletin.gov/)
+
+---
+
+## Support
+
+For issues, questions, or improvements:
+1. Check logs: `cat pipeline.log`
+2. Review database stats: `python -c "from schema import DatabaseManager; import config; print(DatabaseManager(config.DATABASE_PATH).get_stats())"`
+3. Run diagnostics: `python main.py --debug`
+
+---
+
+## License
+
+This tool is provided as-is for PA residents auditing health insurance compliance.
+
+---
+
+**Last Updated**: 2025-02-11  
+**Version**: 1.0

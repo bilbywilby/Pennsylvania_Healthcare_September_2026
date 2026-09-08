@@ -1,0 +1,322 @@
+"""PA Insurance Audit Pipeline - Main Orchestration Script"""
+
+import logging
+import sys
+import hashlib
+import uuid
+from pathlib import Path
+from datetime import datetime
+
+# Import pipeline modules
+import config
+from schema import DatabaseManager
+from crawler import PAInsuranceCrawler
+from processor import DocumentProcessor, DocumentParser
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format=config.LOG_FORMAT,
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(config.BASE_DIR / 'pipeline.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
+class AuditPipeline:
+    """Main orchestration for PA insurance audit pipeline"""
+
+    def __init__(self):
+        self.db = DatabaseManager(config.DATABASE_PATH)
+        self.crawler = PAInsuranceCrawler(
+            download_dir=config.DOWNLOAD_DIR,
+            timeout=config.FETCH_TIMEOUT,
+            delay=config.POLITE_DELAY
+        )
+        self.processor = DocumentProcessor()
+        self.parser = DocumentParser()
+        self.job_id = str(uuid.uuid4())
+        
+        logger.info(f"Initialized pipeline with job_id: {self.job_id}")
+
+    def init_database(self):
+        """Initialize database schema"""
+        logger.info("Initializing database...")
+        if self.db.init_schema():
+            logger.info("Database schema initialized successfully")
+            return True
+        else:
+            logger.error("Failed to initialize database schema")
+            return False
+
+    def log_operation(self, operation_type, resource_id, status, error_message=None, duration_ms=None):
+        """Log operation to processing log"""
+        try:
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO processing_log 
+                (job_id, operation_type, resource_id, status, started_at, completed_at, duration_ms, error_message)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                self.job_id, operation_type, resource_id, status,
+                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+                duration_ms, error_message
+            ))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.error(f"Failed to log operation: {e}")
+
+    def crawl_filings(self):
+        """Stage 1: Crawl PA Insurance Department"""
+        logger.info("=" * 80)
+        logger.info("STAGE 1: CRAWLING PA INSURANCE DEPARTMENT")
+        logger.info("=" * 80)
+        
+        start_time = datetime.utcnow()
+        filings = []
+        
+        try:
+            # Crawl ACA filings
+            logger.info(f"Crawling ACA filings from {config.ACA_FILINGS_URL}")
+            aca_filings = self.crawler.crawl_aca_filings(config.ACA_FILINGS_URL)
+            filings.extend(aca_filings)
+            logger.info(f"Crawled {len(aca_filings)} ACA filings")
+            
+            # Store source records
+            for filing in filings:
+                source_id = hashlib.sha256(filing['url'].encode()).hexdigest()
+                self.db.insert_source(
+                    source_id=source_id,
+                    source_url=filing['url'],
+                    source_type=filing['source_type'],
+                    file_hash=filing['file_hash'],
+                    file_size=filing['size']
+                )
+            
+            duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+            self.log_operation('crawl_filings', 'aca_page', 'completed', duration_ms=int(duration))
+            logger.info(f"Crawl completed in {duration:.0f}ms")
+            
+        except Exception as e:
+            logger.error(f"Crawl failed: {e}")
+            self.log_operation('crawl_filings', 'aca_page', 'failed', error_message=str(e))
+        
+        return filings
+
+    def process_documents(self, filepaths):
+        """Stage 2: Process documents (extract text, OCR)"""
+        logger.info("=" * 80)
+        logger.info("STAGE 2: PROCESSING DOCUMENTS")
+        logger.info("=" * 80)
+        
+        documents = []
+        
+        for filepath in filepaths:
+            try:
+                logger.info(f"Processing {filepath}")
+                start_time = datetime.utcnow()
+                
+                # Extract text from document
+                result = self.processor.process_document(filepath)
+                if not result:
+                    logger.warning(f"Failed to process {filepath}")
+                    continue
+                
+                # Generate document ID
+                doc_id = str(uuid.uuid4())
+                
+                # Parse document
+                parsed = self.parser.parse_document(result['text'], result['filename'])
+                if not parsed:
+                    logger.warning(f"Failed to parse {filepath}")
+                    continue
+                
+                # Get source ID from filepath hash
+                source_id = hashlib.sha256(filepath.encode()).hexdigest()
+                
+                # Store in database
+                doc_stored = self.db.insert_document(
+                    doc_id=doc_id,
+                    source_id=source_id,
+                    doc_type=parsed['doc_type'],
+                    extracted_text=result['text'],
+                    metadata=parsed['extracted_fields'],
+                    confidence=parsed['confidence']
+                )
+                
+                duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+                
+                if doc_stored:
+                    documents.append({
+                        'doc_id': doc_id,
+                        'filepath': filepath,
+                        'doc_type': parsed['doc_type'],
+                        'confidence': parsed['confidence']
+                    })
+                    self.log_operation('process_document', doc_id, 'completed', duration_ms=int(duration))
+                    logger.info(f"✓ Processed as {parsed['doc_type']} (confidence: {parsed['confidence']:.2f})")
+                else:
+                    self.log_operation('process_document', doc_id, 'failed', error_message='DB insert failed')
+                    
+            except Exception as e:
+                logger.error(f"Document processing error: {e}")
+                self.log_operation('process_document', str(filepath), 'failed', error_message=str(e))
+        
+        logger.info(f"Processed {len(documents)} documents successfully")
+        return documents
+
+    def extract_structured_data(self, documents):
+        """Stage 3: Extract and store structured fields"""
+        logger.info("=" * 80)
+        logger.info("STAGE 3: EXTRACTING STRUCTURED DATA")
+        logger.info("=" * 80)
+        
+        extractions = []
+        
+        for doc in documents:
+            try:
+                logger.info(f"Extracting structured data from {doc['doc_id']}")
+                
+                # Query document from database
+                results = self.db.query(
+                    "SELECT extracted_text FROM documents WHERE id = ?",
+                    (doc['doc_id'],)
+                )
+                
+                if not results:
+                    logger.warning(f"Document {doc['doc_id']} not found in database")
+                    continue
+                
+                text = results[0]['extracted_text']
+                parsed = self.parser.parse_document(text, doc.get('filepath', ''))
+                
+                # Store extractions
+                for field_name, field_value in parsed['extracted_fields'].items():
+                    extraction_id = str(uuid.uuid4())
+                    self.db.insert_extraction(
+                        extraction_id=extraction_id,
+                        document_id=doc['doc_id'],
+                        extraction_type='structured_field',
+                        field_name=field_name,
+                        field_value=str(field_value),
+                        confidence=parsed['confidence']
+                    )
+                    extractions.append({
+                        'field': field_name,
+                        'value': field_value,
+                        'doc_id': doc['doc_id']
+                    })
+                
+                logger.info(f"  Extracted {len(parsed['extracted_fields'])} fields")
+                
+            except Exception as e:
+                logger.error(f"Extraction error for {doc['doc_id']}: {e}")
+        
+        logger.info(f"Total extractions stored: {len(extractions)}")
+        return extractions
+
+    def generate_report(self):
+        """Stage 4: Generate analysis report and CSV exports"""
+        logger.info("=" * 80)
+        logger.info("STAGE 4: GENERATING REPORTS")
+        logger.info("=" * 80)
+        
+        stats = self.db.get_stats()
+        
+        report = f"""
+PA INSURANCE AUDIT PIPELINE - REPORT
+=====================================
+Generated: {datetime.utcnow().isoformat()}
+Job ID: {self.job_id}
+
+DATABASE STATISTICS:
+  Sources: {stats.get('sources', 0)}
+  Documents: {stats.get('documents', 0)}
+  Extractions: {stats.get('extractions', 0)}
+  Alerts: {stats.get('alerts', 0)}
+
+DATABASE PATH: {config.DATABASE_PATH}
+DOWNLOAD DIR: {config.DOWNLOAD_DIR}
+LOG FILE: {config.BASE_DIR / 'pipeline.log'}
+
+NEXT STEPS:
+  1. Review {config.DATABASE_PATH} for complete audit data
+  2. Run custom SQL queries on extracted documents
+  3. Generate CSV exports for further analysis
+  4. Implement anomaly detection models
+
+SCHEMA OVERVIEW:
+  - sources: ingested file metadata and provenance
+  - documents: parsed documents with extracted text
+  - extractions: structured field extractions
+  - alerts: detected anomalies and findings
+  - processing_log: audit trail of all operations
+"""
+        
+        # Write report to file
+        report_path = config.BASE_DIR / f"report_{self.job_id[:8]}.txt"
+        with open(report_path, 'w') as f:
+            f.write(report)
+        
+        logger.info(report)
+        logger.info(f"Report saved to {report_path}")
+        
+        return report
+
+    def run(self):
+        """Execute full pipeline"""
+        logger.info("\n")
+        logger.info("╔" + "=" * 78 + "╗")
+        logger.info("║" + " " * 20 + "PA INSURANCE AUDIT PIPELINE" + " " * 32 + "║")
+        logger.info("╚" + "=" * 78 + "╝")
+        
+        try:
+            # Stage 1: Initialize and crawl
+            if not self.init_database():
+                logger.error("Database initialization failed")
+                return False
+            
+            filings = self.crawl_filings()
+            if not filings:
+                logger.warning("No filings were crawled")
+            
+            # Convert filing dicts to filepaths
+            filepaths = [Path(f['filepath']) for f in filings]
+            
+            # Stage 2: Process documents
+            if filepaths:
+                documents = self.process_documents(filepaths)
+            else:
+                documents = []
+            
+            # Stage 3: Extract structured data
+            if documents:
+                extractions = self.extract_structured_data(documents)
+            else:
+                logger.info("No documents to extract from")
+            
+            # Stage 4: Generate reports
+            self.generate_report()
+            
+            logger.info("\n✓ Pipeline completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Pipeline failed: {e}", exc_info=True)
+            return False
+
+
+def main():
+    """Main entry point"""
+    pipeline = AuditPipeline()
+    success = pipeline.run()
+    sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()

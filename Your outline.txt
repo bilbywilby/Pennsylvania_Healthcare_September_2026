@@ -1,0 +1,92 @@
+Your outline already covers a comprehensive set of non‑breaking upgrades that will push the pipeline from “good” to production‑grade. Below are a few observations, optional refinements, and next‑step suggestions that can help you move from the design phase to concrete implementation.
+
+1. Prioritisation & Dependency Order
+Phase	Core actions (must run first)	Why it matters
+Foundational	• Enable WAL mode & PRAGMA settings • Apply the critical indexes (documents, extractions, processing_log, alerts) • Add the unique index on documents.source_id	Guarantees data integrity, concurrent reads, and prevents duplicate work before any higher‑level logic runs.
+Resilience	• Implement exponential‑backoff retry wrapper for all HTTP calls • Add job lock file and graceful shutdown handling	Stops cascading failures when external services hiccup and protects against overlapping runs.
+Observability	• Replace all print statements with structured JSON logging • Set up per‑job rotating log files (10 MB)	Gives you searchable, machine‑readable logs for audits and alert triage.
+Safety Nets	• Automatic DB backup before each run • Health‑check script (healthcheck.py) that validates DB connectivity, required tables, and free disk space	Provides a restore point and early failure detection.
+Feature Enhancements	• OCR fallback + timeout guard • Conditional download via ETag/hash • New alert rules (rate increase, duplicate policy, low‑confidence carrier)	Improves coverage, reduces unnecessary work, and surfaces business‑critical anomalies.
+Operational Extras	• CSV/JSON export flags, timestamped report directories • Parallel processing (thread pool) limited to CPU‑bound OCR/extraction steps • Incremental mode (--since)	Makes downstream consumption easier and speeds up large backfills without risking DB contention.
+Running the phases in this order ensures each layer builds on a stable base.
+
+2. Implementation Tips & Gotchas
+2.1 WAL & PRAGMAs
+PRAGMA journal_mode=WAL; must be executed once per connection before any tables are created.
+Include PRAGMA synchronous=NORMAL; for a good balance of durability vs. throughput.
+Set busy_timeout early so SQLite will wait for locks rather than raising immediate errors.
+2.2 Index Creation
+Wrap each CREATE INDEX IF NOT EXISTS … in a migration script that also checks for existing indexes (SELECT name FROM sqlite_master WHERE type='index').
+Consider composite indexes for frequent multi‑column filters, e.g., (carrier, processing_status) if those are often queried together.
+2.3 Unique Constraint
+The unique index on source_id assumes a deterministic identifier for each source file. If you ever ingest the same file from two different locations, ensure the identifier is truly global (hash of content + origin URL works well).
+2.4 Retry Logic
+Use requests.adapters.HTTPAdapter with a built‑in Retry strategy for cleaner code:
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+import requests
+
+session = requests.Session()
+retry = Retry(
+    total=5,
+    backoff_factor=2,
+    status_forcelist=[429, 500, 502, 503, 504],
+    method_whitelist=["GET", "POST"]
+)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
+
+def fetch(url, **kw):
+    return session.get(url, timeout=config.REQUEST_TIMEOUT, **kw)
+2.5 Conditional Download
+Store a small metadata row per file: {source_id, etag, sha256, last_seen}.
+On each crawl, issue a HEAD request first; if ETag matches the stored value, skip the download entirely.
+2.6 Structured Logging
+Use Python’s logging module with a JsonFormatter. Example:
+import logging, jsonlog
+
+logger = logging.getLogger("pa_audit")
+handler = logging.StreamHandler()
+handler.setFormatter(jsonlog.JsonFormatter())
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+Include a run_id (UUID) in every log entry to correlate events across the pipeline.
+2.7 Backup Automation
+SQLite can be backed up safely with the backup API while the DB is open:
+import shutil, datetime, os
+def create_backup(src_path):
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    dst = f"backups/pa_insurance_audit_{ts}.db"
+    shutil.copyfile(src_path, dst)
+    return dst
+Schedule the backup at the very start of main.py; abort the run if the copy fails.
+2.8 Job Lock & Concurrency
+Create a lock file containing the PID and start timestamp. On startup, check if the file exists and whether the PID is still alive (os.kill(pid, 0)).
+Remove the lock in a finally: block or via a signal handler for SIGTERM/SIGINT.
+2.9 Parallel OCR
+SQLite writes are not thread‑safe without a connection per thread. Keep a single writer thread (or use a queue) that serializes DB inserts, while OCR workers run concurrently and return extracted data structures.
+2.10 Alert Engine Extensibility
+Model alerts as rows in an alerts table with a JSON payload column (details). This lets you add new rule types without schema changes.
+Provide a simple rule registration API:
+ALERT_RULES = []
+
+def register_rule(fn):
+    ALERT_RULES.append(fn)
+    return fn
+Each rule receives the processed document dict and can INSERT into alerts if conditions match.
+
+3. Suggested Immediate Deliverables
+schema.sql – Consolidated migration that sets WAL pragmas, creates all tables, and adds the indexes/unique constraint.
+logging_config.py – Central logger with JSON output, rotation, and run_id injection.
+crawler.py – Refactored fetch function using the requests session with retries, conditional download, and custom UA header.
+main.py – Skeleton that (a) acquires the lock, (b) creates a backup, (c) initializes the DB (runs migrations if needed), (d) launches the processing pool, and (e) handles graceful shutdown.
+Test Suite Stub – tests/test_crawler.py, tests/test_indexing.py, tests/test_alerts.py with a couple of example cases to get CI running quickly.
+Once these pieces are in place, you’ll have a runnable, self‑checking pipeline that can be iteratively expanded with the optional advanced features (API layer, incremental mode, etc.).
+
+4. Next Steps – What would you like to focus on?
+Code generation – I can draft the migration script, logger setup, or a sample fetch_with_retry implementation.
+Testing scaffolding – Provide a pytest layout with fixtures for an in‑memory SQLite DB.
+Alert rule examples – Show how to plug in the rate‑increase and duplicate‑policy detectors.
+Deployment checklist – Outline CI/CD steps, Dockerfile hints, and environment variable conventions (.env.example).
+Let me know which artifact(s) would be most useful right now, and I’ll deliver a concrete snippet or checklist tailored to that piece.

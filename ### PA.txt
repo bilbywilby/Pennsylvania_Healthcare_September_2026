@@ -1,0 +1,405 @@
+### PA Insurance Audit Pipeline — Structural & Resilience Improvements
+
+The current structure is solid and logically organized. Below are **non-breaking enhancements** that improve reliability, auditability, performance, and real-world robustness without removing any features or data.
+
+---
+
+# 1. Project Structure Enhancements
+
+### Additions (No Removals)
+
+```
+pa_insurance_audit/
+│
+├── migrations/                  # Versioned DB schema migrations
+│   ├── 001_initial.sql
+│   ├── 002_indexes.sql
+│   └── ...
+│
+├── tests/                       # Unit + integration tests
+│   ├── test_parser.py
+│   ├── test_processor.py
+│   ├── test_schema.py
+│   └── test_pipeline.py
+│
+├── .env                         # Optional environment config
+├── .env.example
+├── logging_config.py            # Centralized structured logging config
+├── healthcheck.py               # DB + dependency verification
+│
+├── backups/                     # Automatic DB backups
+│
+└── archive/                     # Archived/processed downloads
+```
+
+**Why**
+
+* Enables schema version control
+* Supports CI
+* Allows operational validation before run
+* Protects against database corruption
+* Improves production lifecycle management
+
+---
+
+# 2. Database Hardening Improvements (Critical)
+
+## 2.1 Enable WAL Mode
+
+In `DatabaseManager.init_schema()`:
+
+```sql
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA foreign_keys=ON;
+PRAGMA temp_store=MEMORY;
+PRAGMA busy_timeout=5000;
+```
+
+### Benefits
+
+* Prevents write-lock failures
+* Allows concurrent reads during processing
+* Improves crash recovery
+
+---
+
+## 2.2 Add Critical Indexes (Performance Scaling)
+
+Add migration:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
+CREATE INDEX IF NOT EXISTS idx_documents_carrier ON documents(carrier);
+CREATE INDEX IF NOT EXISTS idx_documents_policy ON documents(policy_number);
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(processing_status);
+
+CREATE INDEX IF NOT EXISTS idx_extractions_field ON extractions(field_name);
+CREATE INDEX IF NOT EXISTS idx_processing_job ON processing_log(job_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
+```
+
+Prevents query degradation at scale.
+
+---
+
+## 2.3 Add Unique Constraint for Idempotency
+
+Prevent duplicate document insertion:
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_documents_source_unique
+ON documents(source_id);
+```
+
+Avoids re-processing identical source files.
+
+---
+
+# 3. Crawler Resilience Improvements
+
+## 3.1 Retry with Exponential Backoff
+
+Wrap all HTTP calls:
+
+```python
+def fetch_with_retry(url, retries=5):
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, timeout=config.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            return response
+        except requests.RequestException:
+            sleep = 2 ** attempt
+            time.sleep(sleep)
+    raise Exception(f"Failed after {retries} attempts")
+```
+
+---
+
+## 3.2 Conditional Downloading (ETag / Hash Check)
+
+Before downloading:
+
+* Compare file hash in DB
+* Skip if unchanged
+
+Prevents redundant OCR and processing.
+
+---
+
+## 3.3 User-Agent Hardening
+
+Set explicit UA header to avoid PID blocking:
+
+```python
+headers = {
+    "User-Agent": "PA-Insurance-Audit-Bot/1.0 (Compliance Monitoring)"
+}
+```
+
+---
+
+# 4. Document Processing Improvements
+
+## 4.1 OCR Failure Fallback Strategy
+
+If:
+
+* `pdfplumber` extracts < 500 chars
+* OR confidence < threshold
+
+Then:
+
+* Convert PDF pages to images
+* Run OCR page-by-page
+
+Improves coverage for scanned filings.
+
+---
+
+## 4.2 Confidence Normalization
+
+Standardize confidence score:
+
+```
+confidence =
+  0.5 * field_extraction_score +
+  0.3 * text_density_score +
+  0.2 * regex_validation_score
+```
+
+More stable scoring across document types.
+
+---
+
+## 4.3 Timeout Guard for OCR
+
+Wrap OCR with:
+
+```python
+signal.alarm(30)
+```
+
+Prevents hanging on malformed PDFs.
+
+---
+
+# 5. Logging Improvements
+
+Replace print statements with structured logging.
+
+Example:
+
+```python
+logger.info(
+    "document_processed",
+    extra={
+        "document_id": doc_id,
+        "carrier": carrier,
+        "confidence": confidence
+    }
+)
+```
+
+### Log Enhancements
+
+* JSON log format option
+* Per-job log file
+* Error trace capture
+* Log rotation (10MB cap)
+
+---
+
+# 6. Alert Engine Expansion
+
+Add new automated anomaly detections:
+
+### 6.1 Rate Increase Threshold Alert
+
+Trigger if:
+
+* Rate change > 10%
+* NAIC code present
+
+### 6.2 Duplicate Policy Across Carriers
+
+Possible fraud indicator.
+
+### 6.3 Low Confidence Carrier Pattern
+
+If:
+
+* > 30% of carrier documents under 0.6 confidence
+
+---
+
+# 7. Reporting Improvements
+
+## 7.1 Add Summary CSV Exports
+
+Add:
+
+* `alerts_summary.csv`
+* `carrier_performance.csv`
+* `confidence_distribution.csv`
+
+---
+
+## 7.2 Add JSON Export Option
+
+Add flag:
+
+```
+python utils.py documents --format json
+```
+
+Improves integration with BI tools.
+
+---
+
+## 7.3 Add Timestamped Report Directory
+
+Instead of flat:
+
+```
+reports/2026_02_11_140302/
+    documents.csv
+    extractions.csv
+    audit_log.csv
+```
+
+Improves archival clarity.
+
+---
+
+# 8. Operational Safety Enhancements
+
+## 8.1 Automatic DB Backup Before Run
+
+At pipeline start:
+
+```
+backups/pa_insurance_audit_YYYYMMDD_HHMMSS.db
+```
+
+Prevents data loss.
+
+---
+
+## 8.2 Job Lock File
+
+Prevent concurrent runs:
+
+```
+.pa_audit.lock
+```
+
+---
+
+## 8.3 Graceful Shutdown Handling
+
+Capture SIGINT:
+
+```python
+signal.signal(signal.SIGINT, handler)
+```
+
+Mark incomplete jobs as failed in processing_log.
+
+---
+
+# 9. Security Improvements
+
+* Sanitize file names before saving
+* Enforce max file size (e.g., 50MB)
+* Validate MIME types
+* Disable automatic execution of embedded scripts in PDFs
+* Strip PII from logs (DOB masking)
+
+---
+
+# 10. Testing Layer
+
+Add:
+
+* Regex extraction tests
+* Carrier classification tests
+* OCR fallback tests
+* DB transaction rollback tests
+
+Enable:
+
+```
+pytest
+```
+
+---
+
+# 11. Optional Advanced Improvements
+
+### 11.1 Parallel Processing
+
+Use:
+
+```
+concurrent.futures.ThreadPoolExecutor
+```
+
+For document processing only (not DB writes).
+
+---
+
+### 11.2 Incremental Processing Mode
+
+Add CLI flag:
+
+```
+python main.py --since 2026-01-01
+```
+
+Only process new filings.
+
+---
+
+### 11.3 API Layer (Optional Future)
+
+Expose read-only FastAPI endpoint:
+
+```
+GET /documents
+GET /alerts
+GET /stats
+```
+
+---
+
+# Overall Assessment
+
+| Category             | Current State | After Enhancements     |
+| -------------------- | ------------- | ---------------------- |
+| Reliability          | Good          | Production-grade       |
+| Data Safety          | Moderate      | Strong (WAL + backups) |
+| Performance          | Acceptable    | Indexed + scalable     |
+| Auditability         | Strong        | Enterprise-grade       |
+| Compliance Readiness | Moderate      | High                   |
+
+---
+
+# Recommended Immediate Priorities
+
+1. WAL mode + Indexes
+2. Retry logic in crawler
+3. DB backup before run
+4. Structured logging
+5. Unique index on documents
+
+These five changes alone significantly improve operational resilience without altering architecture.
+
+---
+
+If desired, the next step can be:
+
+* A fully updated `schema.py` with hardened DB settings
+* A production-grade `main.py` with job locks and backup automation
+* Or an expanded alert rules engine implementation
