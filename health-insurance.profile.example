@@ -1,0 +1,4 @@
+DOMAIN="health-insurance"
+KEYWORDS='EPTC|Enhanced Premium Tax Credit|Pennie|Ez_Insurance|health insurance|individual market|rating area|SERFF|HIOS|prior authorization|network adequacy|Ambetter|Highmark|Geisinger|UPMC|Capital Blue Cross|Independence Blue Cross|QCC|Keystone|Partners.?Jefferson|PPACA|ACA marketplace|carrier rate|IDR/NSA'
+DIR_NAME_PATTERN='.*/(pennsylvania.?health.?insurance[^/]*|pa.?audit.?work|pa.?insurance[^/]*|ez.?insurance[^/]*|health.?insurance.?audit[^/]*|insurance.?audit[^/]*)'
+GH_FILTER='insurance|pennsylvania|pa-audit|ez_insurance'

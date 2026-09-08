@@ -1,0 +1,22 @@
+# Copy to ~/.archive-profiles/<your-domain>.profile and fill in.
+# Only DOMAIN, KEYWORDS, and DIR_NAME_PATTERN are required.
+
+DOMAIN="your-domain-name"
+
+# Phase 2: grep -E pattern run against file contents. Pipe-separated
+# alternatives; escape literal regex metacharacters in your terms.
+KEYWORDS='keyword1|keyword2|phrase with spaces'
+
+# Phase 1: find -iregex (posix-extended) pattern run against directory
+# paths. Matches the FULL path, so lead with .*/ and keep alternatives
+# grouped. [^/]* after a stem lets it match trailing suffixes like
+# "-2026" or "-work" without over-matching into sibling directories.
+DIR_NAME_PATTERN='.*/(pattern1[^/]*|pattern2[^/]*)'
+
+# Phase 4: grep -iE pattern run against `gh repo list` output to spot
+# GitHub repos that look related. Optional — defaults to DOMAIN.
+GH_FILTER='keyword1|keyword2'
+
+# Optional: extra directory names to prune from both find and grep,
+# on top of the engine's built-in DEFAULT_EXCLUDE_DIRS.
+# EXTRA_EXCLUDE_DIRS=(custom_build_dir temp_dumps)
