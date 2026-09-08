@@ -1,0 +1,168 @@
+This comprehensive design and implementation plan outlines the development of a production-grade **PA Health Insurance Audit Pipeline**. This system is architected to handle the high volume and regulatory sensitivity of the Pennsylvania Insurance Department (PID) filings, primarily sourced via the NAIC SERFF (System for Electronic Rate and Form Filings) portal.
+
+### 1. Project Manifest
+```json
+{
+  "project_name": "PA-Health-Audit-Pipeline",
+  "version": "1.0.0",
+  "owner_entity": "Compliance AI Research / PA Insurance Oversight",
+  "architecture_style": "Distributed Task Queue / RAG-ready Microservices",
+  "key_technologies": [
+    "Python 3.11",
+    "FastAPI",
+    "Celery + Redis",
+    "PostgreSQL + pgvector",
+    "React + Tailwind",
+    "AWS S3 / Terraform"
+  ],
+  "compliance_targets": [
+    "PII/PHI Minimization",
+    "SOC2 Type II Alignment",
+    "FIPS 140-2 Encryption Standards",
+    "Full Audit Provenance"
+  ]
+}
+```
+
+---
+
+### 2. Implementation Roadmap
+
+| Phase | Name | Duration | Key Deliverables |
+| :--- | :--- | :--- | :--- |
+| **0** | **Discovery** | 1 Week | Data inventory (SERFF schemas), PII classification rules. |
+| **1** | **Infra & CI/CD** | 2 Weeks | Terraform-managed VPC/RDS/S3, GitHub Actions pipelines. |
+| **2** | **Ingestion** | 2 Weeks | SERFF Web Crawler, idempotent Upload API, S3 immutable storage. |
+| **3** | **Extraction** | 3 Weeks | OCR pipeline (Tesseract/PyMuPDF), Structured Excel parsing. |
+| **4** | **Semantic Search**| 2 Weeks | Embedding generation, pgvector HNSW indexing, search API. |
+| **5** | **Audit UI** | 3 Weeks | React investigator dashboard, PDF highlighter, export engine. |
+| **6** | **Security/QA** | 2 Weeks | Pen-testing, load testing (1k+ filings/hr), DR drills. |
+| **7** | **Rollout** | 1 Week | Canary deployment, investigator training, ops handover. |
+
+---
+
+### 3. Core Technical Artifacts
+
+#### A. Database Schema (PostgreSQL + pgvector)
+This schema ensures every document is tracked from ingestion to embedding, with a robust audit trail.
+
+```sql
+-- Requirements: extension "uuid-ossp", extension "vector"
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+CREATE TYPE processing_status AS ENUM ('PENDING', 'INGESTED', 'PARSING', 'EMBEDDING', 'COMPLETED', 'FAILED');
+
+-- Core Filing Record (SERFF metadata)
+CREATE TABLE filings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    serff_tracking_number VARCHAR(255) UNIQUE NOT NULL,
+    company_name VARCHAR(255) NOT NULL,
+    submission_date DATE NOT NULL,
+    market_type VARCHAR(100), -- 'Individual', 'Small Group'
+    raw_metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Artifact Management (Immutable S3 Links)
+CREATE TABLE artifacts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    filing_id UUID REFERENCES filings(id) ON DELETE CASCADE,
+    filename VARCHAR(512) NOT NULL,
+    storage_path VARCHAR(1024) NOT NULL, -- S3 Key
+    hash_sha256 CHAR(64) NOT NULL,
+    proc_status processing_status DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Semantic Index (RAG)
+CREATE TABLE doc_embeddings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    artifact_id UUID REFERENCES artifacts(id) ON DELETE CASCADE,
+    chunk_text TEXT NOT NULL,
+    embedding vector(1536), -- Optimized for text-embedding-3-small
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_embedding_vector ON doc_embeddings USING hnsw (embedding vector_cosine_ops);
+```
+
+#### B. API Contract (OpenAPI v3)
+The API manages the lifecycle of a filing, from initial crawling to similarity search.
+
+```yaml
+openapi: 3.0.3
+info:
+  title: PA Health Insurance Audit API
+  version: 1.0.0
+paths:
+  /v1/ingest/upload:
+    post:
+      summary: Upload a raw filing artifact
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: {type: string, format: binary}
+                idempotency_key: {type: string}
+      responses:
+        '202': {description: "Processing queued"}
+  /v1/search/semantic:
+    get:
+      summary: Natural language search across filings
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: "Similarity-ranked snippets"}
+```
+
+#### C. CI/CD Pipeline (GitHub Actions)
+Automates testing, security scanning (Bandit), and deployment to Kubernetes.
+
+```yaml
+name: Audit-Pipeline-CI
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Security Scan
+        run: pip install bandit && bandit -r ./app
+      - name: Run Tests
+        run: pytest tests/ --cov=app/
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and Push Docker
+        run: docker build -t pa-audit:latest .
+      - name: Helm Rollout
+        run: helm upgrade --install pa-audit ./charts/pa-audit
+```
+
+---
+
+### 4. Operations Playbook & Resilience
+
+**System Monitoring:**
+- **SLA:** 99.9% API uptime; < 5-minute processing lag for standard 10MB PDFs.
+- **Alerting:** Triggered on SQS queue depth > 500, OCR failure rate > 5%, or RDS CPU > 80%.
+
+**Scaling Strategy:**
+- **Vertical:** RDS instances utilize Graviton3 (m7g) for cost-efficient vector indexing.
+- **Horizontal:** Celery workers auto-scale via KEDA based on RabbitMQ/Redis message depth.
+
+**Resilience & Backpressure:**
+- **Idempotency:** All ingestion tasks use a SHA-256 hash of the file content as a `dedupe_key` to prevent duplicate processing.
+- **Circuit Breaker:** Third-party OCR (Azure/Google) and Embedding APIs (OpenAI) are wrapped in `tenacity` retry logic with exponential backoff.
+- **Disaster Recovery:** RPO is 1 hour (via PITR on Postgres); RTO is 4 hours (automated Terraform redeploy to secondary AWS region).
+
+**Privacy Controls:**
+- **PII Masking:** Automated regex and NER (Named Entity Recognition) steps during extraction to redact Social Security Numbers or private contact info before indexing into the vector database.

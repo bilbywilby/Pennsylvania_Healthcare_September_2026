@@ -1,0 +1,419 @@
+"""
+PA ACA 2026 Market Forensic Studio - Core Data Structures
+Healthcare contract analysis and claims forensics data models
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Any
+from datetime import datetime
+from enum import Enum
+from decimal import Decimal
+
+
+# ============================================================================
+# ENUMS & CONSTANTS
+# ============================================================================
+
+class ContractStatus(Enum):
+    PENDING = "pending"
+    PARSED = "parsed"
+    FLAGGED = "flagged"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class RiskLevel(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ClaimStatus(Enum):
+    SUBMITTED = "submitted"
+    PROCESSING = "processing"
+    APPROVED = "approved"
+    DENIED = "denied"
+    APPEALED = "appealed"
+
+
+class DocumentType(Enum):
+    CONTRACT = "contract"
+    EOB = "eob"  # Explanation of Benefits
+    CLAIM = "claim"
+    APPEAL = "appeal"
+    AUTHORIZATION = "authorization"
+
+
+# ============================================================================
+# CONTRACT PARSING
+# ============================================================================
+
+@dataclass
+class ContractClause:
+    """Individual contract clause with risk assessment"""
+    clause_id: str
+    section: str
+    text: str
+    category: str  # e.g., "deductible", "copay", "exclusion"
+    risk_level: RiskLevel
+    flags: List[str] = field(default_factory=list)
+    ai_confidence: float = 0.0
+    highlighted_terms: List[str] = field(default_factory=list)
+
+
+@dataclass
+class DeductibleTrap:
+    """Specific deductible trap detection"""
+    trap_id: str
+    trap_type: str  # e.g., "separate_deductible", "family_aggregate"
+    description: str
+    clause_refs: List[str]
+    estimated_cost_impact: Optional[Decimal] = None
+    mitigation_strategy: Optional[str] = None
+
+
+@dataclass
+class ParsedContract:
+    """Complete parsed insurance contract"""
+    contract_id: str
+    payer_name: str
+    plan_name: str
+    effective_date: datetime
+    termination_date: Optional[datetime]
+    status: ContractStatus
+    
+    # Parsed components
+    clauses: List[ContractClause] = field(default_factory=list)
+    deductible_traps: List[DeductibleTrap] = field(default_factory=list)
+    
+    # Financial terms
+    in_network_rate: Optional[Decimal] = None
+    out_of_network_rate: Optional[Decimal] = None
+    
+    # Metadata
+    parsed_at: datetime = field(default_factory=datetime.now)
+    parser_version: str = "1.0"
+    ocr_source: Optional[str] = None
+    
+    # Risk assessment
+    overall_risk_score: float = 0.0
+    risk_factors: List[str] = field(default_factory=list)
+
+
+# ============================================================================
+# FORENSIC ENGINE - RVU & GPCI
+# ============================================================================
+
+@dataclass
+class RVUComponent:
+    """Relative Value Unit components for a procedure"""
+    work_rvu: Decimal
+    practice_expense_rvu: Decimal
+    malpractice_rvu: Decimal
+    total_rvu: Decimal
+    
+    def calculate_total(self) -> Decimal:
+        return self.work_rvu + self.practice_expense_rvu + self.malpractice_rvu
+
+
+@dataclass
+class GPCIMultiplier:
+    """Geographic Practice Cost Index by locality"""
+    locality_code: str
+    locality_name: str
+    work_gpci: Decimal
+    practice_expense_gpci: Decimal
+    malpractice_gpci: Decimal
+    effective_year: int
+
+
+@dataclass
+class ProcedureCode:
+    """CPT/HCPCS procedure code with pricing data"""
+    code: str
+    description: str
+    code_type: str  # "CPT" or "HCPCS"
+    rvu: RVUComponent
+    conversion_factor: Decimal
+    
+    # Modifiers
+    modifiers: List[str] = field(default_factory=list)
+    
+    # Metadata
+    effective_date: datetime = field(default_factory=datetime.now)
+    status: str = "active"
+    
+    def calculate_medicare_rate(self, gpci: GPCIMultiplier) -> Decimal:
+        """Calculate Medicare reimbursement rate"""
+        adjusted_rvu = (
+            (self.rvu.work_rvu * gpci.work_gpci) +
+            (self.rvu.practice_expense_rvu * gpci.practice_expense_gpci) +
+            (self.rvu.malpractice_rvu * gpci.malpractice_gpci)
+        )
+        return adjusted_rvu * self.conversion_factor
+
+
+# ============================================================================
+# CLAIMS ANALYSIS
+# ============================================================================
+
+@dataclass
+class LineItem:
+    """Individual line item in a claim"""
+    line_number: int
+    procedure_code: str
+    description: str
+    units: int
+    billed_amount: Decimal
+    allowed_amount: Optional[Decimal]
+    paid_amount: Optional[Decimal]
+    patient_responsibility: Optional[Decimal]
+    denial_code: Optional[str] = None
+    denial_reason: Optional[str] = None
+
+
+@dataclass
+class Claim:
+    """Healthcare claim submission"""
+    claim_id: str
+    patient_id: str  # Scrubbed identifier
+    provider_id: str
+    payer_id: str
+    
+    # Dates
+    service_date: datetime
+    submission_date: datetime
+    adjudication_date: Optional[datetime] = None
+    
+    # Status
+    status: ClaimStatus
+    
+    # Financial
+    line_items: List[LineItem] = field(default_factory=list)
+    total_billed: Decimal = Decimal("0.00")
+    total_allowed: Optional[Decimal] = None
+    total_paid: Optional[Decimal] = None
+    patient_responsibility: Optional[Decimal] = None
+    
+    # Metadata
+    diagnosis_codes: List[str] = field(default_factory=list)
+    place_of_service: Optional[str] = None
+    
+    def calculate_totals(self):
+        """Calculate claim totals from line items"""
+        self.total_billed = sum(item.billed_amount for item in self.line_items)
+        if all(item.paid_amount for item in self.line_items):
+            self.total_paid = sum(item.paid_amount for item in self.line_items)
+
+
+# ============================================================================
+# FORENSIC AUDIT
+# ============================================================================
+
+@dataclass
+class AuditFinding:
+    """Individual audit finding"""
+    finding_id: str
+    finding_type: str  # e.g., "underpayment", "denial_error", "coding_issue"
+    severity: RiskLevel
+    description: str
+    
+    # Financial impact
+    expected_amount: Decimal
+    actual_amount: Decimal
+    variance: Decimal
+    
+    # References
+    claim_id: Optional[str] = None
+    line_item_ref: Optional[int] = None
+    contract_clause_ref: Optional[str] = None
+    
+    # Evidence
+    evidence: List[str] = field(default_factory=list)
+    supporting_docs: List[str] = field(default_factory=list)
+
+
+@dataclass
+class AuditReport:
+    """Complete forensic audit report"""
+    audit_id: str
+    claim_id: str
+    auditor: str  # System or human identifier
+    audit_date: datetime
+    
+    # Findings
+    findings: List[AuditFinding] = field(default_factory=list)
+    
+    # Summary
+    total_variance: Decimal = Decimal("0.00")
+    high_priority_count: int = 0
+    recommendation: Optional[str] = None
+    
+    # Validation results
+    validation_passed: bool = True
+    validation_errors: List[str] = field(default_factory=list)
+    
+    def calculate_summary(self):
+        """Calculate audit summary statistics"""
+        self.total_variance = sum(f.variance for f in self.findings)
+        self.high_priority_count = sum(
+            1 for f in self.findings 
+            if f.severity in [RiskLevel.HIGH, RiskLevel.CRITICAL]
+        )
+
+
+# ============================================================================
+# ADVOCACY & APPEALS
+# ============================================================================
+
+@dataclass
+class AppealTemplate:
+    """Template for generating appeal letters"""
+    template_id: str
+    template_name: str
+    denial_type: str
+    template_html: str
+    required_fields: List[str] = field(default_factory=list)
+    success_rate: Optional[float] = None
+
+
+@dataclass
+class AppealLetter:
+    """Generated appeal letter"""
+    appeal_id: str
+    claim_id: str
+    template_used: str
+    
+    # Content
+    generated_html: str
+    generated_text: str
+    
+    # Supporting evidence
+    attachments: List[str] = field(default_factory=list)
+    audit_report_id: Optional[str] = None
+    
+    # Metadata
+    generated_at: datetime = field(default_factory=datetime.now)
+    sent_at: Optional[datetime] = None
+    status: str = "draft"
+
+
+# ============================================================================
+# DOCUMENT PROCESSING
+# ============================================================================
+
+@dataclass
+class OCRResult:
+    """OCR processing result"""
+    document_id: str
+    ocr_engine: str  # "tesseract" or "textract"
+    
+    # Extracted content
+    raw_text: str
+    confidence_score: float
+    
+    # Structure
+    pages: int
+    detected_tables: List[Dict[str, Any]] = field(default_factory=list)
+    detected_fields: Dict[str, str] = field(default_factory=dict)
+    
+    # Processing metadata
+    processed_at: datetime = field(default_factory=datetime.now)
+    processing_time_ms: int = 0
+
+
+@dataclass
+class ScrubbedDocument:
+    """Document with PHI/PII removed"""
+    document_id: str
+    original_doc_id: str
+    document_type: DocumentType
+    
+    # Scrubbed content
+    scrubbed_text: str
+    redaction_map: Dict[str, str] = field(default_factory=dict)  # token -> placeholder
+    
+    # Metadata
+    scrubbed_at: datetime = field(default_factory=datetime.now)
+    scrubber_version: str = "1.0"
+    fields_scrubbed: List[str] = field(default_factory=list)
+
+
+# ============================================================================
+# CACHING & PERFORMANCE
+# ============================================================================
+
+@dataclass
+class CachedGPCI:
+    """Cached GPCI data with TTL"""
+    cache_key: str
+    locality_code: str
+    gpci_data: GPCIMultiplier
+    
+    # Cache metadata
+    cached_at: datetime = field(default_factory=datetime.now)
+    ttl_seconds: int = 86400  # 24 hours
+    hit_count: int = 0
+    
+    def is_expired(self) -> bool:
+        """Check if cache entry is expired"""
+        age = (datetime.now() - self.cached_at).total_seconds()
+        return age > self.ttl_seconds
+
+
+# ============================================================================
+# PIPELINE ORCHESTRATION
+# ============================================================================
+
+@dataclass
+class PipelineJob:
+    """End-to-end processing pipeline job"""
+    job_id: str
+    input_document_id: str
+    
+    # Pipeline stages
+    ocr_result: Optional[OCRResult] = None
+    scrubbed_doc: Optional[ScrubbedDocument] = None
+    parsed_contract: Optional[ParsedContract] = None
+    claims: List[Claim] = field(default_factory=list)
+    audit_report: Optional[AuditReport] = None
+    appeal_letter: Optional[AppealLetter] = None
+    
+    # Job metadata
+    status: str = "pending"
+    started_at: datetime = field(default_factory=datetime.now)
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    
+    # Performance
+    stage_timings: Dict[str, float] = field(default_factory=dict)
+
+
+# ============================================================================
+# EXAMPLE USAGE
+# ============================================================================
+
+if __name__ == "__main__":
+    # Example: Create a parsed contract with deductible trap
+    contract = ParsedContract(
+        contract_id="CNT-2026-001",
+        payer_name="Example Health Insurance",
+        plan_name="Premium PPO",
+        effective_date=datetime(2026, 1, 1),
+        termination_date=datetime(2026, 12, 31),
+        status=ContractStatus.FLAGGED,
+        overall_risk_score=0.75
+    )
+    
+    trap = DeductibleTrap(
+        trap_id="TRAP-001",
+        trap_type="separate_deductible",
+        description="Separate deductible for in-network specialists",
+        clause_refs=["SEC-4.2"],
+        estimated_cost_impact=Decimal("3000.00")
+    )
+    contract.deductible_traps.append(trap)
+    
+    print(f"Contract {contract.contract_id} has {len(contract.deductible_traps)} traps")
+    print(f"Risk Score: {contract.overall_risk_score}")

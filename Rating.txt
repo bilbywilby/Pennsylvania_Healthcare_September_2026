@@ -1,0 +1,10 @@
+Rating Area,Region / Description,Key Counties (Examples),"Approx. Gross Rate Change (2026 Approved, Blended)","Net Premium Increase (After-Subsidy, Approx. Avg/Examples)"
+1,Northwest (Erie area),"Erie, Crawford, Mercer, Venango, Clarion, Forest, Warren, McKean",~20-25% (influenced by Highmark/UPMC),100-150% (moderate; less extreme than central)
+2,North-central/Northwest,"Elk, Cameron, Potter, parts of Tioga, others",Higher in some reports (~25%+),150-250%+ (higher morbidity areas)
+3,Northeast (Scranton/Wilkes-Barre),"Lackawanna, Luzerne, Monroe, Pike, Wayne, Carbon, parts of Bradford/Susquehanna",~20-24% (Oscar/Highmark influence),120-200%
+4,Southwest (Pittsburgh suburbs),"Parts of Allegheny, Washington, etc.",~20-25%,100-180%
+5,Western (Pittsburgh core + west),"Allegheny (core), Beaver, Butler, etc.",~22-25% (UPMC/Highmark),100-150%
+6,Lehigh Valley / Central-east,"Lehigh, Northampton, Berks, parts of Schuylkill",Higher (~24-26% in some filings),150-300%+ (noted as elevated)
+7,Central (Harrisburg/Lancaster area),"Dauphin, Cumberland, Lancaster, Lebanon, York, Adams, Franklin",~22-26%,"200-400%+ (some highest; e.g., Dauphin ~200%, Juniata up to 485% in examples)"
+8,Southeast (Philadelphia metro),"Philadelphia, Bucks, Chester, Delaware, Montgomery",~22% (Keystone dominant) to 37.8% (Ambetter),100-150%+ (urban competition kept somewhat lower than rural)
+9,South-central / Other,"Parts of Bedford, Blair, Cambria, Centre, Huntingdon, etc.",~22-26% (Capital/Geisinger),150-300%+ (rural/central trends)

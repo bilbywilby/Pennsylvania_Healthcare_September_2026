@@ -1,0 +1,835 @@
+"""
+PA ACA 2026 Market Forensic Studio - Core Data Structures
+Healthcare contract analysis and claims forensics data models
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Any
+from datetime import datetime
+from enum import Enum
+from decimal import Decimal
+
+
+# ============================================================================
+# ENUMS & CONSTANTS
+# ============================================================================
+
+class ContractStatus(Enum):
+    PENDING = "pending"
+    PARSED = "parsed"
+    FLAGGED = "flagged"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class RiskLevel(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ClaimStatus(Enum):
+    SUBMITTED = "submitted"
+    PROCESSING = "processing"
+    APPROVED = "approved"
+    DENIED = "denied"
+    APPEALED = "appealed"
+
+
+class DocumentType(Enum):
+    CONTRACT = "contract"
+    EOB = "eob"  # Explanation of Benefits
+    CLAIM = "claim"
+    APPEAL = "appeal"
+    AUTHORIZATION = "authorization"
+
+
+# ============================================================================
+# CONTRACT PARSING
+# ============================================================================
+
+@dataclass
+class ContractClause:
+    """Individual contract clause with risk assessment"""
+    clause_id: str
+    section: str
+    text: str
+    category: str  # e.g., "deductible", "copay", "exclusion"
+    risk_level: RiskLevel
+    flags: List[str] = field(default_factory=list)
+    ai_confidence: float = 0.0
+    highlighted_terms: List[str] = field(default_factory=list)
+
+
+@dataclass
+class DeductibleTrap:
+    """Specific deductible trap detection"""
+    trap_id: str
+    trap_type: str  # e.g., "separate_deductible", "family_aggregate"
+    description: str
+    clause_refs: List[str]
+    estimated_cost_impact: Optional[Decimal] = None
+    mitigation_strategy: Optional[str] = None
+
+
+@dataclass
+class ParsedContract:
+    """Complete parsed insurance contract"""
+    contract_id: str
+    payer_name: str
+    plan_name: str
+    effective_date: datetime
+    termination_date: Optional[datetime]
+    status: ContractStatus
+    
+    # Parsed components
+    clauses: List[ContractClause] = field(default_factory=list)
+    deductible_traps: List[DeductibleTrap] = field(default_factory=list)
+    
+    # Financial terms
+    in_network_rate: Optional[Decimal] = None
+    out_of_network_rate: Optional[Decimal] = None
+    
+    # Metadata
+    parsed_at: datetime = field(default_factory=datetime.now)
+    parser_version: str = "1.0"
+    ocr_source: Optional[str] = None
+    
+    # Risk assessment
+    overall_risk_score: float = 0.0
+    risk_factors: List[str] = field(default_factory=list)
+
+
+# ============================================================================
+# FORENSIC ENGINE - RVU & GPCI
+# ============================================================================
+
+@dataclass
+class RVUComponent:
+    """Relative Value Unit components for a procedure"""
+    work_rvu: Decimal
+    practice_expense_rvu: Decimal
+    malpractice_rvu: Decimal
+    total_rvu: Decimal
+    
+    def calculate_total(self) -> Decimal:
+        return self.work_rvu + self.practice_expense_rvu + self.malpractice_rvu
+
+
+@dataclass
+class GPCIMultiplier:
+    """Geographic Practice Cost Index by locality"""
+    locality_code: str
+    locality_name: str
+    work_gpci: Decimal
+    practice_expense_gpci: Decimal
+    malpractice_gpci: Decimal
+    effective_year: int
+
+
+@dataclass
+class ProcedureCode:
+    """CPT/HCPCS procedure code with pricing data"""
+    code: str
+    description: str
+    code_type: str  # "CPT" or "HCPCS"
+    rvu: RVUComponent
+    conversion_factor: Decimal
+    
+    # Modifiers
+    modifiers: List[str] = field(default_factory=list)
+    
+    # Metadata
+    effective_date: datetime = field(default_factory=datetime.now)
+    status: str = "active"
+    
+    def calculate_medicare_rate(self, gpci: GPCIMultiplier) -> Decimal:
+        """Calculate Medicare reimbursement rate"""
+        adjusted_rvu = (
+            (self.rvu.work_rvu * gpci.work_gpci) +
+            (self.rvu.practice_expense_rvu * gpci.practice_expense_gpci) +
+            (self.rvu.malpractice_rvu * gpci.malpractice_gpci)
+        )
+        return adjusted_rvu * self.conversion_factor
+
+
+# ============================================================================
+# CLAIMS ANALYSIS
+# ============================================================================
+
+@dataclass
+class LineItem:
+    """Individual line item in a claim"""
+    line_number: int
+    procedure_code: str
+    description: str
+    units: int
+    billed_amount: Decimal
+    allowed_amount: Optional[Decimal]
+    paid_amount: Optional[Decimal]
+    patient_responsibility: Optional[Decimal]
+    denial_code: Optional[str] = None
+    denial_reason: Optional[str] = None
+
+
+@dataclass
+class Claim:
+    """Healthcare claim submission"""
+    claim_id: str
+    patient_id: str  # Scrubbed identifier
+    provider_id: str
+    payer_id: str
+    
+    # Dates
+    service_date: datetime
+    submission_date: datetime
+    adjudication_date: Optional[datetime] = None
+    
+    # Status
+    status: ClaimStatus
+    
+    # Financial
+    line_items: List[LineItem] = field(default_factory=list)
+    total_billed: Decimal = Decimal("0.00")
+    total_allowed: Optional[Decimal] = None
+    total_paid: Optional[Decimal] = None
+    patient_responsibility: Optional[Decimal] = None
+    
+    # Metadata
+    diagnosis_codes: List[str] = field(default_factory=list)
+    place_of_service: Optional[str] = None
+    
+    def calculate_totals(self):
+        """Calculate claim totals from line items"""
+        self.total_billed = sum(item.billed_amount for item in self.line_items)
+        if all(item.paid_amount for item in self.line_items):
+            self.total_paid = sum(item.paid_amount for item in self.line_items)
+
+
+# ============================================================================
+# FORENSIC AUDIT
+# ============================================================================
+
+@dataclass
+class AuditFinding:
+    """Individual audit finding"""
+    finding_id: str
+    finding_type: str  # e.g., "underpayment", "denial_error", "coding_issue"
+    severity: RiskLevel
+    description: str
+    
+    # Financial impact
+    expected_amount: Decimal
+    actual_amount: Decimal
+    variance: Decimal
+    
+    # References
+    claim_id: Optional[str] = None
+    line_item_ref: Optional[int] = None
+    contract_clause_ref: Optional[str] = None
+    
+    # Evidence
+    evidence: List[str] = field(default_factory=list)
+    supporting_docs: List[str] = field(default_factory=list)
+
+
+@dataclass
+class AuditReport:
+    """Complete forensic audit report"""
+    audit_id: str
+    claim_id: str
+    auditor: str  # System or human identifier
+    audit_date: datetime
+    
+    # Findings
+    findings: List[AuditFinding] = field(default_factory=list)
+    
+    # Summary
+    total_variance: Decimal = Decimal("0.00")
+    high_priority_count: int = 0
+    recommendation: Optional[str] = None
+    
+    # Validation results
+    validation_passed: bool = True
+    validation_errors: List[str] = field(default_factory=list)
+    
+    def calculate_summary(self):
+        """Calculate audit summary statistics"""
+        self.total_variance = sum(f.variance for f in self.findings)
+        self.high_priority_count = sum(
+            1 for f in self.findings 
+            if f.severity in [RiskLevel.HIGH, RiskLevel.CRITICAL]
+        )
+
+
+# ============================================================================
+# ADVOCACY & APPEALS
+# ============================================================================
+
+@dataclass
+class AppealTemplate:
+    """Template for generating appeal letters"""
+    template_id: str
+    template_name: str
+    denial_type: str
+    template_html: str
+    required_fields: List[str] = field(default_factory=list)
+    success_rate: Optional[float] = None
+
+
+@dataclass
+class AppealLetter:
+    """Generated appeal letter"""
+    appeal_id: str
+    claim_id: str
+    template_used: str
+    
+    # Content
+    generated_html: str
+    generated_text: str
+    
+    # Supporting evidence
+    attachments: List[str] = field(default_factory=list)
+    audit_report_id: Optional[str] = None
+    
+    # Metadata
+    generated_at: datetime = field(default_factory=datetime.now)
+    sent_at: Optional[datetime] = None
+    status: str = "draft"
+
+
+# ============================================================================
+# DOCUMENT PROCESSING
+# ============================================================================
+
+@dataclass
+class OCRResult:
+    """OCR processing result"""
+    document_id: str
+    ocr_engine: str  # "tesseract" or "textract"
+    
+    # Extracted content
+    raw_text: str
+    confidence_score: float
+    
+    # Structure
+    pages: int
+    detected_tables: List[Dict[str, Any]] = field(default_factory=list)
+    detected_fields: Dict[str, str] = field(default_factory=dict)
+    
+    # Processing metadata
+    processed_at: datetime = field(default_factory=datetime.now)
+    processing_time_ms: int = 0
+
+
+@dataclass
+class ScrubbedDocument:
+    """Document with PHI/PII removed"""
+    document_id: str
+    original_doc_id: str
+    document_type: DocumentType
+    
+    # Scrubbed content
+    scrubbed_text: str
+    redaction_map: Dict[str, str] = field(default_factory=dict)  # token -> placeholder
+    
+    # Metadata
+    scrubbed_at: datetime = field(default_factory=datetime.now)
+    scrubber_version: str = "1.0"
+    fields_scrubbed: List[str] = field(default_factory=list)
+
+
+# ============================================================================
+# CACHING & PERFORMANCE
+# ============================================================================
+
+@dataclass
+class CachedGPCI:
+    """Cached GPCI data with TTL"""
+    cache_key: str
+    locality_code: str
+    gpci_data: GPCIMultiplier
+    
+    # Cache metadata
+    cached_at: datetime = field(default_factory=datetime.now)
+    ttl_seconds: int = 86400  # 24 hours
+    hit_count: int = 0
+    
+    def is_expired(self) -> bool:
+        """Check if cache entry is expired"""
+        age = (datetime.now() - self.cached_at).total_seconds()
+        return age > self.ttl_seconds
+
+
+# ============================================================================
+# PIPELINE ORCHESTRATION
+# ============================================================================
+
+@dataclass
+class PipelineJob:
+    """End-to-end processing pipeline job"""
+    job_id: str
+    input_document_id: str
+    
+    # Pipeline stages
+    ocr_result: Optional[OCRResult] = None
+    scrubbed_doc: Optional[ScrubbedDocument] = None
+    parsed_contract: Optional[ParsedContract] = None
+    claims: List[Claim] = field(default_factory=list)
+    audit_report: Optional[AuditReport] = None
+    appeal_letter: Optional[AppealLetter] = None
+    
+    # Job metadata
+    status: str = "pending"
+    started_at: datetime = field(default_factory=datetime.now)
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    
+    # Performance
+    stage_timings: Dict[str, float] = field(default_factory=dict)
+
+
+# ============================================================================
+# PENNSYLVANIA PAYERS - Major Insurance Companies
+# ============================================================================
+
+@dataclass
+class PayerProfile:
+    """Pennsylvania health insurance payer profile"""
+    payer_id: str
+    payer_name: str
+    payer_type: str  # "Blue Cross Blue Shield", "Regional", "National", "Medicaid MCO", "Medicare Advantage"
+    market_share_percent: Optional[float] = None
+    coverage_region: List[str] = field(default_factory=list)  # County names
+    plan_types: List[str] = field(default_factory=list)  # HMO, PPO, EPO, POS
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    provider_network_size: Optional[int] = None
+    
+    # EOB identifiers
+    typical_policy_prefix: Optional[str] = None
+    claim_office_address: Optional[str] = None
+
+
+# Major Pennsylvania Payers Registry
+PA_MAJOR_PAYERS = {
+    "highmark": PayerProfile(
+        payer_id="PA-HIGHMARK",
+        payer_name="Highmark Blue Cross Blue Shield",
+        payer_type="Blue Cross Blue Shield",
+        market_share_percent=28.0,
+        coverage_region=["Western PA - 29 counties", "Allegheny", "Erie", "Westmoreland"],
+        plan_types=["HMO", "PPO", "EPO"],
+        website="highmark.com",
+        typical_policy_prefix="HM",
+    ),
+    
+    "independence_bc": PayerProfile(
+        payer_id="PA-IBX",
+        payer_name="Independence Blue Cross (IBX)",
+        payer_type="Blue Cross Blue Shield",
+        market_share_percent=25.0,
+        coverage_region=["Philadelphia", "Montgomery", "Bucks", "Chester", "Delaware"],
+        plan_types=["HMO", "PPO", "POS"],
+        website="ibx.com",
+        typical_policy_prefix="IBX",
+    ),
+    
+    "upmc": PayerProfile(
+        payer_id="PA-UPMC",
+        payer_name="UPMC Health Plan",
+        payer_type="Regional Provider-Owned",
+        market_share_percent=10.0,
+        coverage_region=["Western PA", "Pittsburgh Metro"],
+        plan_types=["HMO", "PPO", "EPO"],
+        website="upmchealthplan.com",
+        typical_policy_prefix="UPMC",
+    ),
+    
+    "aetna_cvs": PayerProfile(
+        payer_id="PA-AETNA",
+        payer_name="Aetna (CVS Health)",
+        payer_type="National",
+        market_share_percent=12.0,
+        coverage_region=["Statewide"],
+        plan_types=["HMO", "PPO", "POS"],
+        website="aetna.com",
+        typical_policy_prefix="W",
+    ),
+    
+    "geisinger": PayerProfile(
+        payer_id="PA-GEISINGER",
+        payer_name="Geisinger Health Plan",
+        payer_type="Regional Provider-Owned",
+        coverage_region=["Central PA", "Northeastern PA"],
+        plan_types=["HMO", "PPO"],
+        website="geisinger.org",
+        typical_policy_prefix="GHP",
+    ),
+    
+    "capital_bc": PayerProfile(
+        payer_id="PA-CAPITAL",
+        payer_name="Capital Blue Cross",
+        payer_type="Blue Cross Blue Shield",
+        coverage_region=["Central PA", "21 counties"],
+        plan_types=["HMO", "PPO", "POS"],
+        website="capbluecross.com",
+        typical_policy_prefix="CAP",
+    ),
+    
+    "united_healthcare": PayerProfile(
+        payer_id="PA-UHC",
+        payer_name="UnitedHealthcare",
+        payer_type="National",
+        coverage_region=["Statewide"],
+        plan_types=["HMO", "PPO", "POS", "EPO"],
+        website="uhc.com",
+        typical_policy_prefix="UHC",
+    ),
+    
+    "humana": PayerProfile(
+        payer_id="PA-HUMANA",
+        payer_name="Humana",
+        payer_type="National",
+        coverage_region=["Statewide - primarily Medicare Advantage"],
+        plan_types=["HMO", "PPO"],
+        website="humana.com",
+        typical_policy_prefix="H",
+    ),
+    
+    "oscar": PayerProfile(
+        payer_id="PA-OSCAR",
+        payer_name="Oscar Health",
+        payer_type="National Tech-Focused",
+        coverage_region=["Philadelphia Metro", "Pittsburgh"],
+        plan_types=["EPO", "HMO"],
+        website="hioscar.com",
+        typical_policy_prefix="OSC",
+    ),
+    
+    "jefferson_health": PayerProfile(
+        payer_id="PA-JEFFERSON",
+        payer_name="Jefferson Health Plans (Health Partners Plans)",
+        payer_type="Regional Provider-Owned",
+        coverage_region=["Southeastern PA"],
+        plan_types=["HMO", "POS", "PPO"],
+        website="healthpartnersplans.com",
+        typical_policy_prefix="HPP",
+    ),
+    
+    "ambetter": PayerProfile(
+        payer_id="PA-AMBETTER",
+        payer_name="Ambetter (Centene/PA Health & Wellness)",
+        payer_type="National Marketplace",
+        coverage_region=["Statewide"],
+        plan_types=["HMO", "PPO"],
+        website="ambetter.com",
+        typical_policy_prefix="AMB",
+    ),
+    
+    "wellcare": PayerProfile(
+        payer_id="PA-WELLCARE",
+        payer_name="Wellcare (Centene)",
+        payer_type="National Medicare/Medicaid",
+        coverage_region=["Statewide"],
+        plan_types=["HMO", "PPO", "DSNP"],
+        website="wellcare.com",
+        typical_policy_prefix="WC",
+    ),
+}
+
+
+# ============================================================================
+# EXPLANATION OF BENEFITS (EOB) DATA STRUCTURES
+# ============================================================================
+
+@dataclass
+class EOBHeader:
+    """EOB document header with member/patient information"""
+    eob_id: str
+    eob_date: datetime
+    
+    # Member information
+    member_name: str  # Scrubbed
+    member_id: str
+    policy_number: str
+    group_number: Optional[str] = None
+    
+    # Patient information (if different from member)
+    patient_name: str  # Scrubbed
+    patient_id: str
+    patient_dob: Optional[datetime] = None
+    
+    # Payer information
+    payer_name: str
+    payer_id: str
+    payer_contact_phone: str
+    payer_address: Optional[str] = None
+    
+    # Plan details
+    plan_name: str
+    plan_type: str  # "HMO", "PPO", "EPO", "POS"
+    network_status: str  # "in_network" or "out_of_network"
+
+
+@dataclass
+class EOBServiceLine:
+    """Individual service line on an EOB statement"""
+    line_number: int
+    
+    # Service details
+    service_date: datetime
+    service_end_date: Optional[datetime] = None
+    procedure_code: str  # CPT/HCPCS
+    procedure_description: str
+    modifiers: List[str] = field(default_factory=list)
+    
+    # Provider information
+    provider_name: str
+    provider_npi: Optional[str] = None
+    place_of_service: Optional[str] = None
+    
+    # Financial breakdown (as shown on EOB)
+    billed_amount: Decimal  # Provider charges / Amount charged
+    allowed_amount: Decimal  # Allowed amount / Contracted rate
+    discount_adjustment: Decimal  # Network savings / Adjustment
+    
+    # Insurance payment breakdown
+    plan_paid: Decimal  # Paid by insurer / Insurance paid
+    deductible_applied: Decimal  # Applied to deductible
+    copay_amount: Decimal  # Copayment
+    coinsurance_amount: Decimal  # Coinsurance
+    
+    # Patient responsibility
+    patient_responsibility: Decimal  # Amount you owe / Patient balance
+    not_covered_amount: Decimal  # Non-covered charges
+    
+    # Status codes
+    claim_status: str  # "Paid", "Denied", "Partially Paid", "Pending"
+    remark_codes: List[str] = field(default_factory=list)
+    reason_codes: List[str] = field(default_factory=list)
+    denial_reason: Optional[str] = None
+    
+    def validate_math(self) -> bool:
+        """Validate EOB math is correct"""
+        # allowed_amount = plan_paid + deductible + copay + coinsurance + not_covered
+        calculated_allowed = (
+            self.plan_paid + 
+            self.deductible_applied + 
+            self.copay_amount + 
+            self.coinsurance_amount + 
+            self.not_covered_amount
+        )
+        return abs(calculated_allowed - self.allowed_amount) < Decimal("0.01")
+
+
+@dataclass
+class EOBRemarkCode:
+    """EOB remark/reason code explanation"""
+    code: str
+    code_type: str  # "CARC" (Claim Adjustment Reason Code) or "RARC" (Remittance Advice)
+    description: str
+    category: str  # "payment", "denial", "adjustment", "info"
+
+
+@dataclass
+class EOBBenefitSummary:
+    """Current benefit usage summary on EOB"""
+    plan_year_start: datetime
+    
+    # Deductible tracking
+    individual_deductible_total: Decimal
+    individual_deductible_met: Decimal
+    individual_deductible_remaining: Decimal
+    
+    family_deductible_total: Optional[Decimal] = None
+    family_deductible_met: Optional[Decimal] = None
+    family_deductible_remaining: Optional[Decimal] = None
+    
+    # Out-of-pocket maximum tracking
+    individual_oop_max_total: Decimal
+    individual_oop_max_met: Decimal
+    individual_oop_max_remaining: Decimal
+    
+    family_oop_max_total: Optional[Decimal] = None
+    family_oop_max_met: Optional[Decimal] = None
+    family_oop_max_remaining: Optional[Decimal] = None
+    
+    # Additional benefit tracking
+    hsa_hra_balance: Optional[Decimal] = None
+    flex_spending_balance: Optional[Decimal] = None
+
+
+@dataclass
+class ExplanationOfBenefits:
+    """Complete EOB statement (Pennsylvania payers)"""
+    eob_id: str
+    
+    # Header information
+    header: EOBHeader
+    
+    # Service lines
+    service_lines: List[EOBServiceLine] = field(default_factory=list)
+    
+    # Financial summary
+    total_billed: Decimal = Decimal("0.00")
+    total_allowed: Decimal = Decimal("0.00")
+    total_network_savings: Decimal = Decimal("0.00")
+    total_plan_paid: Decimal = Decimal("0.00")
+    total_patient_responsibility: Decimal = Decimal("0.00")
+    
+    # Benefit summary
+    benefit_summary: Optional[EOBBenefitSummary] = None
+    
+    # Codes and explanations
+    remark_codes: List[EOBRemarkCode] = field(default_factory=list)
+    
+    # Important notices
+    appeal_deadline: Optional[datetime] = None
+    appeal_instructions: Optional[str] = None
+    
+    # Processing metadata
+    claim_received_date: Optional[datetime] = None
+    claim_processed_date: Optional[datetime] = None
+    check_number: Optional[str] = None  # If payment issued
+    
+    def calculate_totals(self):
+        """Calculate EOB financial totals from service lines"""
+        self.total_billed = sum(line.billed_amount for line in self.service_lines)
+        self.total_allowed = sum(line.allowed_amount for line in self.service_lines)
+        self.total_network_savings = sum(line.discount_adjustment for line in self.service_lines)
+        self.total_plan_paid = sum(line.plan_paid for line in self.service_lines)
+        self.total_patient_responsibility = sum(
+            line.patient_responsibility for line in self.service_lines
+        )
+    
+    def get_denied_lines(self) -> List[EOBServiceLine]:
+        """Get all denied service lines"""
+        return [line for line in self.service_lines if line.claim_status == "Denied"]
+    
+    def get_variance_lines(self, threshold: Decimal = Decimal("50.00")) -> List[EOBServiceLine]:
+        """Get lines with significant payment variance"""
+        return [
+            line for line in self.service_lines 
+            if abs(line.allowed_amount - line.billed_amount) > threshold
+        ]
+
+
+# Common Pennsylvania EOB Remark Codes
+PA_COMMON_REMARK_CODES = {
+    "OA23": EOBRemarkCode(
+        code="OA23",
+        code_type="CARC",
+        description="Exceeds the contracted/maximum allowable amount",
+        category="adjustment"
+    ),
+    "PR1": EOBRemarkCode(
+        code="PR1",
+        code_type="CARC",
+        description="Deductible amount applied to patient responsibility",
+        category="payment"
+    ),
+    "PR2": EOBRemarkCode(
+        code="PR2",
+        code_type="CARC",
+        description="Coinsurance amount applied to patient responsibility",
+        category="payment"
+    ),
+    "PR3": EOBRemarkCode(
+        code="PR3",
+        code_type="CARC",
+        description="Copayment amount applied to patient responsibility",
+        category="payment"
+    ),
+    "CO50": EOBRemarkCode(
+        code="CO50",
+        code_type="CARC",
+        description="Non-covered services or procedures",
+        category="denial"
+    ),
+    "CO97": EOBRemarkCode(
+        code="CO97",
+        code_type="CARC",
+        description="Benefit maximum has been reached",
+        category="denial"
+    ),
+    "PDC": EOBRemarkCode(
+        code="PDC",
+        code_type="RARC",
+        description="Billed amount exceeds maximum payment allowed",
+        category="adjustment"
+    ),
+}
+
+
+# ============================================================================
+# EXAMPLE USAGE
+# ============================================================================
+
+if __name__ == "__main__":
+    # Example 1: Create a parsed contract with deductible trap
+    contract = ParsedContract(
+        contract_id="CNT-2026-001",
+        payer_name="Highmark Blue Cross Blue Shield",
+        plan_name="Freedom Blue PPO",
+        effective_date=datetime(2026, 1, 1),
+        termination_date=datetime(2026, 12, 31),
+        status=ContractStatus.FLAGGED,
+        overall_risk_score=0.75
+    )
+    
+    trap = DeductibleTrap(
+        trap_id="TRAP-001",
+        trap_type="separate_deductible",
+        description="Separate deductible for in-network specialists",
+        clause_refs=["SEC-4.2"],
+        estimated_cost_impact=Decimal("3000.00")
+    )
+    contract.deductible_traps.append(trap)
+    
+    # Example 2: Create an EOB with service lines
+    eob_header = EOBHeader(
+        eob_id="EOB-2026-12345",
+        eob_date=datetime(2026, 1, 10),
+        member_name="MEMBER_001",
+        member_id="IBM123456789",
+        policy_number="IBM123456789",
+        patient_name="PATIENT_001",
+        patient_id="PAT001",
+        payer_name="Independence Blue Cross",
+        payer_id="PA-IBX",
+        payer_contact_phone="1-800-275-2583",
+        plan_name="Personal Choice PPO Silver",
+        plan_type="PPO",
+        network_status="in_network"
+    )
+    
+    service_line = EOBServiceLine(
+        line_number=1,
+        service_date=datetime(2026, 1, 5),
+        procedure_code="99213",
+        procedure_description="Office visit, established patient",
+        billed_amount=Decimal("250.00"),
+        allowed_amount=Decimal("150.00"),
+        discount_adjustment=Decimal("100.00"),
+        plan_paid=Decimal("120.00"),
+        deductible_applied=Decimal("0.00"),
+        copay_amount=Decimal("30.00"),
+        coinsurance_amount=Decimal("0.00"),
+        patient_responsibility=Decimal("30.00"),
+        not_covered_amount=Decimal("0.00"),
+        claim_status="Paid",
+        provider_name="Dr. Smith Family Practice",
+        place_of_service="Office"
+    )
+    
+    eob = ExplanationOfBenefits(
+        eob_id="EOB-2026-12345",
+        header=eob_header,
+        service_lines=[service_line]
+    )
+    eob.calculate_totals()
+    
+    print(f"Contract {contract.contract_id} has {len(contract.deductible_traps)} traps")
+    print(f"EOB {eob.eob_id}: Patient owes ${eob.total_patient_responsibility}")
