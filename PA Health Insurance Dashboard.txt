@@ -1,0 +1,681 @@
+import React, { useState, useMemo } from 'react';
+
+// Master Market Filings & Enrollment Data
+const INDIVIDUAL_CARRIERS = [
+  { name: 'Ambetter Health of Pennsylvania', rate: 40.90, baseRate: 23.44, mappingRate: 17.46, regions: '1–9', notes: 'Includes bronze-tier exit & silver mapping differential' },
+  { name: 'Keystone Health Plan Central', rate: 33.83, regions: '6, 7, 9', notes: 'High regional impact in central PA' },
+  { name: 'Highmark Benefits Group', rate: 21.40, regions: '3, 8', notes: 'Western and north-central regions' },
+  { name: 'Partners Insurance Company', rate: 20.51, regions: '3, 6, 8', notes: 'Regional expansion product' },
+  { name: 'QCC Insurance Company', rate: 19.88, regions: '8', notes: 'Philadelphia suburban market' },
+  { name: 'Capital Advantage Assurance Co.', rate: 18.32, regions: '6, 7, 9', notes: 'Central PA market area' },
+  { name: 'Highmark Inc.', rate: 16.16, regions: '1, 2, 4, 5, 6, 7, 9', notes: 'Broad statewide coverage footprint' },
+  { name: 'Health Partners Plans', rate: 15.90, regions: '3, 6, 8', notes: 'Southeastern PA focus' },
+  { name: 'UPMC Health Plan, Inc.', rate: 15.82, regions: 'Statewide', notes: 'Additional PID announcement filing' },
+  { name: 'Oscar Health Plan of Pennsylvania', rate: 15.39, regions: '3, 6, 7, 9', notes: 'Tech-enabled individual plan' },
+  { name: 'Keystone Health Plan East', rate: 14.68, regions: '8', notes: 'Greater Philadelphia region' },
+  { name: 'Geisinger Quality Options', rate: 12.95, regions: '2, 3, 5, 6, 7, 9', notes: 'Central & Northeastern PA' },
+  { name: 'UPMC Health Network, Inc.', rate: 12.03, regions: 'Statewide', notes: 'Additional PID announcement filing' },
+  { name: 'Geisinger Health Plan', rate: 10.46, regions: '2, 3, 5, 6, 7, 9', notes: 'Lowest requested rate hike in individual market' },
+];
+
+const SMALL_GROUP_CARRIERS = [
+  { name: 'Keystone Health Plan Central', rate: 20.93, regions: '6, 7, 9', notes: 'Central region small group carrier' },
+  { name: 'Highmark Care Benefits', rate: 19.95, regions: '3', notes: 'Highest small group rate request' },
+  { name: 'Highmark Benefits Group', rate: 16.99, regions: '6, 7, 9', notes: 'Commercial group coverage' },
+  { name: 'Capital Advantage Assurance Co.', rate: 16.11, regions: '6, 7, 9', notes: 'Central PA small business plans' },
+  { name: 'Highmark Inc.', rate: 15.57, regions: '1, 2, 4, 5, 6, 7, 9', notes: 'Multi-region small employer plans' },
+  { name: 'Highmark Coverage Advantage', rate: 14.63, regions: '1, 2, 4, 5, 6', notes: 'Western and Northern PA' },
+  { name: 'Highmark Senior Health Company', rate: 14.32, regions: '8', notes: 'Southeastern PA market' },
+  { name: 'Independence Assurance Company', rate: 8.95, regions: '8', notes: 'Greater Philadelphia region' },
+  { name: 'Geisinger Quality Options', rate: 4.05, regions: '2, 3, 5, 6, 7, 9', notes: 'Central PA employer health plans' },
+  { name: 'Geisinger Health Plan', rate: 3.74, regions: '2, 3, 5, 6, 7, 9', notes: 'Lowest small group requested rate' },
+  { name: 'UnitedHealthcare of Pennsylvania', rate: null, regions: 'Statewide', notes: 'Includes Gold/Silver-to-Bronze plan mapping adjustments' },
+];
+
+const ENROLLMENT_ATTRITION = [
+  { date: 'Feb 1, 2026', count: 486000, label: 'Peak Active Enrollment', drop: 0 },
+  { date: 'Mar 24, 2026', count: 471442, label: 'Initial Subsidy Loss Impact', drop: 14558 },
+  { date: 'May 1, 2026', count: 452000, label: 'Spring Coverage Drops', drop: 34000 },
+  { date: 'Jul 1, 2026', count: 431270, label: 'Mid-Year Churn Surge', drop: 54730 },
+  { date: 'Aug 1, 2026', count: 422869, label: 'Mid-Year Baseline Target', drop: 63131 },
+];
+
+const TIMELINE_EVENTS = [
+  { date: '2025-12-31', title: 'ARPA / IRA Federal Subsidies Expire', category: 'Subsidy Policy', desc: 'Enhanced federal premium tax credits end, causing net monthly premiums to jump ~102% on average.' },
+  { date: '2026-01-31', title: 'Open Enrollment 2026 Concludes', category: 'Enrollment', desc: 'Pennie reaches peak active baseline of 486,000 enrollees.' },
+  { date: '2026-03-01', title: 'Pennie Board Shortens PY2027 Schedule', category: 'Regulatory', desc: 'Board votes to shorten OE to 9 weeks (Oct 15 - Dec 15) per federal CMS rule.' },
+  { date: '2026-05-15', title: 'Insurers Submit Proposed 2027 Rate Filings', category: 'Regulatory', desc: 'Pennsylvania Insurance Department receives initial rate change requests.' },
+  { date: '2026-07-16', title: 'District Court Issues Nationwide Stay', category: 'Litigation', desc: 'City of Columbus v. Kennedy halts the CMS 9-week open enrollment restriction.' },
+  { date: '2026-07-23', title: 'PID Releases Proposed 2027 Rate Filings', category: 'Regulatory', desc: 'PID announces 17.1% individual and 11.5% small group weighted requested averages.' },
+  { date: '2026-07-31', title: 'CMS Guidance Confirms 15-Week Window', category: 'Regulatory', desc: 'Federal guidance confirms state exchanges can maintain traditional enrollment windows.' },
+  { date: '2026-08-01', title: 'Pennie Reports 13.0% Active Attrition', category: 'Enrollment', desc: 'Active enrollees decline to 422,869; cumulative cancellations surpass 191,000.' },
+  { date: '2026-08-22', title: 'PID Public Comment Period Closes', category: 'Regulatory', desc: 'Public feedback window on carrier proposals formally closes.' },
+  { date: '2026-11-01', title: 'Restored Open Enrollment 2027 Begins', category: 'Enrollment', desc: '15-week Pennie enrollment window opens across Pennsylvania.' },
+  { date: '2027-01-15', title: 'Open Enrollment 2027 Closes', category: 'Enrollment', desc: 'Final deadline for Plan Year 2027 marketplace coverage selections.' },
+];
+
+const IconShield = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+);
+
+const IconTrendingUp = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconCalculator = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconInfo = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [marketType, setMarketType] = useState('individual');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [ratingRegion, setRatingRegion] = useState('all');
+  const [selectedTimelineCategory, setSelectedTimelineCategory] = useState('All');
+  
+  // Rate Shock Calculator State
+  const [calcTier, setCalcTier] = useState('bronze');
+  const [calcCarrier, setCalcCarrier] = useState('Ambetter Health of Pennsylvania');
+  const [calcCurrentPremium, setCalcCurrentPremium] = useState(280);
+
+  // Filtered carriers based on search and region
+  const filteredCarriers = useMemo(() => {
+    const list = marketType === 'individual' ? INDIVIDUAL_CARRIERS : SMALL_GROUP_CARRIERS;
+    return list.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRegion = ratingRegion === 'all' || item.regions.includes(ratingRegion) || item.regions === 'Statewide';
+      return matchesSearch && matchesRegion;
+    });
+  }, [marketType, searchQuery, ratingRegion]);
+
+  // Calculated estimates for calculator
+  const calculatorResults = useMemo(() => {
+    const carrier = INDIVIDUAL_CARRIERS.find(c => c.name === calcCarrier) || INDIVIDUAL_CARRIERS[0];
+    let netIncreasePct = carrier.rate;
+    let note = "Standard silver-to-silver carrier proposed rate request.";
+
+    if (calcCarrier.includes('Ambetter')) {
+      if (calcTier === 'bronze') {
+        netIncreasePct = 40.90;
+        note = "Combines 23.44% base silver hike + 17.46% Bronze-to-Silver mapping adjustment.";
+      } else {
+        netIncreasePct = 23.44;
+        note = "Direct Silver-to-Silver base premium rate increase.";
+      }
+    }
+
+    const estimatedNewPremium = calcCurrentPremium * (1 + netIncreasePct / 100);
+    const monthlyDifference = estimatedNewPremium - calcCurrentPremium;
+    const annualDifference = monthlyDifference * 12;
+
+    return {
+      netIncreasePct,
+      estimatedNewPremium,
+      monthlyDifference,
+      annualDifference,
+      note
+    };
+  }, [calcCarrier, calcTier, calcCurrentPremium]);
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased pb-12">
+      {/* Header Banner */}
+      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+                <IconShield />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-white tracking-tight">Pennsylvania Health Policy Intelligence</h1>
+                  <span className="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                    PY 2027 Filings
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">Insurance Department Rate Analysis, Pennie Marketplace Attrition & Legal Timeline</p>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <nav className="flex items-center space-x-1 bg-slate-800/60 p-1.5 rounded-xl border border-slate-700/50 overflow-x-auto">
+              {[
+                { id: 'overview', label: 'Executive Overview', icon: IconInfo },
+                { id: 'rates', label: 'Rate Filings', icon: IconTrendingUp },
+                { id: 'attrition', label: 'Pennie Enrollment', icon: IconUsers },
+                { id: 'timeline', label: 'Regulatory Timeline', icon: IconCalendar },
+                { id: 'calculator', label: 'Rate Calculator', icon: IconCalculator },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <Icon />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+        
+        {}
+        {activeTab === 'overview' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Top Stat Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 hover:border-slate-600 transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-medium text-slate-400">Individual Market Avg</span>
+                  <span className="p-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-bold">+17.1%</span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-white">+17.1%</div>
+                  <p className="text-xs text-slate-400 mt-1">Enrollment-weighted request across individual carriers</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 hover:border-slate-600 transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-medium text-slate-400">Small-Group Market Avg</span>
+                  <span className="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg text-xs font-bold">+11.5%</span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-white">+11.5%</div>
+                  <p className="text-xs text-slate-400 mt-1">Weighted average request for small employer plans</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 hover:border-slate-600 transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-medium text-slate-400">Pennie Attrition (2026)</span>
+                  <span className="p-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-bold">-13.0%</span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-3xl font-extrabold text-white">-63,131</div>
+                  <p className="text-xs text-slate-400 mt-1">Active enrollees lost between Feb 1 & Aug 1, 2026</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 hover:border-slate-600 transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-medium text-slate-400">Restored OE Window</span>
+                  <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold">15 Weeks</span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-bold text-white">Nov 1 - Jan 15</div>
+                  <p className="text-xs text-slate-400 mt-1">Reinstated following City of Columbus v. Kennedy stay</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Executive Summary Narrative */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  Pennsylvania Plan Year 2027 Public Health Context
+                </h2>
+                <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
+                  <p>
+                    In July 2026, the Pennsylvania Insurance Department (PID) published proposed Plan Year 2027 health insurance rate filings. Pennsylvania insurers requested an enrollment-weighted average premium increase of <strong className="text-white">17.1% in the individual market</strong> and <strong className="text-white">11.5% in the small-group market</strong>.
+                  </p>
+                  <p>
+                    These proposed rate hikes arrive amidst unprecedented marketplace volatility on Pennie (Pennsylvania’s state-based health exchange). Following the expiration of enhanced federal premium tax credits on December 31, 2025, individual marketplace enrollees experienced a mean net monthly premium payment spike of approximately <strong className="text-rose-400">102%</strong>.
+                  </p>
+                  <p>
+                    Concurrently, active enrollment contracted from <strong className="text-white">486,000 enrollees on February 1, 2026</strong> down to <strong className="text-white">422,869 by August 1, 2026</strong>—a loss of over 63,000 Pennsylvanians. This report synthesizes carrier rate mechanics, plan mapping dynamics, enrollment attrition, and open enrollment regulatory updates.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-700/50 flex flex-wrap gap-4">
+                  <button 
+                    onClick={() => setActiveTab('rates')}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-blue-600/20"
+                  >
+                    Explore Carrier Filings →
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('attrition')}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold transition-all"
+                  >
+                    View Attrition Data →
+                  </button>
+                </div>
+              </div>
+
+              {/* Focus Box: Ambetter Deconstruction */}
+              <div className="bg-gradient-to-br from-amber-950/40 to-slate-800/40 border border-amber-500/30 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <IconInfo />
+                  <span>Ambetter Rate Mechanics Breakdown</span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Ambetter Health of Pennsylvania submitted the highest individual market request at <strong className="text-amber-300">40.90%</strong>. However, PID’s statutory review revealed that this top-line figure is driven by a bronze-tier exit:
+                </p>
+
+                <div className="space-y-3 pt-2">
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Silver-to-Silver Base Increase:</span>
+                      <span className="font-bold text-amber-400">23.44%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                      <div className="bg-amber-500 h-full" style={{ width: '57%' }}></div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Bronze-to-Silver Mapping Differential:</span>
+                      <span className="font-bold text-rose-400">17.46%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                      <div className="bg-rose-500 h-full" style={{ width: '43%' }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400 italic">
+                  Note: Existing Silver enrollees face a 23.44% hike, while Bronze members mapped into higher-benefit Silver plans absorb the cumulative 40.90% impact.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {}
+        {activeTab === 'rates' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Filter Bar */}
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+              {/* Market Toggle */}
+              <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-700/50 w-full md:w-auto">
+                <button
+                  onClick={() => setMarketType('individual')}
+                  className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    marketType === 'individual'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Individual Market (17.1% Avg)
+                </button>
+                <button
+                  onClick={() => setMarketType('smallGroup')}
+                  className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    marketType === 'smallGroup'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Small-Group Market (11.5% Avg)
+                </button>
+              </div>
+
+              {/* Search & Region Select */}
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                  <input
+                    type="text"
+                    placeholder="Search carrier name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-900/80 border border-slate-700/50 text-white text-xs rounded-xl px-3.5 py-2 pl-9 focus:outline-none focus:border-blue-500"
+                  />
+                  <div className="absolute left-3 top-2.5 text-slate-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <select
+                  value={ratingRegion}
+                  onChange={(e) => setRatingRegion(e.target.value)}
+                  className="bg-slate-900/80 border border-slate-700/50 text-white text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="all">All Rating Areas (1-9)</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((r) => (
+                    <option key={r} value={r.toString()}>Rating Area {r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Carrier Grid / List */}
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Proposed PY 2027 Rate Requests</span>
+                  <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full font-normal">
+                    {filteredCarriers.length} Carriers Listed
+                  </span>
+                </h3>
+                <span className="text-xs text-slate-400">Spread: {marketType === 'individual' ? '30.44% pts' : '15.90% pts'}</span>
+              </div>
+
+              {/* Carrier Chart Visual Bar List */}
+              <div className="space-y-4">
+                {filteredCarriers.map((carrier, idx) => {
+                  const rateVal = carrier.rate || 0;
+                  const maxRate = marketType === 'individual' ? 45 : 22;
+                  const barWidthPct = Math.min((rateVal / maxRate) * 100, 100);
+
+                  return (
+                    <div key={idx} className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 space-y-2 hover:border-slate-600 transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-sm font-bold text-white">{carrier.name}</span>
+                          <div className="text-xs text-slate-400">Rating Areas Served: {carrier.regions}</div>
+                        </div>
+                        <div className="flex items-baseline space-x-2">
+                          <span className={`text-lg font-extrabold ${rateVal > 25 ? 'text-rose-400' : rateVal > 15 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {carrier.rate !== null ? `+${carrier.rate.toFixed(2)}%` : 'N/A (Mapping)'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bar Visualization */}
+                      {carrier.rate !== null && (
+                        <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden flex">
+                          {carrier.baseRate && carrier.mappingRate ? (
+                            <>
+                              <div 
+                                className="bg-amber-500 h-full" 
+                                style={{ width: `${(carrier.baseRate / maxRate) * 100}%` }}
+                                title={`Base Increase: ${carrier.baseRate}%`}
+                              ></div>
+                              <div 
+                                className="bg-rose-500 h-full" 
+                                style={{ width: `${(carrier.mappingRate / maxRate) * 100}%` }}
+                                title={`Mapping Differential: ${carrier.mappingRate}%`}
+                              ></div>
+                            </>
+                          ) : (
+                            <div 
+                              className={`h-full rounded-full ${rateVal > 25 ? 'bg-rose-500' : rateVal > 15 ? 'bg-amber-500' : 'bg-blue-500'}`} 
+                              style={{ width: `${barWidthPct}%` }}
+                            ></div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="text-xs text-slate-400 pt-1 flex justify-between items-center">
+                        <span>{carrier.notes}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {}
+        {activeTab === 'attrition' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Attrition Hero Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                <span className="text-xs font-semibold text-slate-400">Net Enrollment Contraction</span>
+                <div className="text-3xl font-extrabold text-rose-400 mt-2">-63,131</div>
+                <p className="text-xs text-slate-400 mt-1">Active Pennie consumers lost between Feb 1 & Aug 1, 2026 (-13.0%)</p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                <span className="text-xs font-semibold text-slate-400">OE Non-Effectuations</span>
+                <div className="text-3xl font-extrabold text-amber-400 mt-2">85,000</div>
+                <p className="text-xs text-slate-400 mt-1">Consumers who selected plans but failed to pay initial binder</p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+                <span className="text-xs font-semibold text-slate-400">Cumulative Cancellations</span>
+                <div className="text-3xl font-extrabold text-slate-200 mt-2">&gt;191,000</div>
+                <p className="text-xs text-slate-400 mt-1">Aggregate cancellations including mid-year drops (108,000)</p>
+              </div>
+            </div>
+
+            {/* Custom SVG Line Chart for Pennie Attrition */}
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 space-y-6">
+              <div>
+                <h3 className="text-base font-bold text-white">Pennie Active Enrollment Decay (Plan Year 2026)</h3>
+                <p className="text-xs text-slate-400">Tracking post-subsidy expiration active membership drops across 2026</p>
+              </div>
+
+              {/* Chart Visual Component */}
+              <div className="relative h-64 w-full bg-slate-900/80 rounded-xl p-4 flex flex-col justify-between border border-slate-700/40">
+                <div className="absolute inset-0 p-6 flex flex-col justify-between pointer-events-none opacity-20">
+                  <div className="border-b border-slate-600 w-full"></div>
+                  <div className="border-b border-slate-600 w-full"></div>
+                  <div className="border-b border-slate-600 w-full"></div>
+                </div>
+
+                {/* SVG Visual Bars / Line overlay */}
+                <div className="relative z-10 h-full flex items-end justify-around pt-6 pb-2">
+                  {ENROLLMENT_ATTRITION.map((pt, i) => {
+                    const heightPct = ((pt.count - 400000) / (490000 - 400000)) * 100;
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-2 group w-1/6">
+                        <div className="opacity-0 group-hover:opacity-100 transition-all text-xs bg-slate-800 text-white px-2 py-1 rounded shadow border border-slate-700 mb-1">
+                          {pt.count.toLocaleString()}
+                        </div>
+                        <div className="w-12 bg-slate-800 rounded-t-lg relative overflow-hidden flex items-end" style={{ height: '140px' }}>
+                          <div 
+                            className="w-full bg-gradient-to-t from-blue-600 to-rose-500 rounded-t-lg transition-all duration-500" 
+                            style={{ height: `${heightPct}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-300 mt-2">{pt.date}</span>
+                        <span className="text-[10px] text-slate-500">{pt.count.toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Table Data View */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-900/60 text-slate-400 uppercase font-semibold">
+                    <tr>
+                      <th className="p-3">Measurement Date</th>
+                      <th className="p-3">Active Enrollees</th>
+                      <th className="p-3">Net Change from Feb 1</th>
+                      <th className="p-3">Percent Change (%)</th>
+                      <th className="p-3">Key Event / Context</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {ENROLLMENT_ATTRITION.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/30">
+                        <td className="p-3 font-medium text-white">{row.date}</td>
+                        <td className="p-3 text-slate-200 font-mono">{row.count.toLocaleString()}</td>
+                        <td className="p-3 text-rose-400 font-mono">{row.drop > 0 ? `-${row.drop.toLocaleString()}` : '—'}</td>
+                        <td className="p-3 text-rose-400 font-mono">{row.drop > 0 ? `-${((row.drop / 486000) * 100).toFixed(2)}%` : '—'}</td>
+                        <td className="p-3 text-slate-400">{row.label}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {}
+        {activeTab === 'timeline' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2">
+              {['All', 'Subsidy Policy', 'Regulatory', 'Litigation', 'Enrollment'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedTimelineCategory(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    selectedTimelineCategory === cat
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Timeline Vertical Path */}
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6">
+              <div className="relative border-l-2 border-slate-700 ml-4 pl-6 space-y-8">
+                {TIMELINE_EVENTS
+                  .filter(e => selectedTimelineCategory === 'All' || e.category === selectedTimelineCategory)
+                  .map((evt, idx) => (
+                    <div key={idx} className="relative group">
+                      {/* Timeline Dot */}
+                      <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-slate-900 border-2 border-blue-500 group-hover:scale-125 group-hover:bg-blue-500 transition-all"></div>
+
+                      <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 space-y-2 hover:border-slate-600 transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <span className="text-xs font-mono text-blue-400 font-bold">{evt.date}</span>
+                          <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
+                            {evt.category}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-bold text-white">{evt.title}</h4>
+                        <p className="text-xs text-slate-300 leading-relaxed">{evt.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {}
+        {activeTab === 'calculator' && (
+          <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <IconCalculator />
+                  <span>Personalized 2027 Rate Shock & Mapping Estimator</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Estimate potential monthly premium adjustments under proposed 2027 filings</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Select Carrier</label>
+                    <select
+                      value={calcCarrier}
+                      onChange={(e) => setCalcCarrier(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-blue-500"
+                    >
+                      {INDIVIDUAL_CARRIERS.map((c, i) => (
+                        <option key={i} value={c.name}>{c.name} (+{c.rate}%)</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Current Metal Tier</label>
+                    <select
+                      value={calcTier}
+                      onChange={(e) => setCalcTier(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="bronze">Bronze Tier (Subject to Ambetter Plan Mapping)</option>
+                      <option value="silver">Silver Tier</option>
+                      <option value="gold">Gold Tier</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Current Monthly Premium ($)</label>
+                  <input
+                    type="number"
+                    value={calcCurrentPremium}
+                    onChange={(e) => setCalcCurrentPremium(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Calculation Output Box */}
+              <div className="bg-slate-900/80 border border-blue-500/30 rounded-2xl p-6 space-y-4">
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Estimated Premium Output</span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                  <div className="p-3 bg-slate-800/60 rounded-xl">
+                    <span className="text-[10px] text-slate-400">Effective Rate Hike</span>
+                    <div className="text-xl font-bold text-amber-400">+{calculatorResults.netIncreasePct.toFixed(2)}%</div>
+                  </div>
+
+                  <div className="p-3 bg-slate-800/60 rounded-xl">
+                    <span className="text-[10px] text-slate-400">Est. New Monthly Cost</span>
+                    <div className="text-xl font-bold text-white">${calculatorResults.estimatedNewPremium.toFixed(2)}</div>
+                  </div>
+
+                  <div className="p-3 bg-slate-800/60 rounded-xl">
+                    <span className="text-[10px] text-slate-400">Monthly Increase</span>
+                    <div className="text-xl font-bold text-rose-400">+${calculatorResults.monthlyDifference.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl text-xs text-blue-200">
+                  <strong>Mechanics Note:</strong> {calculatorResults.note}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>Pennsylvania 2027 Health Insurance Rate Filings & Marketplace Analytics Portal.</p>
+        <p className="mt-1">Data compiled from Pennsylvania Insurance Department (PID), Pennie Public Dashboards & Federal CMS filings.</p>
+      </footer>
+    </div>
+  );
+}
