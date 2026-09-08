@@ -1,0 +1,59 @@
+
+Before we run this verification pass, one framing correction: an absence of search results is **not proof a citation is fabricated** — it's evidence the claim is unverifiable, which is enough for the repo's gate (only verified citations may render), but the ledger note should say "not found in official sources as of <date>," not "does not exist." Let me run the actual searches now rather than guess.
+
+Good first haul — and it's already reshaping the picture: **HB 2562/2563/2564 are real, confirmed bills** (ACA-codification package, PA House passed them in October 2024 with recorded vote counts). And **SB 1071 exists in the 2025-2026 session but it's a Crimes/Municipalities bill, not health insurance** — a session-and-topic mismatch, not a clean "doesn't exist." Let me chase the remaining items.
+
+Search round complete. Here's what the evidence supports — with an important nuance the "they don't exist" framing misses:
+
+## Verification results
+
+**SB 1071 (2024) — MISATTRIBUTED, not nonexistent.** SB 1071 *does* exist in the 2025–2026 session (palegis.us/legislation/bills/2025/sb1071), but it amends **Titles 18 (Crimes and Offenses) and 53 (Municipalities)** — it has nothing to do with health insurance. So the correct ledger treatment is "wrong bill / wrong session for health-insurance claim," not "bill doesn't exist." Notably, the actual 2025–2026 health-insurance protections bills are **SB 50** (preexisting-condition protections, Sen. Williams/Hughes) and **SB 1195** (preventive-services coverage protections) — likely what the fabricated citation was groping toward.
+
+**Act 252-2023 — UNVERIFIED.** Nothing matching "Act 252 of 2023" surfaces. Nearby hits (HB 252 = Election Code, SB 252 = Tax Reform Code, Act 8 of 2023, Act 33 of 2023) are all unrelated. Status: not found in official sources.
+
+**HB 2562/2563/2564 — REAL and now confirmed in detail.** This is the strongest finding of the session:
+- HB 2562 (Frankel): prohibits annual/lifetime coverage limits — House approved **160–42**
+- HB 2563 (Pashinski): dependent coverage to age 26 — House approved **163–39**
+- HB 2564 (Haddock): prohibits preexisting-condition denials — House approved **174–28**
+
+All three passed the PA House in **October 2024** (City & State Pennsylvania; PA House Insurance Committee record, Sept 30 2024 voting meeting). **However, final enactment status remains unconfirmed** — none of my results show Senate concurrence or a governor's signature. Two suggestive signals, clearly labeled as *inference*: Hospital & Healthsystem Association of PA's March 2025 statement referenced successor bills (e.g., HB 404 of the 2025–26 session covering the age-26 provision), which *may* indicate the originals didn't clear the Senate — but that's inference, not evidence. This goes into the ledger as **"House-passed October 2024; final enactment unverified."**
+
+**§28-725 and §29-8719 — NOT FOUND, consistent with your audit trail.** Title 40 P.S. (Insurance) is the real codified home for PA insurance law, and neither citation surfaced in any official source (palegis.us statutes, Purdon's, FindLaw, Justia). Your earlier reframe stands: verify **Act 68 of 1998** and **Title 40 Pa.C.S.** provisions on network adequacy/disclosure instead, and document these two as non-existent-as-cited.
+
+## Recommended ledger entries (draft, for your `statutes_2026.json`)
+
+```json
+{
+  "sb_1071_health_insurance_claim": {
+    "status": "misattributed",
+    "finding": "SB 1071 exists in the 2025-2026 session but amends Titles 18 and 53 (crimes/municipalities), not health insurance",
+    "replacement_candidates": ["SB 50 (2025-2026): preexisting-condition insurance protections", "SB 1195 (2025-2026): preventive services coverage protections"],
+    "source_url": "https://www.palegis.us/legislation/bills/2025/sb1071",
+    "last_verified": "2026-09-07"
+  },
+  "act_252_2023": {
+    "status": "unverified",
+    "finding": "No Act 252 of 2023 found in official sources",
+    "last_verified": "2026-09-07"
+  },
+  "hb_2562_hb_2563_hb_2564": {
+    "status": "partially_verified",
+    "finding": "ACA-codification package, PA House passed Oct 2024 (votes 160-42, 163-39, 174-28); final enactment status unconfirmed",
+    "source_url": "https://www.cityandstatepa.com/policy/2024/10/pa-house-approves-bills-would-codify-affordable-care-act-protections-state-law/400172",
+    "last_verified": "2026-09-07"
+  },
+  "sec_28_725_and_29_8719": {
+    "status": "unverified",
+    "finding": "Neither section found in any official PA code source; consistent with fabricated-citation finding",
+    "last_verified": "2026-09-07"
+  }
+}
+```
+
+Note none of these can go into the **verified column** yet — under your own gate, "partially verified" and "unverified" stay out of any public-facing render.
+
+## Remaining gap: one check I couldn't close from search alone
+
+Final enactment status for the HB 2562–2564 package needs the authoritative source directly — the bill pages on palegis.us (`/legislation/bills/2023/hb2562` etc.) will show Senate action and any Act number. That's a two-minute manual check of three pages, and it's the difference between "House-passed" and "law." One caution from tonight's theme: a bill numbered 2562 also exists in *other* sessions (the Thai-language noise in the last search is a reminder of how easy it is to grab the wrong hit) — always confirm session year on the page you cite.
+
+Want me to draft the `research/legislation_verification_2026.json` file with these findings in the provenance schema, or would you rather knock out the Senate-status check on the palegis.us pages first and then write the file once, completely?

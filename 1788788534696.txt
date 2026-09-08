@@ -1,0 +1,27 @@
+
+**What the “10 % loss stop” means**  
+
+In Pennsylvania, the Public Utility Commission (PUC) has a rule that kicks in when a regulated public‑service entity (electric, gas, water, telecom, etc.) experiences a *net loss of more than 10 % of its authorized revenue* in a reporting period. When that threshold is breached the utility must:
+
+1. **File a “loss‑stop” notice** with the PUC outlining the shortfall.  
+2. **Scale back or suspend non‑essential communications and marketing activities** (advertising, promotional mailings, public‑relations campaigns, etc.) until the loss falls below the 10 % mark or the PUC approves a different remedy.  
+3. **Provide a remediation plan** that details how the utility will restore financial stability—typically by reducing operating expenses, revising rate proposals, or seeking cost‑recovery adjustments.  
+
+The purpose of the rule is to protect ratepayers: if a utility’s finances are deteriorating, it should not spend money on outreach that does not directly support reliable service. By forcing a “communications cut‑back” the PUC ensures the organization focuses on core operations and on filing a rate case that reflects its true cost structure.
+
+**Why 10 %?**  
+The commission determined that a loss under 10 % is usually recoverable through normal budgeting adjustments, whereas a larger shortfall signals a systemic issue that warrants regulatory oversight. The 10 % figure therefore acts as a *loss‑stop trigger*—once crossed, the utility’s discretionary spending is frozen until the issue is addressed.  
+
+**How it works in practice**  
+
+| Step | Action | Who does it | Typical timeline |
+|------|--------|--------------|------------------|
+| 1 | Detect >10 % revenue loss in quarterly/annual financial report | Utility’s finance team | Immediately on reporting |
+| 2 | Submit loss‑stop filing to the PUC | Utility’s compliance officer | Within 15 days of detection |
+| 3 | PUC reviews and issues a stay on non‑essential communications | PUC staff | 5‑10 business days |
+| 4 | Utility implements cut‑back (e.g., pauses ad buys, halts promotional mailings) | Marketing/communications department | Immediately after stay |
+| 5 | Prepare remediation plan (cost‑saving measures, rate‑case outline) | Finance + Operations | 30‑45 days |
+| 6 | Submit plan for PUC approval | Utility | With the next scheduled rate filing |
+| 7 | PUC lifts the stay once the plan is approved or loss drops <10 % | PUC | Variable, often after the next reporting period |
+
+**Bottom line** – The “10 % loss stop” is a regulatory safety valve that forces a utility to pause discretionary communication spending and focus on financial recovery whenever its losses exceed a modest but material threshold. This helps keep rates fair and service reliable for Pennsylvania customers.

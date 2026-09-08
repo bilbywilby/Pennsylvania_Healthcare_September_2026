@@ -1,0 +1,701 @@
+
+   410                  self._collect_statute_refs(item, violations)
+   411
+   412      # -- render guard (hard fail) --------------------------------------------------
+   413
+   414      def require_claims(self, claim_ids: Iterable[str]) -> list[Claim]:
+   415          """Resolve claims for rendering; raises on unknown or stale.
+   416
+   417          Used by renderers (e.g. HardenedProvenanceRenderer): they receive
+   418          resolved Claims only, so an unresolvable reference can never be
+   419          silently substituted with an unlabeled value.
+   420          """
+   421          resolved: list[Claim] = []
+   422          for cid in claim_ids:
+   423              claim = self.ledger.get(cid)  # raises UnknownClaimError
+   424              if claim.is_stale(self.as_of):
+   425                  raise StaleClaimError(
+   426                      f"Refusing to render {cid!r}: last verified "
+   427                      f"{claim.last_verified}, staleness window {claim.staleness_days}d"
+   428                  )
+   429              resolved.append(claim)
+   430          return resolved
+   431
+   432
+   433  # ---------------------------------------------------------------------------
+   434  # CI entry point
+   435  # ---------------------------------------------------------------------------
+   436
+   437  def validate_tree(
+   438      education_root: Path,
+   439      ledger_path: Path,
+   440      statutes_path: Path | None = None,
+   441  ) -> int:
+   442      """Validate every .json artifact under education_root. Returns exit code."""
+   443      ledger = ProvenanceLedger.load(ledger_path)
+   444      validator = ArtifactValidator(ledger, statutes_path=statutes_path)
+   445
+   446      artifacts = [
+   447          p for p in sorted(education_root.rglob("*.json"))
+   448          if p.name != ledger_path.name
+   449      ]
+   450      if not artifacts:
+   451          logger.error("No artifacts found under %s — nothing to validate", education_root)
+   452          return 1
+   453
+   454      failures = 0
+   455      for path in artifacts:
+   456          try:
+   457              artifact = json.loads(path.read_text(encoding="utf-8"))
+   458          except json.JSONDecodeError as exc:
+   459              print(f"FAIL {path.relative_to(education_root)}: invalid JSON ({exc})")
+   460              failures += 1
+   461              continue
+   462
+   463          violations = validator.validate_artifact(artifact)
+   464          for v in violations:
+   465              print(f"FAIL {path.relative_to(education_root)}: {v}")
+   466              failures += 1
+   467          if not violations:
+   468              print(f" ok   {path.relative_to(education_root)}")
+   469
+   470      for claim in ledger.stale_claims():
+   471          print(f"WARN ledger claim {claim.claim_id!r} is stale "
+   472                f"(verified {claim.last_verified}) — needs re-verification")
+   473
+   474      if failures:
+   475          print(f"\n{failures} violation(s) across {len(artifacts)} artifact(s)")
+   476          return 1
+   477      print(f"\nAll {len(artifacts)} artifacts pass the provenance gate.")
+   478      return 0
+   479
+   480
+   481  def main(argv: list[str] | None = None) -> int:
+   482      parser = argparse.ArgumentParser(description="Provenance gate for education artifacts")
+   483      parser.add_argument("--education-root", type=Path, default=Path("education"))
+   484      parser.add_argument("--ledger", type=Path,
+   485                          default=Path("education/verification_log.json"))
+   486      parser.add_argument("--statutes", type=Path, default=Path("statutes_2026.json"))
+   487      args = parser.parse_args(argv)
+   488      logging.basicConfig(level=logging.INFO)
+   489      return validate_tree(args.education_root, args.ledger, args.statutes)
+   490
+   491
+   492  if __name__ == "__main__":
+   493      sys.exit(main())
+
+=== REAL HANDOVER.json ===
+{
+  "project": "pennsylvania-health-insurance-audit-2026",
+  "handover_date": "2026-09-06",
+  "phase": "BOOTSTRAP_COMPLETE",
+  "status": "AWAITING_EXTERNAL_DATA",
+  "test_suite": {
+    "command": "python3 -m pytest tests/ -q",
+    "passing": 64,
+    "failing": 0
+  },
+  "contract": {
+    "required_columns": [
+      "carrier",
+      "rate_change",
+      "rating_area"
+    ],
+    "optional_columns": [
+      "covered_lives",
+      "serff_id",
+      "verified"
+    ],
+    "column_aliases": {
+      "carrier_name": "carrier",
+      "approved_rate_change": "rate_change"
+    },
+    "behavior": "Missing covered_lives -> unweighted_fallback (logged). Legacy rows without serff_id get deterministic SYNT- prefixed synthesized IDs. Duplicate (carrier, serff_id) and cross-carrier SERFF collisions raise."
+  },
+  "pipeline": [
+    {
+      "steps": "01-05",
+      "runner": "bootstrap/00_run_all.sh"
+    },
+    {
+      "step": "06",
+      "entry": "scripts/06_write_county_exposure.py",
+      "output": "data/private/county_rate_exposure.csv"
+    }
+  ],
+  "next_event": {
+    "trigger": "PID covered-lives extract dropped at data/carrier-rate-changes.csv",
+    "acceptance": "step 06 logs basis: covered_lives",
+    "checklist": "docs/REAL_DATA_ARRIVAL_CHECKLIST.md",
+    "rollback": "quarantine to data/private/, never delete"
+  },
+  "known_data_defects": [
+    "SERFF INAC-134505843 assigned to both Keystone East and Central (collision raised by design; Central's true ID unverified)",
+    "SERFF IDs CABC-134505011, CECO-134506033, GSHP-134496810, UPMC-134504084, UPMC-134504074 unverified against full PID table",
+    "UPMC rating-area footprint [1,4,5] needs PID confirmation",
+    "All market shares are placeholders until the extract arrives"
+  ],
+  "optional_followup": "Promote validate_filings/normalize_crosswalk to shared bootstrap/crosswalk_lib.py",
+  "open_items": [
+    {
+      "item": "Build src/api/main.py (FastAPI app) required by test_golden_metrics.py",
+      "status": "resolved",
+      "quarantined_file": "tests/quarantine_test_golden_metrics.py.txt",
+      "resolution": "src/api/main.py implemented, serving data/public/key_statistics_2026.json; verified against pennie.com/affordability/ for Act 54 block"
+    }
+  ]
+}
+=== pyproject.toml check (project root only — will not touch anything outside repo) ===
+(none at project root)
+
+=== attempting defensive patch of src/provenance.py ===
+[OK] patched src/provenance.py (backup at src/provenance.py.pre-digest.bak)
+NOTE: digest field/method added but NOT wired into a @model_validator —
+that wiring depends on your actual base class (BaseModel vs dataclass),
+which I could not confirm blindly. Enforcement hook left as a manual
+follow-up once you review the patched file.
+
+=== resulting src/provenance.py (post-patch, for your review) ===
+     1  """src/provenance.py — provenance enforcement for all public-facing artifacts.
+     2
+     3  Contract:
+     4    * No numeric claim reaches a rendered artifact without a ledger entry.
+     5    * No ledger entry exists without a real citation, a real source_url,
+     6      and a last_verified date.
+     7    * Statutory references additionally require presence in the verified
+     8      column of statutes_2026.json.
+     9    * Stale claims are refused, not silently rendered.
+    10
+    11  Companion module: src/hardened_renderer.py consumes ArtifactValidator
+    12  and Claim via require_claims(); this module is the sole authority on
+    13  what is verifiable.
+    14  """
+    15
+    16  from __future__ import annotations
+    17
+    18  import argparse
+    19  import json
+    20  import logging
+    21  import re
+    22  import sys
+    23  from datetime import date, timedelta
+    24  from pathlib import Path
+    25  from typing import Any, Iterable, Iterator, Mapping
+    26
+    27  from pydantic import BaseModel, ConfigDict, Field, field_validator
+    28
+    29  logger = logging.getLogger(__name__)
+    30
+    31  # ---------------------------------------------------------------------------
+    32  # Constants
+    33  # ---------------------------------------------------------------------------
+    34
+    35  DEFAULT_STALENESS_DAYS = 90
+    36  CLAIM_ID_RE = re.compile(r"[a-z0-9]+(_[a-z0-9]+)*")
+    37
+    38  # Placeholder markers that MUST never reach a rendered artifact.
+    39  # Templates use these tokens while drafting; the render gate rejects them.
+    40  PLACEHOLDER_MARKERS = (
+    41      "{{", "}}",
+    42      "PENDING_VERIFICATION",
+    43      "TODO",
+    44      "XXX",
+    45      "[PLACEHOLDER",
+    46  )
+    47
+    48  # Sources that look authoritative but aren't — refused at ledger load.
+    49  FORBIDDEN_SOURCE_HOSTS = (
+    50      "example.com",
+    51      "example.org",
+    52      "yourdomain",
+    53      "insert-url",
+    54  )
+    55
+    56
+    57  # ---------------------------------------------------------------------------
+    58  # Errors
+    59  # ---------------------------------------------------------------------------
+    60
+    61  class ProvenanceError(Exception):
+    62      """Base error for all provenance violations."""
+    63
+    64
+    65  class UnknownClaimError(ProvenanceError):
+    66      """An artifact referenced a claim_id absent from the ledger."""
+    67
+    68
+    69  class StaleClaimError(ProvenanceError):
+    70      """A claim exceeded its staleness window."""
+    71
+    72
+    73  class InvalidLedgerError(ProvenanceError):
+    74      """The ledger itself is malformed or contains unverifiable entries."""
+    75
+    76
+    77  # ---------------------------------------------------------------------------
+    78  # Claim model
+    79  # ---------------------------------------------------------------------------
+    80
+    81  class Claim(BaseModel):
+    82      digest: "str | None" = None
+    83      """One verifiable factual assertion with full sourcing."""
+    84
+    85      model_config = ConfigDict(extra="forbid")
+    86
+    87      claim_id: str = Field(..., description="Stable unique identifier, snake_case")
+    88      value: Any = Field(..., description="The asserted value (number, string, or object)")
+    89      source_citation: str = Field(..., description="Human-readable citation")
+    90      source_url: str = Field(..., description="Real, resolvable source URL or repo path")
+    91      last_verified: date = Field(..., description="ISO date of last verification")
+    92      staleness_days: int = Field(
+    93          default=DEFAULT_STALENESS_DAYS,
+    94          ge=1,
+    95          description="Days this claim may go unverified before it is refused",
+    96      )
+    97      verified_by: str = Field(..., description="Who or what performed verification")
+    98      notes: str | None = Field(default=None, description="Caveats / known discrepancies")
+    99
+   100      @field_validator("claim_id")
+   101      @classmethod
+   102      def _claim_id_pattern(cls, v: str) -> str:
+   103          if not CLAIM_ID_RE.fullmatch(v):
+   104              raise ValueError(f"claim_id must be snake_case ([a-z0-9_]), got: {v!r}")
+   105          return v
+   106
+   107      @field_validator("source_url")
+   108      @classmethod
+   109      def _no_placeholder_urls(cls, v: str) -> str:
+   110          for host in FORBIDDEN_SOURCE_HOSTS:
+   111              if host in v:
+   112                  raise ValueError(
+   113                      f"source_url {v!r} points at {host} — placeholders are "
+   114                      f"forbidden in the ledger. Verify a real source."
+   115                  )
+   116          if not (v.startswith(("http://", "https://")) or Path(v).exists()):
+   117              raise ValueError(
+   118                  f"source_url {v!r} is neither an http(s) URL nor an existing repo path"
+   119              )
+   120          return v
+   121
+   122      @field_validator("verified_by")
+   123      @classmethod
+   124      def _verified_by_not_empty(cls, v: str) -> str:
+   125          if not v.strip():
+   126              raise ValueError("verified_by must identify a real verifier (person, "
+   127                               "script+commit, or automated check)")
+   128          return v
+   129
+   130      @property
+   131      def stale_after(self) -> date:
+   132          """Date after which this claim is considered stale."""
+   133          return self.last_verified + timedelta(days=self.staleness_days)
+   134
+   135      def is_stale(self, as_of: date | None = None) -> bool:
+   136          """True if last_verified is older than the claim's own staleness window."""
+   137          ref = as_of or date.today()
+   138          return ref > self.stale_after
+   139
+   140
+   141  # ---------------------------------------------------------------------------
+   142  # Ledger
+   143  # ---------------------------------------------------------------------------
+   144
+   145
+   146      @staticmethod
+   147      def compute_digest(payload: dict) -> str:
+   148          import hashlib, json as _json
+   149          fields = ("claim_id", "value", "source_citation", "source_url",
+   150                    "last_verified", "staleness_days")
+   151          canonical = _json.dumps(
+   152              {k: payload[k] for k in fields if k in payload},
+   153              sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str,
+   154          )
+   155          return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+   156
+   157  class ProvenanceLedger(Mapping[str, Claim]):
+   158      """Loads, indexes, validates, and re-serializes the verification ledger.
+   159
+   160      Implements Mapping so callers can do ``"x" in ledger``, ``len(ledger)``,
+   161      and ``ledger["x"]``; iteration yields (claim_id, Claim) pairs, sorted
+   162      for determinism.
+   163      """
+   164
+   165      def __init__(self, claims: dict[str, Claim]):
+   166          self._claims = claims
+   167
+   168      # -- construction -------------------------------------------------------
+   169
+   170      @classmethod
+   171      def load(cls, path: Path) -> "ProvenanceLedger":
+   172          """Load and self-validate a ledger file. Raises InvalidLedgerError."""
+   173          if not path.exists():
+   174              raise InvalidLedgerError(f"Ledger not found: {path}")
+   175          try:
+   176              raw = json.loads(path.read_text(encoding="utf-8"))
+   177          except json.JSONDecodeError as exc:
+   178              raise InvalidLedgerError(f"Ledger {path} is not valid JSON: {exc}") from exc
+   179          if not isinstance(raw, dict):
+   180              raise InvalidLedgerError(f"Ledger {path} must be a JSON object keyed by claim_id")
+   181
+   182          claims: dict[str, Claim] = {}
+   183          for key, entry in raw.items():
+   184              if not isinstance(entry, dict) or key != entry.get("claim_id"):
+   185                  raise InvalidLedgerError(
+   186                      f"Ledger key {key!r} does not match its entry's claim_id"
+   187                  )
+   188              try:
+   189                  claims[key] = Claim(**entry)
+   190              except Exception as exc:
+   191                  raise InvalidLedgerError(
+   192                      f"Malformed ledger entry {key!r} in {path}: {exc}"
+   193                  ) from exc
+   194          if not claims:
+   195              raise InvalidLedgerError(
+   196                  f"Ledger {path} is empty — seed it with real, verified claims"
+   197              )
+   198          return cls(claims)
+   199
+   200      def save(self, path: Path) -> None:
+   201          """Serialize deterministically (sorted keys, stable diffs)."""
+   202          path.parent.mkdir(parents=True, exist_ok=True)
+   203          payload = {cid: c.model_dump(mode="json") for cid, c in sorted(self._claims.items())}
+   204          path.write_text(
+   205              json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+   206          )
+   207
+   208      # -- mapping protocol ----------------------------------------------------
+   209
+   210      def __getitem__(self, claim_id: str) -> Claim:
+   211          try:
+   212              return self._claims[claim_id]
+   213          except KeyError:
+   214              raise UnknownClaimError(
+   215                  f"Claim {claim_id!r} is not in the ledger. A claim must be "
+   216                  f"registered with a citation BEFORE it appears in an artifact."
+   217              ) from None
+   218
+   219      def __contains__(self, claim_id: object) -> bool:
+   220          return claim_id in self._claims
+   221
+   222      def __len__(self) -> int:
+   223          return len(self._claims)
+   224
+   225      def __iter__(self) -> Iterator[str]:
+   226          yield from sorted(self._claims)
+   227
+   228      # -- mutation --------------------------------------------------------------
+   229
+   230      def get(self, claim_id: str) -> Claim:
+   231          """Same as __getitem__ — raises UnknownClaimError if missing."""
+   232          return self[claim_id]
+   233
+   234      def register(self, claim: Claim, *, overwrite: bool = False) -> None:
+   235          """Add a claim. Refuses silent replacement unless overwrite=True."""
+   236          if claim.claim_id in self._claims and not overwrite:
+   237              raise ProvenanceError(
+   238                  f"Claim {claim.claim_id!r} already registered. Replacing a value "
+   239                  f"requires explicit overwrite=True AND a fresh last_verified date."
+   240              )
+   241          self._claims[claim.claim_id] = claim
+   242
+   243      def register_many(self, claims: Iterable[Claim], *, overwrite: bool = False) -> None:
+   244          for claim in claims:
+   245              self.register(claim, overwrite=overwrite)
+   246
+   247      def refresh(self, claim_id: str, as_of: date, *, verified_by: str) -> None:
+   248          """Mark a claim re-verified as of `as_of` (after an actual re-check)."""
+   249          self[claim_id]  # raises if unknown
+   250          self._claims[claim_id] = self._claims[claim_id].model_copy(
+   251              update={"last_verified": as_of, "verified_by": verified_by}
+   252          )
+   253
+   254      def stale_claims(self, as_of: date | None = None) -> list[Claim]:
+   255          return [c for c in self._claims.values() if c.is_stale(as_of)]
+   256
+   257
+   258  def seed_from_golden_fixture(
+   259      fixture_path: Path,
+   260      source_url: str,
+   261      verified_by: str,
+   262      as_of: date | None = None,
+   263  ) -> ProvenanceLedger:
+   264      """Migrate tests/fixtures/key_statistics_golden.json into a ledger.
+   265
+   266      The golden fixture shape is:
+   267        {"golden": {"<claim_id>": {"value": ..., "citation": ...}}, "_meta": {...}}
+   268
+   269      The value and citation carry over; source_url and verified_by are NOT
+   270      derivable from the fixture and must be supplied by the caller — this
+   271      function refuses to guess them. Claims the caller knows are volatile
+   272      (e.g. appropriated dollar figures) should be re-registered afterwards
+   273      with shorter staleness_days.
+   274      """
+   275      raw = json.loads(fixture_path.read_text(encoding="utf-8"))
+   276      golden = raw.get("golden", {})
+   277      if not golden:
+   278          raise InvalidLedgerError(f"No golden rows found in {fixture_path}")
+   279
+   280      ledger = ProvenanceLedger({})
+   281      as_of = as_of or date.today()
+   282      for cid, spec in sorted(golden.items()):
+   283          citation = spec.get("citation", "")
+   284          if not citation:
+   285              raise InvalidLedgerError(
+   286                  f"Golden row {cid!r} has no citation — it cannot enter the ledger"
+   287              )
+   288          ledger.register(Claim(
+   289              claim_id=cid,
+   290              value=spec["value"],
+   291              source_citation=citation,
+   292              source_url=source_url,
+   293              last_verified=as_of,
+   294              verified_by=verified_by,
+   295          ))
+   296      return ledger
+   297
+   298
+   299  # ---------------------------------------------------------------------------
+   300  # Extraction helpers
+   301  # ---------------------------------------------------------------------------
+   302
+   303  def extract_claim_ids(node: Any, _depth: int = 0) -> set[str]:
+   304      """Recursively collect every claim_id referenced anywhere in a structure.
+   305
+   306      Recognizes:
+   307        * ``{"claim_id": "..."}`` objects, at any nesting depth
+   308        * ``"claim_id:<cid>"`` prefix-strings, at any depth (the convention
+   309          the hardened renderer uses for claim references inside prose)
+   310
+   311      Bare strings are deliberately NOT auto-detected — heuristics there
+   312      produce false positives on ordinary text.
+   313      """
+   314      PREFIX = "claim_id:"
+   315      found: set[str] = set()
+   316      if _depth > 200:  # defensive; renderer enforces tighter bounds upstream
+   317          raise ValueError("extract_claim_ids: nesting exceeds 200 levels")
+   318      if isinstance(node, dict):
+   319          for key, value in node.items():
+   320              if key == "claim_id" and isinstance(value, str):
+   321                  found.add(value)
+   322              else:
+   323                  found |= extract_claim_ids(value, _depth + 1)
+   324      elif isinstance(node, (list, tuple)):
+   325          for item in node:
+   326              found |= extract_claim_ids(item, _depth + 1)
+   327      elif isinstance(node, str) and node.startswith(PREFIX):
+   328          found.add(node[len(PREFIX):].strip())
+   329      return found
+   330
+   331
+   332  def scan_text_for_placeholders(text: str) -> list[str]:
+   333      """Find placeholder markers that must not survive into rendered output."""
+   334      lowered = text.lower()
+   335      return [m for m in PLACEHOLDER_MARKERS if m.lower() in lowered]
+   336
+   337
+   338  # ---------------------------------------------------------------------------
+   339  # Validator
+   340  # ---------------------------------------------------------------------------
+   341
+   342  class ArtifactValidator:
+   343      """Validates loaded artifacts against a ledger.
+   344
+   345      validate_artifact() collects ALL violations (for CI reports);
+   346      require_claims() raises on the first (for render paths).
+   347      """
+   348
+   349      def __init__(
+   350          self,
+   351          ledger: ProvenanceLedger,
+   352          statutes_path: Path | None = None,
+   353          as_of: date | None = None,
+   354      ):
+   355          self.ledger = ledger
+   356          self.as_of = as_of or date.today()
+   357          self.statutes_path = statutes_path
+   358          self._verified_statutes: set[str] | None = None
+   359
+   360      # -- statutes gate ---------------------------------------------------------
+   361
+   362      @property
+   363      def verified_statutes(self) -> set[str]:
+   364          """The verified column of statutes_2026.json, lazily loaded. Fail-closed."""
+   365          if self._verified_statutes is None:
+   366              if self.statutes_path is None or not self.statutes_path.exists():
+   367                  logger.warning(
+   368                      "statutes_2026.json not found at %r — ALL statutory "
+   369                      "references will fail until it exists (fail-closed).",
+   370                      self.statutes_path,
+   371                  )
+   372                  self._verified_statutes = set()
+   373              else:
+   374                  raw = json.loads(self.statutes_path.read_text(encoding="utf-8"))
+   375                  # Expected shape: {"verified": {"<citation>": {...}}, ...}
+   376                  self._verified_statutes = set(raw.get("verified", {}))
+   377          return self._verified_statutes
+   378
+   379      def check_statute(self, citation: str) -> None:
+   380          """Raises ProvenanceError unless the citation is verified."""
+   381          if citation not in self.verified_statutes:
+   382              raise ProvenanceError(
+   383                  f"Statutory citation {citation!r} is not in the verified column "
+   384                  f"of statutes_2026.json — refusing to render. "
+   385                  f"(This is the fabricated-citation guard.)"
+   386              )
+   387
+   388      # -- validation --------------------------------------------------------------
+   389
+   390      def validate_artifact(self, artifact: Any) -> list[str]:
+   391          """Return ALL violations (does not raise) so CI reports are complete."""
+   392          violations: list[str] = []
+   393
+   394          for cid in sorted(extract_claim_ids(artifact)):
+   395              try:
+   396                  claim = self.ledger.get(cid)
+   397                  if claim.is_stale(self.as_of):
+   398                      violations.append(
+   399                          f"STALE claim {cid!r}: last verified {claim.last_verified} "
+   400                          f"(window {claim.staleness_days}d) — re-verify or drop it"
+   401                      )
+   402              except UnknownClaimError as exc:
+   403                  violations.append(str(exc))
+   404
+   405          self._collect_statute_refs(artifact, violations)
+   406
+   407          for hit in scan_text_for_placeholders(json.dumps(artifact, ensure_ascii=False)):
+   408              violations.append(f"PLACEHOLDER marker {hit!r} present in artifact")
+   409
+   410          return violations
+   411
+   412      def _collect_statute_refs(self, node: Any, violations: list[str]) -> None:
+   413          if isinstance(node, dict):
+   414              if "statute" in node and isinstance(node["statute"], str):
+   415                  try:
+   416                      self.check_statute(node["statute"])
+   417                  except ProvenanceError as exc:
+   418                      violations.append(str(exc))
+   419              for value in node.values():
+   420                  self._collect_statute_refs(value, violations)
+   421          elif isinstance(node, (list, tuple)):
+   422              for item in node:
+   423                  self._collect_statute_refs(item, violations)
+   424
+   425      # -- render guard (hard fail) --------------------------------------------------
+   426
+   427      def require_claims(self, claim_ids: Iterable[str]) -> list[Claim]:
+   428          """Resolve claims for rendering; raises on unknown or stale.
+   429
+   430          Used by renderers (e.g. HardenedProvenanceRenderer): they receive
+   431          resolved Claims only, so an unresolvable reference can never be
+   432          silently substituted with an unlabeled value.
+   433          """
+   434          resolved: list[Claim] = []
+   435          for cid in claim_ids:
+   436              claim = self.ledger.get(cid)  # raises UnknownClaimError
+   437              if claim.is_stale(self.as_of):
+   438                  raise StaleClaimError(
+   439                      f"Refusing to render {cid!r}: last verified "
+   440                      f"{claim.last_verified}, staleness window {claim.staleness_days}d"
+   441                  )
+   442              resolved.append(claim)
+   443          return resolved
+   444
+   445
+   446  # ---------------------------------------------------------------------------
+   447  # CI entry point
+   448  # ---------------------------------------------------------------------------
+   449
+   450  def validate_tree(
+   451      education_root: Path,
+   452      ledger_path: Path,
+   453      statutes_path: Path | None = None,
+   454  ) -> int:
+   455      """Validate every .json artifact under education_root. Returns exit code."""
+   456      ledger = ProvenanceLedger.load(ledger_path)
+   457      validator = ArtifactValidator(ledger, statutes_path=statutes_path)
+   458
+   459      artifacts = [
+   460          p for p in sorted(education_root.rglob("*.json"))
+   461          if p.name != ledger_path.name
+   462      ]
+   463      if not artifacts:
+   464          logger.error("No artifacts found under %s — nothing to validate", education_root)
+   465          return 1
+   466
+   467      failures = 0
+   468      for path in artifacts:
+   469          try:
+   470              artifact = json.loads(path.read_text(encoding="utf-8"))
+   471          except json.JSONDecodeError as exc:
+   472              print(f"FAIL {path.relative_to(education_root)}: invalid JSON ({exc})")
+   473              failures += 1
+   474              continue
+   475
+   476          violations = validator.validate_artifact(artifact)
+   477          for v in violations:
+   478              print(f"FAIL {path.relative_to(education_root)}: {v}")
+   479              failures += 1
+   480          if not violations:
+   481              print(f" ok   {path.relative_to(education_root)}")
+   482
+   483      for claim in ledger.stale_claims():
+   484          print(f"WARN ledger claim {claim.claim_id!r} is stale "
+   485                f"(verified {claim.last_verified}) — needs re-verification")
+   486
+   487      if failures:
+   488          print(f"\n{failures} violation(s) across {len(artifacts)} artifact(s)")
+   489          return 1
+   490      print(f"\nAll {len(artifacts)} artifacts pass the provenance gate.")
+   491      return 0
+   492
+   493
+   494  def main(argv: list[str] | None = None) -> int:
+   495      parser = argparse.ArgumentParser(description="Provenance gate for education artifacts")
+   496      parser.add_argument("--education-root", type=Path, default=Path("education"))
+   497      parser.add_argument("--ledger", type=Path,
+   498                          default=Path("education/verification_log.json"))
+   499      parser.add_argument("--statutes", type=Path, default=Path("statutes_2026.json"))
+   500      args = parser.parse_args(argv)
+   501      logging.basicConfig(level=logging.INFO)
+   502      return validate_tree(args.education_root, args.ledger, args.statutes)
+   503
+   504
+   505  if __name__ == "__main__":
+   506      sys.exit(main())
+.....................................................................    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+69 passed, 2 warnings in 0.39s
+ERROR: Not Conventional Commits. Got: feat(provenance): add sha256 digest computation to Claim (unwired, needs manual validator hookup)
+       Bypass once with: git commit --no-verify
+!!! FAILED — rolling back to 441c7a49c9412aa79bbb1a3773de544ff39a7ea4
+HEAD is now at 441c7a4 chore: pre-provenance-digest checkpoint
+.....................................................................    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+69 passed, 1 warning in 0.38s
+Enumerating objects: 11, done.
+Counting objects: 100% (11/11), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (9/9), 3.47 KiB | 591.00 KiB/s, done.
+Total 9 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 2 local objects.
+To https://github.com/bilbywilby/pennsylvania-health-insurance-audit-2026.git
+   1e99fb5..4e3d81e  main -> main
+[OK] done: 4e3d81e70d66c6beb3088b43c359dd21d1b03ac0
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ 

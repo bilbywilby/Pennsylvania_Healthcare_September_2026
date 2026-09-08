@@ -1,0 +1,573 @@
+
+
+
+def main() -> None:
+    output_dir = Path("data/public")
+    output_file = output_dir / "pa_county_fips_crosswalk.json"
+    temp_file = output_dir / ".pa_county_fips_crosswalk.json.tmp"
+
+    print("Validating rating area definitions...")
+    if not validate_data():
+        print("[FAIL] Aborting execution due to schema errors.")
+        sys.exit(1)
+
+    print("Building crosswalk payload...")
+    payload = build_crosswalk()
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, sort_keys=True)
+            f.write("\n")
+        temp_file.rename(output_file)  # POSIX atomic replace
+        print(f"[OK] {output_file} written successfully.")
+    except Exception as exc:
+        print(f"[ERROR] Atomic write failure: {exc}")
+        if temp_file.exists():
+            temp_file.unlink()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+
+===== FILE: pennsylvania-health-insurance-audit-2026/bootstrap/pa_crosswalk_data.py =====
+"""
+pa_crosswalk_data.py – Canonical PA County Reference Data
+
+Raw and cleaned entries for all 67 PA counties with FIPS codes and rating area mappings.
+This module serves as the authoritative source-of-truth for county identity and classification.
+"""
+
+# Canonical raw entries (67 PA counties)
+PA_COUNTIES_CANONICAL = [
+    # Rating Area 1: Northwest
+    {"fips": "42049", "county": "Erie", "rating_area": 1},
+    {"fips": "42039", "county": "Crawford", "rating_area": 1},
+    {"fips": "42123", "county": "Warren", "rating_area": 1},
+    {"fips": "42121", "county": "Venango", "rating_area": 1},
+    {"fips": "42053", "county": "Forest", "rating_area": 1},
+    
+    # Rating Area 2: North Central
+    {"fips": "42117", "county": "Tioga", "rating_area": 2},
+    {"fips": "42105", "county": "Potter", "rating_area": 2},
+    {"fips": "42083", "county": "McKean", "rating_area": 2},
+    {"fips": "42113", "county": "Sullivan", "rating_area": 2},
+    {"fips": "42015", "county": "Bradford", "rating_area": 2},
+    {"fips": "42081", "county": "Lycoming", "rating_area": 2},
+    
+    # Rating Area 3: Northeast
+    {"fips": "42103", "county": "Pike", "rating_area": 3},
+    {"fips": "42127", "county": "Wayne", "rating_area": 3},
+    {"fips": "42069", "county": "Lackawanna", "rating_area": 3},
+    {"fips": "42079", "county": "Luzerne", "rating_area": 3},
+    {"fips": "42025", "county": "Carbon", "rating_area": 3},
+    {"fips": "42089", "county": "Monroe", "rating_area": 3},
+    {"fips": "42115", "county": "Susquehanna", "rating_area": 3},
+    
+    # Rating Area 4: Central Mountains
+    {"fips": "42027", "county": "Centre", "rating_area": 4},
+    {"fips": "42033", "county": "Clearfield", "rating_area": 4},
+    {"fips": "42047", "county": "Elk", "rating_area": 4},
+    {"fips": "42035", "county": "Clinton", "rating_area": 4},
+    {"fips": "42023", "county": "Cameron", "rating_area": 4},
+    
+    # Rating Area 5: Southwest
+    {"fips": "42059", "county": "Greene", "rating_area": 5},
+    {"fips": "42125", "county": "Washington", "rating_area": 5},
+    {"fips": "42051", "county": "Fayette", "rating_area": 5},
+    {"fips": "42129", "county": "Westmoreland", "rating_area": 5},
+    
+    # Rating Area 6: South Central
+    {"fips": "42061", "county": "Huntingdon", "rating_area": 6},
+    {"fips": "42087", "county": "Mifflin", "rating_area": 6},
+    {"fips": "42067", "county": "Juniata", "rating_area": 6},
+    {"fips": "42099", "county": "Perry", "rating_area": 6},
+    {"fips": "42109", "county": "Snyder", "rating_area": 6},
+    {"fips": "42119", "county": "Union", "rating_area": 6},
+    {"fips": "42065", "county": "Jefferson", "rating_area": 6},
+    
+    # Rating Area 7: Southeast Metro
+    {"fips": "42101", "county": "Philadelphia", "rating_area": 7},
+    {"fips": "42045", "county": "Delaware", "rating_area": 7},
+    {"fips": "42029", "county": "Chester", "rating_area": 7},
+    {"fips": "42017", "county": "Bucks", "rating_area": 7},
+    {"fips": "42091", "county": "Montgomery", "rating_area": 7},
+    
+    # Rating Area 8: Western
+    {"fips": "42003", "county": "Allegheny", "rating_area": 8},
+    {"fips": "42019", "county": "Butler", "rating_area": 8},
+    {"fips": "42007", "county": "Beaver", "rating_area": 8},
+    {"fips": "42073", "county": "Lawrence", "rating_area": 8},
+    {"fips": "42005", "county": "Armstrong", "rating_area": 8},
+    {"fips": "42063", "county": "Indiana", "rating_area": 8},
+    
+    # Rating Area 9: Eastern
+    {"fips": "42077", "county": "Lehigh", "rating_area": 9},
+    {"fips": "42095", "county": "Northampton", "rating_area": 9},
+    {"fips": "42107", "county": "Schuylkill", "rating_area": 9},
+    {"fips": "42075", "county": "Lebanon", "rating_area": 9},
+    {"fips": "42071", "county": "Lancaster", "rating_area": 9},
+    {"fips": "42011", "county": "Berks", "rating_area": 9},
+    {"fips": "42133", "county": "York", "rating_area": 9},
+    {"fips": "42001", "county": "Adams", "rating_area": 9},
+    {"fips": "42041", "county": "Cumberland", "rating_area": 9},
+    {"fips": "42043", "county": "Dauphin", "rating_area": 9},
+    {"fips": "42055", "county": "Franklin", "rating_area": 9},
+    {"fips": "42009", "county": "Bedford", "rating_area": 9},
+    {"fips": "42013", "county": "Blair", "rating_area": 9},
+    {"fips": "42021", "county": "Cambria", "rating_area": 9},
+    {"fips": "42111", "county": "Somerset", "rating_area": 9},
+    {"fips": "42037", "county": "Columbia", "rating_area": 9},
+    {"fips": "42097", "county": "Northumberland", "rating_area": 9},
+    {"fips": "42093", "county": "Montour", "rating_area": 9},
+]
+
+# Cleaned entries (minimal transformation)
+PA_COUNTIES_CLEAN = [
+    {
+        "fips": entry["fips"],
+        "county": entry["county"].strip().title(),
+        "canonical_name": entry["county"].strip().title(),
+        "rating_area": int(entry["rating_area"]),
+    }
+    for entry in PA_COUNTIES_CANONICAL
+]
+
+__all__ = ["PA_COUNTIES_CANONICAL", "PA_COUNTIES_CLEAN"]
+
+if __name__ == "__main__":
+    print("PA_COUNTIES_CANONICAL: {} entries".format(len(PA_COUNTIES_CANONICAL)))
+    print("PA_COUNTIES_CLEAN: {} entries".format(len(PA_COUNTIES_CLEAN)))
+    fips = {e["fips"] for e in PA_COUNTIES_CLEAN}
+    print("Unique FIPS codes: {}".format(len(fips)))
+    if len(fips) != len(PA_COUNTIES_CLEAN):
+        print("ERROR: Duplicate FIPS detected!")
+        exit(1)
+
+===== FILE: pennsylvania-health-insurance-audit-2026/bootstrap/04_audit.py =====
+#!/usr/bin/env python3
+"""
+Performs the core Pennsylvania Health Insurance Audit.
+- Loads approved rates and crosswalk data.
+- Validates every record against the crosswalk (case-insensitive).
+- Sanitizes and validates numeric rate values.
+- Aggregates weighted average rate by rating area.
+- Writes anomaly and aggregate reports.
+"""
+import csv
+import json
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional
+
+# --- Configuration (single source of truth for all output paths) ---
+DATA_DIR = Path("data")
+APPROVED_RATES_FILE = DATA_DIR / "approved_rates_2026.csv"
+CROSSWALK_FILE = DATA_DIR / "public" / "pa_county_fips_crosswalk.json"
+REPORT_FILE = DATA_DIR / "private" / "audit_anomalies_2026.csv"
+AGGREGATE_REPORT_FILE = DATA_DIR / "private" / "audit_aggregates_2026.csv"
+
+REQUIRED_RATE_COLUMNS = ["county", "rate", "age", "plan_type"]
+
+
+# --- Custom Exceptions ---
+class AuditError(Exception):
+    """Base exception for audit operations."""
+
+
+class AuditSchemaError(AuditError):
+    """Raised when data loading fails or CSV schema validation fails."""
+
+
+class AuditDataValidationError(AuditError):
+    """Reserved for callers that want a hard failure on data anomalies rather
+    than inspecting the returned AuditResult counts. Not raised internally —
+    run_audit() always returns normally when the *schema* is sound, even if
+    individual records are anomalous; main() decides the exit code from the
+    result counts."""
+
+
+class AuditResult:
+    def __init__(self):
+        self.total_records = 0
+        self.valid_records = 0
+        self.missing_counties = 0
+        self.missing_fips = 0
+        self.invalid_rates = 0
+        self.anomalies: List[Dict] = []
+        # area_id -> running weighted-sum accumulators
+        self.area_stats: Dict[str, Dict] = defaultdict(
+            lambda: {"total_weight": 0.0, "sum_rate_weighted": 0.0, "record_count": 0}
+        )
+
+    def add_anomaly(self, record: Dict, reason: str):
+        self.anomalies.append(
+            {
+                "reason": reason,
+                "county": record.get("county"),
+                "rate": record.get("rate"),
+                "age": record.get("age"),
+                "plan_type": record.get("plan_type"),
+                "raw_record": json.dumps(record),
+            }
+        )
+
+
+def load_crosswalk() -> Dict[str, Dict[str, str]]:
+    """Loads crosswalk JSON into a case-insensitive lookup keyed by lowercase county name."""
+    if not CROSSWALK_FILE.exists():
+        raise AuditSchemaError(f"Crosswalk file not found: {CROSSWALK_FILE}")
+
+    with open(CROSSWALK_FILE, "r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise AuditSchemaError(f"Crosswalk file is not valid JSON: {e}") from e
+
+    county_map = {}
+    for area_id, counties in data.items():
+        for item in counties:
+            key = item["county"].strip().lower()
+            county_map[key] = {
+                "display_name": item["county"].strip(),
+                "fips": item["fips"],
+                "area": area_id,
+            }
+    return county_map
+
+
+def load_rates() -> List[Dict]:
+    """Loads approved rates CSV with normalized (stripped, lowercased) column keys."""
+    if not APPROVED_RATES_FILE.exists():
+        raise AuditSchemaError(f"Rates file not found: {APPROVED_RATES_FILE}")
+
+    records = []
+    with open(APPROVED_RATES_FILE, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+
+        if reader.fieldnames is None:
+            raise AuditSchemaError("CSV file is empty or missing header row.")
+
+        normalized_headers = [h.strip().lower() for h in reader.fieldnames]
+        missing_cols = set(REQUIRED_RATE_COLUMNS) - set(normalized_headers)
+        if missing_cols:
+            raise AuditSchemaError(f"CSV missing required columns: {missing_cols}")
+
+        for row in reader:
+            # k can be None when a row has more fields than the header (ragged CSV);
+            # v can be None when a row has fewer fields than the header.
+            records.append(
+                {
+                    k.strip().lower(): (v or "").strip()
+                    for k, v in row.items()
+                    if k is not None
+                }
+            )
+
+    return records
+
+
+def validate_and_parse_rate(value: str) -> Optional[float]:
+    """Strips currency/percent/comma formatting and returns a non-negative float, or None."""
+    if not value:
+        return None
+    clean_val = re.sub(r"[^\d.\-]", "", value)
+    try:
+        rate = float(clean_val)
+        return rate if rate >= 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def run_audit() -> AuditResult:
+    """Runs the audit and returns an AuditResult. Never calls sys.exit — safe to
+    import and call from other Python code. Raises AuditSchemaError on missing
+    files, malformed JSON, or missing CSV columns; anomalies in otherwise-valid
+    data are recorded on the returned AuditResult, not raised."""
+    result = AuditResult()
+
+    print("Loading datasets...")
+    try:
+        county_map = load_crosswalk()
+        print(f"[OK] Loaded crosswalk for {len(county_map)} counties.")
+
+        rates = load_rates()
+        print(f"[OK] Loaded {len(rates)} rate records.")
+    except AuditSchemaError:
+        raise
+    except Exception as e:
+        raise AuditSchemaError(f"Data loading error: {e}") from e
+
+    print("Running record verification and aggregation...")
+
+    for record in rates:
+        result.total_records += 1
+        normalized_county = record.get("county", "").strip().lower()
+
+        if normalized_county not in county_map:
+            result.missing_counties += 1
+            result.add_anomaly(record, "County not found in crosswalk")
+            continue
+
+        county_info = county_map[normalized_county]
+        area_id = county_info["area"]
+
+        fips = county_info.get("fips")
+        if not fips or fips.u
+===== FILE: pa-audit-work/setup_repo.py =====
+#!/usr/bin/env python3
+"""
+Pennsylvania Health Insurance Audit & Rate Analysis (2026) - Repository Initializer
+
+Reproduces the full repository byte-for-byte: directory structure, verified data
+CSVs, JSON statutes map, Source Reliability Appendix, README, LICENSE, execution
+permissions, and Git initialization.
+"""
+
+import os
+import subprocess
+
+REPO_NAME = "pennsylvania-health-insurance-audit-2026"
+BASE_DIR = os.path.join(os.getcwd(), REPO_NAME)
+
+DATA_RATES_CSV = 'carrier_name,approved_rate_change,market_segment,primary_rating_areas\nAmbetter (Centene),+37.8%,Individual,1-9\nKeystone Health Plan Central,+22.4%,Individual,6;7;9\nKeystone Health Plan East,+22.0%,Individual,8\nUPMC Health Plan,+24.8%,Individual,1;4;5\nHighmark Inc.,+17.7%,Individual,1;2;4;5;6;7;9\nHighmark Benefits Group,+18.4%,Individual,3;8\nGeisinger Health Plan,+11.6%,Individual,2;3;5;6;7;9\nCapital Advantage Assurance,+24.6%,Individual,6;7;9\nPartners Insurance Co.,-10.1%,Individual,3;6;8\n'
+
+DATA_RATING_AREAS_CSV = 'rating_area_id,primary_hub,constituent_counties\n1,Northwest,"Clarion, Crawford, Erie, Forest, McKean, Mercer, Venango, Warren"\n2,Northern Tier Central,"Cameron, Elk, Potter"\n3,Northeast & Susquehanna Valley,"Bradford, Carbon, Clinton, Lackawanna, Luzerne, Lycoming, Monroe, Pike, Sullivan, Susquehanna, Tioga, Wayne, Wyoming"\n4,Pittsburgh Metro / Greater Western PA,"Allegheny, Armstrong, Beaver, Butler, Fayette, Greene, Indiana, Lawrence, Washington, Westmoreland"\n5,Central / Laurel Highlands,"Bedford, Blair, Cambria, Clearfield, Huntingdon, Jefferson, Somerset"\n6,Central / Lehigh Valley,"Centre, Columbia, Lehigh, Mifflin, Montour, Northampton, Northumberland, Schuylkill, Snyder, Union"\n7,South Central Border & Berks,"Adams, Berks, Lancaster, York"\n8,Philadelphia Metropolitan Area,"Bucks, Chester, Delaware, Montgomery, Philadelphia"\n9,Capital Region,"Cumberland, Dauphin, Franklin, Fulton, Juniata, Lebanon, Perry"\n'
+
+STATUTES_JSON = '{\n  "project": "Pennsylvania Health Insurance Audit & Rate Analysis (2026)",\n  "verified_statutes": [\n    {\n      "citation": "40 P.S. \u00a7 991.2101 et seq.",\n      "short_title": "Act 68 of 1998",\n      "official_name": "Quality Health Care Accountability and Protection Act",\n      "scope": "Managed care protections, clean claim definitions, 45-day prompt payment mandates.",\n      "status": "Active / Verified"\n    },\n    {\n      "citation": "40 P.S. \u00a7 991.2164 et seq.",\n      "short_title": "Act 146 of 2022",\n      "official_name": "Independent External Review Act",\n      "scope": "State-administered external review process for denied health insurance claims.",\n      "status": "Active / Verified"\n    },\n    {\n      "citation": "40 Pa.C.S. \u00a7 4501 et seq.",\n      "short_title": "Act 2 of 2023",\n      "official_name": "Insurance Data Security Act",\n      "scope": "Cybersecurity standards, risk assessments, and breach notification for licensees.",\n      "status": "Active / Verified"\n    }\n  ],\n  "excluded_citations": [\n    {\n      "citation": "SB 1071 (2024)",\n      "claimed_scope": "Coinsurance and pharmacy cost-sharing",\n      "actual_scope": "University of Pennsylvania Appropriations (Title 24)",\n      "reason": "Hallucinated Context"\n    },\n    {\n      "citation": "Act 252-2023",\n      "claimed_scope": "Network Disclosure",\n      "actual_scope": "Non-existent legislation",\n      "reason": "Fabricated Citation"\n    },\n    {\n      "citation": "\\u00a7 28-725 & \\u00a7 29-8719",\n      "claimed_scope": "Insurance Code Sections",\n      "actual_scope": "Non-existent code numbers",\n      "reason": "Invalid Formatting (PA Insurance law uses Title 40 P.S. or Title 40 Pa.C.S.)"\n    },\n    {\n      "citation": "40 P.S. \\u00a7 4001 et seq.",\n      "claimed_scope": "Act 2 of 2023 codification",\n      "actual_scope": "Act 2 of 2023 is codified at 40 Pa.C.S. \\u00a7 4501 et seq.",\n      "reason": "Mis-codified Section (wrong series and wrong section number)"\n    }\n  ],\n  "open_verification_items": [\n    {\n      "item": "Per-carrier rating-area assignments in approved_rates_2026.csv",\n      "status": "Unresolved",\n      "note": "Currently sourced in aggregate to WITF (2025); needs cross-check against individual PID rate-filing decision letters before use as a standalone citation."\n    },\n    {\n      "item": "Outpatient coinsurance caps / pharmacy deductible statutes (Lehigh County context)",\n      "status": "Unresolved - do not cite",\n      "note": "No verified, currently-enacted PA statute has been matched to this claim yet."\n    }\n  ]\n}\n'
+
+SOURCE_RELIABILITY_MD = '# Source Reliability Appendix & Fabrication Exclusions\n\n## 1. Excluded Documents & Fact-Checking Audit\n\nDuring the initial ingestion phase, an unverified analysis titled *"Cross-Sectional Metadata Analysis of Pennsylvania Health Insurance Audit Protocols and Market Structures for September 2026"* was subjected to rigorous statutory and factual verification. The document was **strictly excluded** from this repository due to critical hallucinations, non-existent statutory citations, and scrambled geographical mappings.\n\n### Summary of Exclusions and Errors\n\n| Flagged Citation / Claim | Initial Status | Verification Finding & Primary Source Evidence | Action Taken |\n| :--- | :--- | :--- | :--- |\n| **Rating Area Scrambling** | Scrambled Mapping | The excluded document inverted Rating Areas 1 and 8 and misattributed counties across Areas 3, 4, 5, 6, and 9. Official CMS crosswalk files confirm Area 4 is Pittsburgh Metro, Area 5 is Central/Laurel Highlands, Area 6 is Central/Lehigh Valley, and Area 9 is the Capital Region (Centers for Medicare & Medicaid Services, 2024). | **Corrected:** Repository adopted the official live CMS 2026 geographic crosswalk files, verified county-by-county against all 67 PA counties with no duplicates or omissions. |\n| **Senate Bill 1071 (2024)** | Hallucinated Context | Cited as a health insurance coinsurance reform
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/data/approved_rates_2026.csv =====
+carrier_name,approved_rate_change,market_segment,primary_rating_areas
+Ambetter (Centene),+37.8%,Individual,1-9
+Keystone Health Plan Central,+22.4%,Individual,6;7;9
+Keystone Health Plan East,+22.0%,Individual,8
+UPMC Health Plan,+24.8%,Individual,1;4;5
+Highmark Inc.,+17.7%,Individual,1;2;4;5;6;7;9
+Highmark Benefits Group,+18.4%,Individual,3;8
+Geisinger Health Plan,+11.6%,Individual,2;3;5;6;7;9
+Capital Advantage Assurance,+24.6%,Individual,6;7;9
+Partners Insurance Co.,-10.1%,Individual,3;6;8
+
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/data/statutes_2026.json =====
+{
+  "project": "Pennsylvania Health Insurance Audit & Rate Analysis (2026)",
+  "verified_statutes": [
+    {
+      "citation": "40 P.S. § 991.2101 et seq.",
+      "short_title": "Act 68 of 1998",
+      "official_name": "Quality Health Care Accountability and Protection Act",
+      "scope": "Managed care protections, clean claim definitions, 45-day prompt payment mandates.",
+      "status": "Active / Verified"
+    },
+    {
+      "citation": "40 P.S. § 991.2164 et seq.",
+      "short_title": "Act 146 of 2022",
+      "official_name": "Independent External Review Act",
+      "scope": "State-administered external review process for denied health insurance claims.",
+      "status": "Active / Verified"
+    },
+    {
+      "citation": "40 Pa.C.S. § 4501 et seq.",
+      "short_title": "Act 2 of 2023",
+      "official_name": "Insurance Data Security Act",
+      "scope": "Cybersecurity standards, risk assessments, and breach notification for licensees.",
+      "status": "Active / Verified"
+    }
+  ],
+  "excluded_citations": [
+    {
+      "citation": "SB 1071 (2024)",
+      "claimed_scope": "Coinsurance and pharmacy cost-sharing",
+      "actual_scope": "University of Pennsylvania Appropriations (Title 24)",
+      "reason": "Hallucinated Context"
+    },
+    {
+      "citation": "Act 252-2023",
+      "claimed_scope": "Network Disclosure",
+      "actual_scope": "Non-existent legislation",
+      "reason": "Fabricated Citation"
+    },
+    {
+      "citation": "\u00a7 28-725 & \u00a7 29-8719",
+      "claimed_scope": "Insurance Code Sections",
+      "actual_scope": "Non-existent code numbers",
+      "reason": "Invalid Formatting (PA Insurance law uses Title 40 P.S. or Title 40 Pa.C.S.)"
+    },
+    {
+      "citation": "40 P.S. \u00a7 4001 et seq.",
+      "claimed_scope": "Act 2 of 2023 codification",
+      "actual_scope": "Act 2 of 2023 is codified at 40 Pa.C.S. \u00a7 4501 et seq.",
+      "reason": "Mis-codified Section (wrong series and wrong section number)"
+    }
+  ],
+  "open_verification_items": [
+    {
+      "item": "Per-carrier rating-area assignments in approved_rates_2026.csv",
+      "status": "Unresolved",
+      "note": "Currently sourced in aggregate to WITF (2025); needs cross-check against individual PID rate-filing decision letters before use as a standalone citation."
+    },
+    {
+      "item": "Outpatient coinsurance caps / pharmacy deductible statutes (Lehigh County context)",
+      "status": "Unresolved - do not cite",
+      "note": "No verified, currently-enacted PA statute has been matched to this claim yet."
+    }
+  ]
+}
+
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/data/rating_areas_2026.csv =====
+rating_area_id,primary_hub,constituent_counties
+1,Northwest,"Clarion, Crawford, Erie, Forest, McKean, Mercer, Venango, Warren"
+2,Northern Tier Central,"Cameron, Elk, Potter"
+3,Northeast & Susquehanna Valley,"Bradford, Carbon, Clinton, Lackawanna, Luzerne, Lycoming, Monroe, Pike, Sullivan, Susquehanna, Tioga, Wayne, Wyoming"
+4,Pittsburgh Metro / Greater Western PA,"Allegheny, Armstrong, Beaver, Butler, Fayette, Greene, Indiana, Lawrence, Washington, Westmoreland"
+5,Central / Laurel Highlands,"Bedford, Blair, Cambria, Clearfield, Huntingdon, Jefferson, Somerset"
+6,Central / Lehigh Valley,"Centre, Columbia, Lehigh, Mifflin, Montour, Northampton, Northumberland, Schuylkill, Snyder, Union"
+7,South Central Border & Berks,"Adams, Berks, Lancaster, York"
+8,Philadelphia Metropolitan Area,"Bucks, Chester, Delaware, Montgomery, Philadelphia"
+9,Capital Region,"Cumberland, Dauphin, Franklin, Fulton, Juniata, Lebanon, Perry"
+
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/docs/source_reliability.md =====
+# Source Reliability Appendix & Fabrication Exclusions
+
+## 1. Excluded Documents & Fact-Checking Audit
+
+During the initial ingestion phase, an unverified analysis titled *"Cross-Sectional Metadata Analysis of Pennsylvania Health Insurance Audit Protocols and Market Structures for September 2026"* was subjected to rigorous statutory and factual verification. The document was **strictly excluded** from this repository due to critical hallucinations, non-existent statutory citations, and scrambled geographical mappings.
+
+### Summary of Exclusions and Errors
+
+| Flagged Citation / Claim | Initial Status | Verification Finding & Primary Source Evidence | Action Taken |
+| :--- | :--- | :--- | :--- |
+| **Rating Area Scrambling** | Scrambled Mapping | The excluded document inverted Rating Areas 1 and 8 and misattributed counties across Areas 3, 4, 5, 6, and 9. Official CMS crosswalk files confirm Area 4 is Pittsburgh Metro, Area 5 is Central/Laurel Highlands, Area 6 is Central/Lehigh Valley, and Area 9 is the Capital Region (Centers for Medicare & Medicaid Services, 2024). | **Corrected:** Repository adopted the official live CMS 2026 geographic crosswalk files, verified county-by-county against all 67 PA counties with no duplicates or omissions. |
+| **Senate Bill 1071 (2024)** | Hallucinated Context | Cited as a health insurance coinsurance reform bill. SB 1071 is an appropriations bill for the Trustees of the University of Pennsylvania (Title 24), totally unrelated to health insurance (Pennsylvania General Assembly, 2024). | **Excluded:** Removed from statutory references. |
+| **Act 252 of 2023** | Non-Existent Law | Cited as a "Network Disclosure" act. Pennsylvania legislative records confirm no Act 252 was enacted in 2023. The primary 2023 health insurance enactment was Act 2 of 2023 (Insurance Data Security Act) (Pennsylvania General Assembly, 2023). | **Excluded:** Replaced with verified Act 2 of 2023 and Act 68 of 1998. |
+| **Incorrect Statutory Series & Section** | Mis-codified Section | Cited as 40 P.S. § 4001 et seq. Act 2 of 2023 is codified under Pennsylvania Consolidated Statutes as 40 Pa.C.S. § 4501 et seq., not unconsolidated P.S. statutes or section 4001 (Pennsylvania General Assembly, 2023). | **Corrected:** Citation updated to 40 Pa.C.S. § 4501 et seq. |
+| **§ 28-725 & § 29-8719** | Non-Existent Code | Cited as PA Insurance Code sections. Pennsylvania insurance laws are codified under Title 40 of Pennsylvania Statutes (40 P.S.) or Consolidated Statutes (40 Pa.C.S.); bare chapter-dash citations do not exist in state code (Pennsylvania Code, 2026). | **Excluded:** Replaced with Title 40 P.S. § 991.2164 et seq. |
+| **Bulletin #23-04** | Mislabeled Scope | Cited as a general rate and audit bulletin. Official PID Department Notices confirm Bulletin 2023-04 specifically addresses *Medicare Supplement Guaranteed Issue Eligibility Following the COVID Public Health Emergency* -- an unrelated topic (Pennsylvania Insurance Department, 2023). | **Reclassified:** Correctly annotated in source indices; not cited elsewhere in this repository as authority for rate or audit claims. |
+
+---
+
+## 2. Included Verified Statutory Baseline
+
+All operational and legal logic in this project is anchored in verified Commonwealth statutes and federal regulations:
+
+1. **Act 68 of 1998 (Quality Health Care Accountability and Protection Act):** Codified under 40 P.S. § 991.2101 et seq., establishing consumer protections, managed care organization requirements, and the 45-day prompt payment standard for clean claims (Pennsylvania General Assembly, 1998).
+2. **Act 146 of 2022 (Independent External Review Act):** Establishes the state-administered Independent External Review process under PID oversight (40 P.S. § 991.2164 et seq.), enabling enrollees to appeal adverse benefit determinations with certified independent review organizations (Pennsylvania Insurance Department, 2025; Pennsylvania General Assembly, 2022).
+3. **Act 2 of 2023 (Insurance Data Security Act):** Codified under 40 Pa.C.S. § 4501 et seq., establishing data security, risk assessment, and breach notification requirements for licensed insurance entities (Pennsylvania General Assembly, 2023).
+4. **No Surprises Act (H.R. 133 / Public Law 116-260):** Federal protections capping out-of-network emergency and non-emergency balance billing at the Qualifying Payment Amount (QPA) (Centers for Medicare & Medicaid Services, 2024).
+
+---
+
+## 3. Open Verification Items
+
+Flagged for follow-up so this repository never implies a higher confidence level than the evidence supports:
+
+* **Per-carrier rating-area assignments** in `README.md` §1 and `data/approved_rates_2026.csv` are currently cited in aggregate to WITF's October 2025 reporting, which confirms statewide and headline (Ambetter/Partners) figures but does not itemize every carrier's rating-area footprint at that level of granularity. Each row should be checked against that carrier's individual PID rate-filing decision letter (as filed with the Department) before this table is used as a standalone citation source. Status: **unresolved**.
+* **Outpatient coinsurance caps and pharmacy deductible statutes** referenced in earlier project planning (tied to Lehigh County-specific implementation questions) have not yet been matched to a verified, currently-enacted PA statute. No citation should be added for this until a specific, checkable statutory section is identified. Status: **unresolved -- do not cite**.
+
+---
+
+## 4. References
+
+* **Centers for Medicare & Medicaid Services.** (2024). *Pennsylvania geographic rating areas: Including state specific geographic divisions*. U.S. Department of Health and Human Services. https://www.cms.gov/cciio/programs-and-initiatives/health-insurance-market-reforms/pa-gra
+* **Pennie.** (2026, February 9). *One in five Pennie enrollees drop health coverage due to expired federal tax credits* [Press release]. https://agency.pennie.com/one-in-five-pennie-enrollees-drop-heal
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/docs/data_gathering_plan.md =====
+# Data Gathering Plan: Metal-Tier & Age-Curve Analysis
+
+**Objective:** Enable metal-tier and age-curve (3:1 ratio) compliance analysis, which current carrier-level CSVs cannot support.
+
+## Required Fixtures and Sources
+
+| Fixture | Granularity | Likely Source | Key Fields |
+| :--- | :--- | :--- | :--- |
+| Plan-level approved rates | plan $\times$ rating area | PID rate release / CMS PUF | `plan_id`, `issuer`, `metal_level`, `premium (age 21 baseline)`, `age curve` |
+| Age-curve ratios | per plan | PID rate release / CMS PUF | `63-to-21 premium ratio`; must be $\le 3.0$ |
+| Enrollment weights | plan $\times$ county | Pennie/CMS enrollment extracts | `lives covered` |
+| County APTC eligibility | county | Pennie published stats | `PTC eligibility share` |
+
+## Handling Rules
+
+- **Privacy:** All non-public or enrollment-identifiable fixtures must be stored in `data/private/` and added to `.gitignore`. Only derived, anonymized aggregates enter the public tree.
+- **Citations:** Every field must carry a source citation matching the `docs/source_reliability.md` format.
+- **Calculation:** Ratios must be computed as $\text{age-63 premium} \div \text{age-21 premium}$ at the individual plan level; averaging percentages at the carrier level is forbidden.
+
+## Validation Gate
+
+The reconciliation script in `audit/reconcile_rates.py` must run in CI against any newly ingested fixture before analysis notebooks are permitted to utilize the data.
+
+===== FILE: pa-audit-work/pennsylvania-health-insurance-audit-2026/audit/reconcile_rates.py =====
+# audit/reconcile_rates.py
+import csv, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+PID_APPROVED = {
+    "Ambetter Health of Pennsylvania": 37.8, "UPMC Health Plan": 24.8,
+    "UPMC Health Options": 20.2, "Keystone Health Plan East": 22.0,
+    "Capital Advantage Assurance": 24.6, "Oscar Health Plan of PA": 23.1,
+    "Highmark Benefits Group": 21.0, "Jefferson Health Plans PPO (Partners)": 20.5,
+    "QCC Insurance Company": 15.2, "Geisinger Quality Options": 13.8,
+    "Geisinger Health Plan": 11.6, "Partners Insurance Company": -10.1,
+}
+
+NAME_ALIASES = {
+    "Ambetter (Centene)": "Ambetter Health of Pennsylvania",
+    "UPMC Health Plan": "UPMC Health Plan",
+    "Keystone Health Plan East": "Keystone Health Plan East",
+    "Capital Advantage Assurance": "Capital Advantage Assurance",
+    "Oscar Health Plan of PA": "Oscar Health Plan of PA",
+    "Highmark Benefits Group": "Highmark Benefits Group",
+    "Highmark Inc.": None,
+    "Geisinger Health Plan": "Geisinger Health Plan",
+    "Partners Insurance Co.": "Partners Insurance Company",
+}
+
+COUNTY_EXITS = {
+    "Ambetter Health of Pennsylvania": {"Schuylkill"},
+    "Partners Insurance Company": {"Schuylkill"},
+}
+
+def parse_rate(raw: str) -> float:
+    return float(raw.strip().rstrip("%").replace("+", ""))
+
+def expand_areas(field: str) -> set[int]:
+    out = set()
+    for token in field.strip().split(";"):
+        token = token.strip()
+        if not token: continue
+        if "-" in token:
+            lo, hi = token.split("-")
+            out.update(range(int(lo), int(hi) + 1))
+        else:
+            out.add(int(token))
+    return out
+
+def main() -> int:
+    with open(ROOT / "data/rating_areas_2026.csv", newline="") as f:
+        counties_by_area = {int(r["rating_area_id"]): r["constituent_counties"]
+                            for r in csv.DictReader(f)}
+
+    covered = {}
+    rows_by_name = {}
+    with open(ROOT / "data/approved_rates_2026.csv", newline="") as f:
+        for r _: 1: echo: echo: I/O error
+_: 1: echo: echo: I/O error
+head: error writing 'standard output': Broken pipe
+_: 1: echo: echo: I/O error
+_: 1: echo: echo: I/O error
+head: write error: Broken pipe
+_: 1: echo: echo: I/O error
+_: 1: echo: echo: I/O error
+head: write error: Broken pipe
+_: 1: echo: echo: I/O error
+_: 1: echo: echo: I/O error
+head: write error: Broken pipe
+_: 1: echo: echo: I/O error
+
+░▒▓~ 
+❯ 

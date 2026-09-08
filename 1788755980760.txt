@@ -1,0 +1,487 @@
+
+Quack, bilbywilby. The three visible steps are really **verification gates** designed to prevent unsupported legal claims from entering the report or codebase. Here is a fuller version of each.
+
+## Step 1 — Verify the enactment status before treating a bill as law
+
+### Purpose
+
+Do not assume that HB 2562, HB 2563, or HB 2564 became law merely because:
+
+- They appear in a legislative database.
+- A policy document refers to them.
+- A health-plan name suggests that the legislation exists.
+- A summary describes them as enacted.
+- A bill number appears in a secondary source.
+
+Each bill should first be classified as one of the following:
+
+- Introduced
+- Referred to committee
+- Reported from committee
+- Passed one chamber
+- Passed both chambers
+- Enrolled
+- Signed into law
+- Became law without signature
+- Vetoed
+- Withdrawn
+- Failed or expired
+- Status unresolved
+
+Only the appropriate final categories should support a statement such as “Puerto Rico law requires…” or “the statute imposes…”
+
+### Recommended workflow
+
+For each bill, capture the following fields:
+
+```text
+jurisdiction
+bill_number
+session
+short_title
+official_title
+subject
+introduced_date
+last_action_date
+last_action
+enactment_status
+governor_action
+act_number
+effective_date
+official_source_url
+retrieved_at
+verification_notes
+```
+
+The critical distinction is between a **bill identifier** and an **enacted law identifier**. A bill number is not automatically a statute. If enacted, it should generally be traceable to an act number, signed-law record, codified provision, or official session-law publication.
+
+### What to verify
+
+For HB 2562, HB 2563, and HB 2564:
+
+1. Confirm the legislative session.
+2. Confirm that the numbers refer to the relevant Puerto Rico measures rather than another jurisdiction or session.
+3. Read the official status history.
+4. Check whether the measure passed both chambers.
+5. Check for executive approval, veto, or automatic enactment.
+6. Locate the resulting act number if the bill became law.
+7. Confirm the effective date.
+8. Determine whether the relevant provision was later amended, repealed, delayed, or superseded.
+9. Record the exact provision relevant to outpatient coinsurance, pharmacy deductibles, or annual cost-sharing caps.
+10. Mark the result as `unconfirmed` if any essential link is missing.
+
+### Safer wording
+
+Use wording that matches the evidence:
+
+- **Verified enactment:** “Act No. ___, enacted on ___, provides…”
+- **Pending bill:** “HB ___, introduced on ___, would provide…”
+- **Unresolved:** “The measure’s enactment status could not be confirmed from the available official record.”
+- **Secondary-source-only:** “A secondary source describes HB ___ as addressing ___; official enactment was not independently confirmed.”
+
+Avoid:
+
+> Puerto Rico law caps outpatient coinsurance under HB 2562.
+
+Prefer:
+
+> HB 2562 is cited in the working materials as relating to outpatient cost sharing, but its enactment status and operative text must be confirmed before it is treated as binding law.
+
+### Acceptance criteria
+
+Step 1 is complete only when every measure has:
+
+- An official status record.
+- A status value.
+- An official source.
+- An act number, if enacted.
+- An effective date, if enacted.
+- A quoted or pinpointed operative provision.
+- A clear distinction between proposed and enacted language.
+
+A useful machine-readable status object would look like this:
+
+```json
+{
+  "bill_number": "HB 2562",
+  "jurisdiction": "Puerto Rico",
+  "session": null,
+  "enactment_status": "unconfirmed",
+  "act_number": null,
+  "effective_date": null,
+  "official_source_url": null,
+  "verified": false,
+  "notes": "Do not cite as operative law until official status and text are located."
+}
+```
+
+## Step 4 — Verify the legal framework instead of searching for nonexistent code sections
+
+### Purpose
+
+The instruction not to hunt for the “full text” of §28-725 or §29-8719 is important because an apparently precise citation can be misleading in several ways:
+
+- The section number may not exist.
+- The number may belong to a different title.
+- The reference may be to a bill section rather than codified law.
+- A section may have been renumbered.
+- The source may have generated a citation from a template.
+- The citation may combine a chapter number and section number incorrectly.
+- The provision may exist only in a regulation, administrative rule, or session law.
+
+Repeatedly searching for nonexistent text risks converting a bad citation into a false legal conclusion.
+
+### Replace the search objective
+
+Instead of asking:
+
+> Where is the full text of §28-725 or §29-8719?
+
+Ask:
+
+> What official provisions govern network adequacy, disclosure, provider access, and related insurance-plan obligations, and can the claimed section numbers be mapped to those provisions?
+
+That creates two separate research tracks:
+
+1. **Positive verification:** locate the actual governing law.
+2. **Negative verification:** document that the cited sections could not be confirmed as valid statutory references.
+
+### Verify Act 68 of 1998 and Act 2 of 2023 separately
+
+For each act, record:
+
+```text
+act_number
+enactment_date
+title_or_subject
+official_session_law_url
+codified_title
+codified_sections
+relevant_topic
+amendments
+repeals
+effective_date
+quoted_language
+```
+
+Do not treat “Act 68 of 1998” or “Act 2 of 2023” as sufficient by themselves. The research record should identify:
+
+- What the act actually enacted.
+- Which title or code it amended.
+- Whether it created network-adequacy duties.
+- Whether it imposed disclosure requirements.
+- Which agency administers the provision.
+- Whether implementing regulations are required.
+- Whether the provision applies to all plans or only specified markets or products.
+
+### Build a citation crosswalk
+
+A crosswalk makes unsupported references visible:
+
+```json
+{
+  "claimed_citation": "§28-725",
+  "claimed_topic": "network adequacy",
+  "citation_found": false,
+  "possible_authority": [
+    {
+      "source": "Act 68 of 1998",
+      "status": "requires verification",
+      "relationship": "possible underlying insurance-law authority"
+    },
+    {
+      "source": "Act 2 of 2023",
+      "status": "requires verification",
+      "relationship": "possible later amendment or disclosure authority"
+    }
+  ],
+  "treatment": "Do not cite §28-725 as an operative code section"
+}
+```
+
+### How to describe a failed citation search
+
+Do not write:
+
+> Sections §28-725 and §29-8719 do not exist.
+
+That is stronger than the evidence unless the complete official code has been checked.
+
+Use:
+
+> The references “§28-725” and “§29-8719” could not be confirmed as valid, citable sections in the official sources reviewed. They are therefore excluded from the legal authority list pending source-level confirmation.
+
+That wording distinguishes:
+
+- “I did not find it,” from
+- “It definitely does not exist.”
+
+### Acceptance criteria
+
+Step 4 is complete when:
+
+- Act 68 of 1998 has been located in an official source.
+- Act 2 of 2023 has been located in an official source.
+- Their actual subject matter has been recorded.
+- Relevant operative provisions have been quoted or pinpointed.
+- The claimed section numbers have been tested against the appropriate code or session-law source.
+- Invalid or unresolved references are excluded from final citations.
+- Network adequacy and disclosure claims are tied to verified provisions, not merely related legislation.
+
+A compact research-state file could be generated like this:
+
+```bash
+mkdir -p research/authority
+
+cat > research/authority/citation_crosswalk.json <<'EOF'
+{
+  "claims": [
+    {
+      "claim_id": "network-adequacy-001",
+      "claim": "Puerto Rico law requires network adequacy disclosure",
+      "authority": null,
+      "status": "unverified",
+      "allowed_in_final_report": false
+    },
+    {
+      "claim_id": "citation-001",
+      "claim": "§28-725 is the governing network-adequacy provision",
+      "authority": "§28-725",
+      "status": "not_confirmed",
+      "allowed_in_final_report": false
+    }
+  ]
+}
+EOF
+```
+
+## Step 8 — Block unsupported citations from the Vob/Appeal/IDR templates
+
+### Purpose
+
+This is an implementation control. It prevents unsupported statutes from appearing in:
+
+- Verification-of-benefits templates.
+- Appeals.
+- Internal dispute-resolution materials.
+- Member letters.
+- Provider communications.
+- Compliance checklists.
+- Automatically generated legal summaries.
+
+The key rule is:
+
+> A citation may be used in an output template only if it already exists in the verified `statutes_2026.json` data source.
+
+The template must not invent citations, infer them from prose, or accept a citation merely because it resembles a valid statute.
+
+### Define the allowed-citation rule
+
+A citation is usable only when all of these are true:
+
+```text
+citation exists in statutes_2026.json
+status is enacted or otherwise legally operative
+jurisdiction matches the document
+effective date covers the document date
+source URL is present
+verification flag is true
+```
+
+A stricter record might look like this:
+
+```json
+{
+  "citation": "40 L.P.R.A. § 1234",
+  "jurisdiction": "Puerto Rico",
+  "status": "enacted",
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "source_url": "https://official-source.example/law",
+  "verified": true,
+  "allowed_templates": [
+    "vob",
+    "appeal",
+    "idr"
+  ]
+}
+```
+
+An unverified citation should remain in research notes, but not in production output:
+
+```json
+{
+  "citation": "§28-725",
+  "status": "unconfirmed",
+  "verified": false,
+  "allowed_templates": []
+}
+```
+
+### Add a hard validation gate
+
+The generator should fail closed. If a citation is missing, it should not silently print it.
+
+```python
+#!/usr/bin/env python3
+import json
+from pathlib import Path
+
+STATUTES = Path("data/statutes_2026.json")
+
+def load_statutes():
+    with STATUTES.open(encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    if isinstance(data, dict):
+        return data.get("statutes", [])
+
+    if isinstance(data, list):
+        return data
+
+    raise ValueError("statutes_2026.json must contain a list or a statutes property")
+
+def verified_citations(statutes):
+    allowed = set()
+
+    for item in statutes:
+        citation = item.get("citation")
+        if not citation:
+            continue
+
+        if item.get("verified") is True and item.get("status") in {
+            "enacted",
+            "operative",
+            "regulation"
+        }:
+            allowed.add(citation)
+
+    return allowed
+
+def validate_template_citations(template_citations, allowed):
+    rejected = sorted(set(template_citations) - allowed)
+
+    if rejected:
+        raise SystemExit(
+            "Blocked unsupported citations:\n- " + "\n- ".join(rejected)
+        )
+
+def main():
+    statutes = load_statutes()
+    allowed = verified_citations(statutes)
+
+    requested = [
+        "§28-725",
+        "§29-8719"
+    ]
+
+    validate_template_citations(requested, allowed)
+    print("All citations are verified and permitted.")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Prefer citation IDs over free-form text
+
+Instead of allowing templates to accept arbitrary strings:
+
+```json
+{
+  "citation": "§28-725"
+}
+```
+
+use a verified identifier:
+
+```json
+{
+  "statute_id": "pr_act_68_1998_network_adequacy"
+}
+```
+
+The renderer then retrieves the citation only from the verified data file. This prevents a user or upstream model from injecting an unverified citation directly into the document.
+
+```python
+def resolve_statute(statutes_by_id, statute_id):
+    statute = statutes_by_id.get(statute_id)
+
+    if not statute:
+        raise KeyError(f"Unknown statute_id: {statute_id}")
+
+    if not statute.get("verified"):
+        raise ValueError(f"Unverified statute blocked: {statute_id}")
+
+    return statute
+```
+
+### Add a visible fallback
+
+When no verified authority exists, the output should say so rather than fabricate one:
+
+```text
+Legal authority: No verified statutory citation available.
+Action: Route for manual legal or compliance review.
+```
+
+Do not allow the template to produce:
+
+```text
+Pursuant to §28-725...
+```
+
+unless that exact citation is present and verified in `statutes_2026.json`.
+
+### Test cases
+
+The gate should test at least these conditions:
+
+- Verified citation is accepted.
+- Unknown citation is rejected.
+- Unverified citation is rejected.
+- Repealed citation is rejected.
+- Citation from the wrong jurisdiction is rejected.
+- Citation not effective on the document date is rejected.
+- Missing source URL is rejected.
+- Duplicate citations are normalized.
+- A template with no citations can still render with a manual-review notice.
+
+### Acceptance criteria
+
+Step 8 is complete when:
+
+- All template citations come from `statutes_2026.json`.
+- Unverified citations cause a hard failure.
+- The system distinguishes enacted, proposed, repealed, and unresolved authorities.
+- Each accepted citation has a source and verification metadata.
+- The output records which citations were used.
+- A missing citation produces a review queue rather than invented legal text.
+- CI or a pre-generation test runs the citation validator automatically.
+
+A practical pipeline is:
+
+```bash
+mkdir -p data tests build
+
+python3 scripts/validate_statutes.py
+python3 scripts/validate_templates.py
+python3 scripts/render_documents.py
+```
+
+The overall logic is:
+
+```text
+research source
+    ↓
+status verification
+    ↓
+citation crosswalk
+    ↓
+verified statutes_2026.json
+    ↓
+template validation
+    ↓
+document generation
+```
+
+In short: **Step 1 verifies whether the proposed measures became law, Step 4 verifies the actual legal authorities instead of trusting questionable section numbers, and Step 8 enforces those findings mechanically so unsupported citations cannot reach an end-user document.**

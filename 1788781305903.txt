@@ -1,0 +1,63 @@
+
+On it. Let me run the primary-source checks first so the outline can flag what's verified vs. pending, then deliver the skeleton.
+
+Searching for the primary sources now:
+
+Primary sources found. One more search to pin the newest enrollment figure:
+
+Both checks came back with primary-source confirmation — the PID's own press release and Pennie's affordability page. Here's what verified, then the outline.
+
+## Verification results
+
+**Rate filings — confirmed against PID directly.** The PID newsroom release ([pa.gov](https://www.pa.gov/agencies/insurance/newsroom/shapiro-admin-receives-proposed-2027-health-insurance-rates)) confirms: filings submitted **May 15, 2026**; enrollment-weighted average requests of **17.1% (individual)** and **11.5% (small group)**; public comment through **Aug. 22, 2026**; final rates public in the fall. Two details worth pulling into the paper from the primary source that the news coverage flattens:
+
+- **Ambetter's 40.9% is not a pure rate hike.** PID discloses it's a 23.44% silver-to-silver average *plus* a 17.46% bronze-to-silver shift because Ambetter is discontinuing bronze plans entirely. The white paper should say this — reporting it as a flat "41% increase" misstates what's being requested, and the requested-vs-approved discipline you've built demands that precision.
+- **Corroborating detail from healthinsurance.org's PA marketplace guide:** at least 13 marketplace insurers filed for 2027, and Highmark Coverage Advantage has *no* 2027 filing — its enrollees may be consolidated into Highmark Inc./Benefits Group. Worth a sentence in the market-stability subsection.
+
+**Enrollment attrition — confirmed at Pennie's own affordability page** ([pennie.com/affordability](https://pennie.com/affordability), updated Aug. 10, 2026): as of **Aug 1, 2026**, total enrollment 422,869; 108,000 post-OE dropouts; **191,000 cumulative cancellations** including OE. The 102% premium increase figure is corroborated there too. So the WVIA figures check out, and the July 1 (431,270 / 177,000) → Aug 1 (422,869 / 191,000) progression gives you a clean series:
+
+```vega-lite
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "title": { "text": "Pennie Enrollment After Subsidy Expiration", "subtitle": "Enrollment fell from 486,000 (Feb 1) to 422,869 (Aug 1), a 13% decline" },
+  "data": {
+    "values": [
+      { "date": "2026-02-01", "enrollment": 486000, "source": "Pennie press release" },
+      { "month": "2026-03-24", "enrollment": 471442, "label": "PORH" },
+      { "date": "2026-05-01", "enrollment": 452000, "source": "GoErie" },
+      { "date": "2026-07-01", "enrollment": 431270, "source": "Pennie" },
+      { "date": "2026-08-01", "enrollment": 422869, "source": "Pennie" }
+    ]
+  },
+  "mark": { "type": "bar" },
+  "encoding": {
+    "x": { "field": "date", "type": "temporal", "title": "Date" },
+    "y": { "field": "enrollment", "type": "quantitative", "title": "Total enrollment" }
+  }
+}
+```
+
+**One discrepancy to flag before it enters the draft:** the WVIA piece says annual open enrollment "starts on Nov. 1," but PHIEA's own release says **OE 2027 runs Oct 15 – Dec 15, with Dec 15 as the single deadline** — a federal change. If OE now starts Oct 15, the "final rates by end of September / no later than Nov. 1" framing from the same article is internally stale. For the paper: cite PHIEA for the OE 2027 dates (primary), keep the rate-decision timeline as "expected by early November" attributed to the Commissioner via WVIA, and note the schedule change explicitly — it's material to the attrition story since the shorter window compresses renewal decisions.
+
+```card
+{ "type": "finding", "title": "Requested ≠ final", "body": "All 2027 figures (17.1%, 11.5%, Ambetter 40.9%) are insurer requests from May 15 filings, subject to PID's review-and-objections process; final approved rates land in the fall. The section should carry the distinction throughout.", "severity": "info" }
+```
+
+## Section outline: "2027 Rate Filing & Continued Attrition"
+
+Extends the August Status Report's structure; inherits its APA-citation style and "verified exclusions" discipline.
+
+**9.1 Filing timeline and request context** — May 15 filing deadline met; PID announcement July 23; public comment through Aug 22 (ra-in-comment@pa.gov per PID). Frame the driver: post-expiration cost pressure documented in the prior attrition section now flowing back into pricing requests.
+
+**9.2 Individual market requests.** Weighted average 17.1%; per-carrier range: Geisinger HMO 9.68% at the low end through Ambetter 40.9% at the high (with the bronze-discontinuation decomposition noted, and the note that discontinued-bronze members have other-carrier access). Source the table to PID's July 23, 2026 release directly, not to WVIA — the news piece cites the PID release, so cite upstream.
+
+**9.3 Small group market.** 11.5% weighted average; notable spread (Geisinger ~3.7–4.1% vs. Highmark's Lehigh Valley Flex Blue PPO at 21.4%). Keep brief — the paper's center of gravity is the individual market.
+
+**9.4 Continued attrition data (updated table).** Your July 1 figures (431,270 enrolled / 177,000 cancels) superseded by Aug 1 data: 422,869 enrolled, 108,000 post-OE drops, 191,000 cumulative. Preserve the "verified exclusions" convention: OE-terminations (85,000), post-OE cancels, and cumulative totals are distinct windows — carry forward the reconciliation discipline from the PORH reconciliation.
+
+**9.5 Process and outlook placeholder.** Commissioner Humphreys' timeline (final rates hoped by end of September, per WVIA). Placeholder block for final approved rates + exact publication date, flagged to update before the docx ships — and given the OE 2027 schedule change, note the new Oct 15 opener with the Dec 15 sole deadline sourced to PHIEA's release.
+
+**9.5 Provenance note** (methodology addition): one line documenting that doc 1/2 (the Gemini-provenance RTF/PDF) were quarantined per standing fabrication findings, and that rating-area/statutory tables derive solely from the verified crosswalk CSV and statute database.
+
+Ready to write the full prose for any of these subsections — suggest starting with 9.2 since it's the most figure-dense and everything in it is now verified against primary sources. Want that drafted, or do you want to settle the OE-2027 date question first (it affects how 9.5's placeholder is worded)?

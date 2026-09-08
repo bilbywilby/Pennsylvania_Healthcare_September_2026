@@ -1,0 +1,68 @@
+
+cat << 'BASHEOF' > ~/opsec_surveillance/surveillance_cli.sh
+#!/bin/bash
+set -u
+export COLUMNS=100
+
+VAULT="$HOME/opsec_surveillance/.surveillance_vault"
+DUMPS="$HOME/opsec_surveillance/dumps"
+LOG="$HOME/opsec_surveillance/surveillance_log.txt"
+CLEANER="$HOME/opsec_surveillance/utils/cleaner.py"
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
+
+TARGETS=(
+  "0|https://www.health.pa.gov/topics/health-coverage/Pages/default.aspx|Health-Coverage"
+)
+mkdir -p "$VAULT" "$DUMPS"
+
+log_event() { printf '%s,%s,%s,%s\n' "$(date +%Y%m%d_%H%M%S)" "$1" "$2" "$3" >> "$LOG"; }
+
+echo "[*] Ritual starting."
+timeout 20 w3m -dump https://example.com > /dev/null 2>&1 || { echo "[!] Canary failed."; exit 1; }
+
+for target_data in "${TARGETS[@]}"; do
+    IFS='|' read -r tid url cat <<< "$target_data"
+    DUMP_FILE="$DUMPS/target_$tid.dump"
+    HASH_FILE="$VAULT/target_$tid.sha256"
+    SNAP_FILE="$VAULT/target_$tid.clean"
+    sleep $((RANDOM % 15 + 5))
+    echo -n "[+] Target $tid: "
+
+    timeout 30 w3m -dump -U "$UA" "$url" > "$DUMP_FILE" 2>/dev/null; rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "FETCH_FAILED rc=$rc"; log_event "$tid" "$rc" "FETCH_FAILED"; continue
+    fi
+    if [ "$(wc -c < "$DUMP_FILE")" -lt 5000 ]; then
+        echo "TOO_SMALL"; log_event "$tid" "$rc" "TOO_SMALL"; continue
+    fi
+
+    TMP_CLEAN=$(mktemp)
+    python3 "$CLEANER" < "$DUMP_FILE" > "$TMP_CLEAN"
+    if [ ! -s "$TMP_CLEAN" ] || [ "$(wc -l < "$TMP_CLEAN")" -lt 10 ]; then
+        echo "EMPTY_AFTER_CLEAN"; log_event "$tid" 0 "EMPTY_CONTENT"
+        rm -f "$TMP_CLEAN"; continue
+    fi
+
+    NEW_HASH=$(sha256sum "$TMP_CLEAN" | awk '{print $1}')
+    if [ -f "$HASH_FILE" ]; then
+        if [ "$NEW_HASH" != "$(cat "$HASH_FILE")" ]; then
+            DIFF_FILE="$VAULT/diff_${tid}_$(date +%Y%m%d_%H%M%S).txt"
+            if [ -f "$SNAP_FILE" ]; then
+                diff "$SNAP_FILE" "$TMP_CLEAN" > "$DIFF_FILE"
+            else
+                echo "hash changed, no prior snapshot" > "$DIFF_FILE"
+            fi
+            echo "CHANGE_DETECTED"; log_event "$tid" 1 "CHANGE_DETECTED"
+            cp "$TMP_CLEAN" "$SNAP_FILE"; echo "$NEW_HASH" > "$HASH_FILE"
+        else
+            echo "NO_CHANGE"; log_event "$tid" 0 "STABLE"
+        fi
+    else
+        cp "$TMP_CLEAN" "$SNAP_FILE"; echo "$NEW_HASH" > "$HASH_FILE"
+        echo "BASELINE_SET"; log_event "$tid" 0 "INIT"
+    fi
+    rm -f "$TMP_CLEAN"
+done
+echo "[*] Ritual complete. Quack."
+BASHEOF
+bash -n ~/opsec_surveillance/surveillance_cli.sh && grep -c health.pa.gov ~/opsec_surveillance/surveillance_cli.sh

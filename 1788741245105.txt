@@ -1,0 +1,138 @@
+
+src/provenance_engine/provenance.py — use the full module from my earlier message with three changes: rename the package import surface (from provenance_engine import ...), replace the hardcoded CLI defaults with config loading (tomllib from stdlib on 3.13), and read CLAIM_ID_RE prefix from engine.toml. Everything else — Claim, ProvenanceLedger, ArtifactValidator, seed_from_golden_fixture, validate_tree — drops in unchanged.
+
+data/statutes_2026.json — starts fail-closed, with the four disputed citations recorded as unverified (per my search results, not the pasted summary's unretrievable-source claims):
+
+{
+  "verified": {},
+  "unverified": {
+    "sb_1071_2023_health_insurance": {
+      "finding": "SB 1071 of the 2025-2026 session exists but covers crimes/municipalities, not insurance; no health-insurance SB 1071 located. A 2023-2024 UPenn appropriations claim for this number is ALSO unconfirmed (asserted in working notes, source never retrieved).",
+      "last_checked": "2026-09-07"
+    },
+    "act_252_2023": {
+      "finding": "No Act 252 of 2023 found in official sources.",
+      "last_checked": "2026-09-07"
+    },
+    "hb_2562_2563_2564": {
+      "finding": "Real ACA-codification bills; PA House passed Oct 2024 (160-42, 163-39, 174-28). Senate action and enactment status unconfirmed - requires direct palegis.us bill-page check. Working notes claim Senate committee referral; unverified.",
+      "candidate_source": "https://www.cityandstatepa.com/policy/2024/10/pa-house-approves-bills-would-codify-affordable-care-act-protections-state-law/400172",
+      "last_checked": "2026-09-07"
+    },
+    "section_28_725_29_8719": {
+      "finding": "Not located in any official PA code source. Verify Act 68 of 1998 and Title 40 Pa.C.S. provisions as replacement lane.",
+      "last_checked": "2026-09-07"
+    }
+  }
+}
+
+research/legislation_notes_2026-09-07.json — the pasted summary, demoted to research notes with its unverifiable claims explicitly flagged (the DHS 85K "resolution" goes here as status: unresolved, not as a finding).
+
+data/verification_log.json — for now, just the schema contract:
+
+{}
+
+Deliberately empty: the Claim model refuses an empty ledger at load time, which is correct — no real claims are verified yet, so the gate should fail until someone does the palegis.us checks and seeds it. The empty file exists so the path is documented, not so validation passes.
+
+tests/test_provenance.py (core gates — these encode the standards, not test trivia):
+
+import json, tempfile
+from datetime import date, timedelta
+from pathlib import Path
+import pytest
+from provenance_engine.provenance import (
+    Claim, ProvenanceLedger, InvalidLedgerError, UnknownClaimError, ArtifactValidator,
+)
+
+def make_claim(**over):
+    base = dict(
+        claim_id="test_claim", value=42,
+        source_citation="PID Annual Report 2026, p.14",
+        source_url="https://www.insurance.pa.gov/",
+        last_verified=date.today(), verified_by="test",
+    )
+    base.update(over)
+    return Claim(**base)
+
+class TestLedgerIntegrity:
+    def test_placeholder_url_rejected(self):
+        with pytest.raises(Exception):
+            make_claim(source_url="https://example.com/report")
+
+    def test_missing_local_path_rejected(self):
+        with pytest.raises(Exception):
+            make_claim(source_url="docs/nonexistent.pdf")
+
+    def test_key_claim_id_mismatch_rejected(self, tmp_path):
+        bad = {"wrong_key": make_claim().model_dump(mode="json")}
+        p = tmp_path / "ledger.json"
+        p.write_text(json.dumps(bad))
+        with pytest.raises(InvalidLedgerError):
+            ProvenanceLedger.load(p)
+
+    def test_register_refuses_silent_overwrite(self):
+        ledger = ProvenanceLedger({"test_claim": make_claim()})
+        with pytest.raises(Exception):
+            ledger.register(make_claim(value=99))  # same id, no overwrite flag
+
+class TestValidator:
+    def _ledger(self):
+        return ProvenanceLedger({
+            "fresh_claim": make_claim(claim_id="fresh_claim"),
+            "stale_claim": make_claim(claim_id="stale_claim",
+                                      last_verified=date.today() - timedelta(days=365)),
+        })
+
+    def test_unknown_claim_reported(self):
+        v = ArtifactValidator(self._ledger())
+        assert any("unknown_or_typo" in s for s in v.validate_artifact(
+            {"data": {"claim_id": "unknown_or_typo"}}))
+
+    def test_stale_claim_reported(self):
+        v = ArtifactValidator(self._ledger())
+        assert any("STALE" in s for s in v.validate_artifact(
+            {"data": {"claim_id": "stale_claim"}}))
+
+    def test_verified_artifact_clean(self):
+        v = ArtifactValidator(self._ledger())
+        assert v.validate_artifact({"data": {"claim_id": "fresh_claim"}}) == []
+
+    def test_unverified_statute_fails_closed(self, tmp_path):
+        v = ArtifactValidator(self._ledger(),
+                               statutes_path=tmp_path / "nonexistent.json")
+        assert any("verified column" in s for s in v.validate_artifact(
+            {"statute": "Sec. 28-725"}))
+
+.github/workflows/validate.yml:
+
+name: provenance-gate
+on: [push, pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install pydantic pytest
+      - run: python -m pytest tests/ -q
+      - run: python -m provenance_engine.provenance --config config/engine.toml
+        continue-on-error: false
+
+(The final step will fail until the ledger is seeded with real claims — that's the fail-closed design working, and it documents itself in the Actions log.)
+
+PROVENANCE_SCHEMA.md — the public contract, two pages: claim fields, the verified/unverified distinction, staleness semantics, and the merge plan for integration (below).
+
+The pre-stitched integration seam
+Three deliberate choices make the eventual merge into the audit repo non-breaking:
+
+Package namespace: it lives at src/provenance_engine/, so dropping it into the main repo's src/ won't collide with the existing src/paths.py or future src/api/.
+Config-over-convention: after merge, engine.toml sets owner_repo_prefix = "pennsylvania-health-insurance-audit-2026/" and repoints ledger/statutes to the main repo's copies (or symlinks them) — no code edits.
+claim_id_namespace: if the audit repo's own golden-fixture IDs ever collide with engine-side claims, the prefix resolves it mechanically.
+Merge-day checklist, for the README: copy src/provenance_engine/ → main src/; move data/*.json or point config at them; migrate the golden fixture via seed_from_golden_fixture() (it requires the real source document URL — refuse the placeholder); delete this standalone remote or archive it.
+
+Committing it
+cd /home/droid/pa-provenance-engine
+git add -A
+git status   # review before commit, always
+git commit -m "feat(engine): provenance enforcement engine with fail-closed statutes gate"

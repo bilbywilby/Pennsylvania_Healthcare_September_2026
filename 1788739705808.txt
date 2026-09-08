@@ -1,0 +1,641 @@
+
+        )
+
+    def add_anomaly(self, record: Dict, reason: str):
+        self.anomalies.append(
+            {
+                "reason": reason,
+                "county": record.get("county"),
+                "rate": record.get("rate"),
+                "age": record.get("age"),
+                "plan_type": record.get("plan_type"),
+                "raw_record": json.dumps(record),
+            }
+        )
+
+
+def load_crosswalk() -> Dict[str, Dict[str, str]]:
+    """Loads crosswalk JSON into a case-insensitive lookup keyed by lowercase county name."""
+    if not CROSSWALK_FILE.exists():
+        raise AuditSchemaError(f"Crosswalk file not found: {CROSSWALK_FILE}")
+
+    with open(CROSSWALK_FILE, "r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise AuditSchemaError(f"Crosswalk file is not valid JSON: {e}") from e
+
+    county_map = {}
+    for area_id, counties in data.items():
+        for item in counties:
+            key = item["county"].strip().lower()
+            county_map[key] = {
+                "display_name": item["county"].strip(),
+                "fips": item["fips"],
+                "area": area_id,
+            }
+    return county_map
+
+
+def load_rates() -> List[Dict]:
+    """Loads approved rates CSV with normalized (stripped, lowercased) column keys."""
+    if not APPROVED_RATES_FILE.exists():
+        raise AuditSchemaError(f"Rates file not found: {APPROVED_RATES_FILE}")
+
+    records = []
+    with open(APPROVED_RATES_FILE, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+
+        if reader.fieldnames is None:
+            raise AuditSchemaError("CSV file is empty or missing header row.")
+
+        normalized_headers = [h.strip().lower() for h in reader.fieldnames]
+        missing_cols = set(REQUIRED_RATE_COLUMNS) - set(normalized_headers)
+        if missing_cols:
+            raise AuditSchemaError(f"CSV missing required columns: {missing_cols}")
+
+        for row in reader:
+            # k can be None when a row has more fields than the header (ragged CSV);
+            # v can be None when a row has fewer fields than the header.
+            records.append(
+                {
+                    k.strip().lower(): (v or "").strip()
+                    for k, v in row.items()
+                    if k is not None
+                }
+            )
+
+    return records
+
+
+def validate_and_parse_rate(value: str) -> Optional[float]:
+    """Strips currency/percent/comma formatting and returns a non-negative float, or None."""
+    if not value:
+        return None
+    clean_val = re.sub(r"[^\d.\-]", "", value)
+    try:
+        rate = float(clean_val)
+        return rate if rate >= 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def run_audit() -> AuditResult:
+    """Runs the audit and returns an AuditResult. Never calls sys.exit — safe to
+    import and call from other Python code. Raises AuditSchemaError on missing
+    files, malformed JSON, or missing CSV columns; anomalies in otherwise-valid
+    data are recorded on the returned AuditResult, not raised."""
+    result = AuditResult()
+
+    print("Loading datasets...")
+    try:
+        county_map = load_crosswalk()
+        print(f"[OK] Loaded crosswalk for {len(county_map)} counties.")
+
+        rates = load_rates()
+        print(f"[OK] Loaded {len(rates)} rate records.")
+    except AuditSchemaError:
+        raise
+    except Exception as e:
+        raise AuditSchemaError(f"Data loading error: {e}") from e
+
+    print("Running record verification and aggregation...")
+
+    for record in rates:
+        result.total_records += 1
+        normalized_county = record.get("county", "").strip().lower()
+
+        if normalized_county not in county_map:
+            result.missing_counties += 1
+            result.add_anomaly(record, "County not found in crosswalk")
+            continue
+
+        county_info = county_map[normalized_county]
+        area_id = county_info["area"]
+
+        fips = county_info.get("fips")
+        if not fips or fips.upper() == "UNKNOWN":
+            result.missing_fips += 1
+            result.add_anomaly(record, "Missing or unresolved FIPS code")
+            continue
+
+        raw_rate = record.get("rate", "")
+        parsed_rate = validate_and_parse_rate(raw_rate)
+        if parsed_rate is None:
+            result.invalid_rates += 1
+            result.add_anomaly(record, f"Invalid or non-numeric rate value: '{raw_rate}'")
+            continue
+
+        # Optional per-record weight (e.g. enrolled member count). Defaults to 1.0
+        # (unweighted / simple average) when absent or non-positive.
+        weight = 1.0
+        if "weight" in record:
+            w = validate_and_parse_rate(record["weight"])
+            if w is not None and w > 0:
+                weight = w
+
+        stats = result.area_stats[area_id]
+        stats["total_weight"] += weight
+        stats["sum_rate_weighted"] += parsed_rate * weight
+        stats["record_count"] += 1
+        result.valid_records += 1
+
+    print("\n=== Audit Summary ===")
+    print(f"Total Records Processed : {result.total_records}")
+    print(f"Valid Records           : {result.valid_records}")
+    print(f"Missing Counties        : {result.missing_counties}")
+    print(f"Missing FIPS Codes      : {result.missing_fips}")
+    print(f"Invalid Rate Values     : {result.invalid_rates}")
+
+    if result.anomalies:
+        print(f"\n[!] Identified {len(result.anomalies)} anomalies. Writing report...")
+        REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(REPORT_FILE, "w", newline="", encoding="utf-8") as f:
+            fieldnames = ["reason", "county", "rate", "age", "plan_type", "raw_record"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for anomaly in result.anomalies:
+                writer.writerow(anomaly)
+        print(f"[OK] Detailed anomaly log written to: {REPORT_FILE}")
+
+    print("\nGenerating rating area aggregates...")
+    AGGREGATE_REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(AGGREGATE_REPORT_FILE, "w", newline="", encoding="utf-8") as f:
+        fieldnames = ["rating_area", "total_records", "total_weight", "weighted_avg_rate"]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for area_id in sorted(result.area_stats.keys()):
+            stats = result.area_stats[area_id]
+            total_weight = stats["total_weight"]
+            weighted_avg = (
+                stats["sum_rate_weighted"] / total_weight if total_weight > 0 else 0.0
+            )
+            writer.writerow(
+                {
+                    "rating_area": area_id,
+                    "total_records": stats["record_count"],
+                    "total_weight": total_weight,
+                    "weighted_avg_rate": f"{weighted_avg:.4f}",
+                }
+            )
+    print(f"[OK] Aggregates written to: {AGGREGATE_REPORT_FILE}")
+    print(f"    Areas processed: {len(result.area_stats)}")
+
+    return result
+
+
+def main():
+    try:
+        result = run_audit()
+    except AuditSchemaError as e:
+        print(f"\n[FAIL] Schema or file error: {e}")
+        sys.exit(1)
+
+    if result.valid_records < result.total_records:
+        print("\n[WARNING] Audit completed with validation exceptions.")
+        sys.exit(1)
+    print("\n[PASSED] All records validated against crosswalk and rate constraints.")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+
+=== schema_reconciliation.py (likely source of computed exposure/rate figures) ===
+"""
+Schema Reconciliation: carrier x rating-area filings -> county-level audit engine.
+Jurisdiction: Commonwealth of Pennsylvania (Rating Areas 1-9, 67 Counties).
+"""
+import csv
+import json
+import logging
+import re
+import zlib
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+SERFF_REGEX = re.compile(r"^[A-Z]{4}-\d{9}$")
+
+class ReconciliationError(Exception):
+    """Structural failure in crosswalk data."""
+
+class FilingValidationError(ReconciliationError):
+    """Structural failure in carrier filing data."""
+
+CROSSWALK_PATH = Path(__file__).resolve().parent.parent / "data" / "public" / "pa_county_fips_crosswalk.json"
+EXPOSURE_OUTPUT_PATH = Path(__file__).resolve().parent.parent / "data" / "private" / "county_rate_exposure.csv"
+EXPECTED_COUNTIES = 67
+VALID_RATING_AREAS = set(range(1, 10))
+
+COLUMN_ALIASES = {"carrier_name": "carrier", "approved_rate_change": "rate_change"}
+
+CARRIER_RATE_FILINGS: List[Dict[str, Any]] = [
+    # placeholder watermarked shares — replace with real covered_lives on PID extract
+    {"carrier": "Ambetter (Centene)", "serff_id": "CECO-134506033", "rate_change": 37.8, "share": 0.06, "rating_areas": list(range(1, 10)), "verified": False},
+    {"carrier": "UPMC Health Plan Inc.", "serff_id": "UPMC-134504084", "rate_change": 24.78, "share": 0.18, "rating_areas": [1, 4, 5], "verified": True},
+    {"carrier": "UPMC Health Options Inc.", "serff_id": "UPMC-134504074", "rate_change": 20.18, "share": 0.06, "rating_areas": [1, 2, 3, 4, 5, 6, 7, 9], "verified": True},
+    {"carrier": "Capital Advantage Assurance", "serff_id": "CABC-134505011", "rate_change": 24.56, "share": 0.08, "rating_areas": [6, 7, 9], "verified": False},
+    {"carrier": "Keystone Health Plan Central", "serff_id": "INAC-134505999", "rate_change": 22.40, "share": 0.05, "rating_areas": [6, 7, 9], "verified": False},
+    {"carrier": "Keystone Health Plan East", "serff_id": "INAC-134505843", "rate_change": 22.04, "share": 0.14, "rating_areas": [8], "verified": True},
+    {"carrier": "Highmark Benefits Group", "serff_id": "HGHM-134397666", "rate_change": 18.37, "share": 0.07, "rating_areas": [3, 8], "verified": True},
+    {"carrier": "Highmark Inc.", "serff_id": "HGHM-134504750", "rate_change": 17.75, "share": 0.24, "rating_areas": [1, 2, 4, 5, 6, 7, 9], "verified": True},
+    {"carrier": "Geisinger Health Plan", "serff_id": "GSHP-134496810", "rate_change": 11.59, "share": 0.09, "rating_areas": [2, 3, 5, 6, 7, 9], "verified": False},
+    {"carrier": "Oscar Health Plan of PA", "serff_id": "OHIN-134536199", "rate_change": 23.12, "share": 0.02, "rating_areas": [3, 6, 7, 8], "verified": True},
+    {"carrier": "QCC Insurance Company", "serff_id": "INAC-134505902", "rate_change": 15.18, "share": 0.05, "rating_areas": [8], "verified": True},
+    {"carrier": "Partners Insurance Co.", "serff_id": "PICI-134521223", "rate_change": -10.12, "share": 0.04, "rating_areas": [3, 6, 8], "verified": True},
+]
+
+PA_RATING_AREA_COUNTY_MAP: Dict[int, List[Dict[str, str]]] = {
+    1: [{"fips": "42031", "name": "Clarion"}, {"fips": "42039", "name": "Crawford"}, {"fips": "42049", "name": "Erie"}, {"fips": "42053", "name": "Forest"}, {"fips": "42083", "name": "McKean"}, {"fips": "42085", "name": "Mercer"}, {"fips": "42121", "name": "Venango"}, {"fips": "42123", "name": "Warren"}],
+    2: [{"fips": "42023", "name": "Cameron"}, {"fips": "42047", "name": "Elk"}, {"fips": "42105", "name": "Potter"}],
+    3: [{"fips": "42015", "name": "Bradford"}, {"fips": "42025", "name": "Carbon"}, {"fips": "42035", "name": "Clinton"}, {"fips": "42069", "name": "Lackawanna"}, {"fips": "42079", "name": "Luzerne"}, {"fips": "42081", "name": "Lycoming"}, {"fips": "42089", "name": "Monroe"}, {"fips": "42103", "name": "Pike"}, {"fips": "42113", "name": "Sullivan"}, {"fips": "42115", "name": "Susquehanna"}, {"fips": "42117", "name": "Tioga"}, {"fips": "42127", "name": "Wayne"}, {"fips": "42131", "name": "Wyoming"}],
+    4: [{"fips": "42003", "name": "Allegheny"}, {"fips": "42005", "name": "Armstrong"}, {"fips": "42007", "name": "Beaver"}, {"fips": "42019", "name": "Butler"}, {"fips": "42051", "name": "Fayette"}, {"fips": "42059", "name": "Greene"}, {"fips": "42063", "name": "Indiana"}, {"fips": "42073", "name": "Lawrence"}, {"fips": "42125", "name": "Washington"}, {"fips": "42129", "name": "Westmoreland"}],
+    5: [{"fips": "42009", "name": "Bedford"}, {"fips": "42013", "name": "Blair"}, {"fips": "42021", "name": "Cambria"}, {"fips": "42033", "name": "Clearfield"}, {"fips": "42061", "name": "Huntingdon"}, {"fips": "42065", "name": "Jefferson"}, {"fips": "42111", "name": "Somerset"}],
+    6: [{"fips": "42027", "name": "Centre"}, {"fips": "42037", "name": "Columbia"}, {"fips": "42077", "name": "Lehigh"}, {"fips": "42087", "name": "Mifflin"}, {"fips": "42093", "name": "Montour"}, {"fips": "42095", "name": "Northampton"}, {"fips": "42097", "name": "Northumberland"}, {"fips": "42107", "name": "Schuylkill"}, {"fips": "42109", "name": "Snyder"}, {"fips": "42119", "name": "Union"}],
+    7: [{"fips": "42001", "name": "Adams"}, {"fips": "42011", "name": "Berks"}, {"fips": "42071", "name": "Lancaster"}, {"fips": "42133", "name": "York"}],
+    8: [{"fips": "42017", "name": "Bucks"}, {"fips": "42029", "name": "Chester"}, {"fips": "42045", "name": "Delaware"}, {"fips": "42091", "name": "Montgomery"}, {"fips": "42101", "name": "Philadelphia"}],
+    9: [{"fips": "42041", "name": "Cumberland"}, {"fips": "42043", "name": "Dauphin"}, {"fips": "42055", "name": "Franklin"}, {"fips": "42057", "name": "Fulton"}, {"fips": "42067", "name": "Juniata"}, {"fips": "42075", "name": "Lebanon"}, {"fips": "42099", "name": "Perry"}],
+}
+
+def normalize_crosswalk(raw: Any) -> List[Dict[str, Any]]:
+    """Normalize crosswalk shapes A/B/C into canonical county entries."""
+    if isinstance(raw, dict) and "counties" in raw:
+        return raw["counties"]
+    if isinstance(raw, dict):
+        entries: List[Dict[str, Any]] = []
+        for area_key, counties in raw.items():
+            try:
+                area_id = int(area_key)
+            except (TypeError, ValueError):
+                raise ReconciliationError(f"Non-numeric rating area key in crosswalk: {area_key!r}")
+            if not isinstance(counties, list):
+                raise ReconciliationError(f"Expected list for area key {area_key!r}, got {type(counties).__name__}")
+            for c in counties:
+                if not isinstance(c, dict):
+                    raise ReconciliationError(f"Malformed county entry: {c!r}")
+                name = c.get("name") or c.get("county")
+                if not name or "fips" not in c:
+                    raise ReconciliationError(f"Malformed county entry: {c!r}")
+                entries.append({"fips": c["fips"], "name": name, "rating_area": area_id})
+        return entries
+    if isinstance(raw, list):
+        return raw
+    raise ReconciliationError(f"Unrecognized crosswalk structure: {type(raw).__name__}")
+
+def load_crosswalk(path: Path = CROSSWALK_PATH) -> Dict[str, Dict[str, Any]]:
+    """Load and validate the county/FIPS/rating-area crosswalk (all known shapes)."""
+    if path.exists():
+        entries = normalize_crosswalk(json.loads(path.read_text()))
+    else:
+        logger.warning("Crosswalk file not found at %s. Falling back to internal map.", path)
+        entries = [
+            {"fips": c["fips"], "name": c["name"], "rating_area": area}
+            for area, counties in PA_RATING_AREA_COUNTY_MAP.items()
+            for c in counties
+        ]
+    fips_to_area: Dict[str, Dict[str, Any]] = {}
+    seen: set = set()
+    for entry in entries:
+        fips = str(entry["fips"]).zfill(5)
+        if fips in seen:
+            raise ReconciliationError(f"Duplicate FIPS in crosswalk: {fips}")
+        if not fips.startswith("42"):
+            raise ReconciliationError(f"Non-PA FIPS in crosswalk: {fips}")
+        seen.add(fips)
+        fips_to_area[fips] = {
+            "county_name": entry["name"], "rating_area": int(entry["rating_area"]),
+            "carriers": [], "weighted_rate_increase": 0.0,
+        }
+    if len(fips_to_area) != EXPECTED_COUNTIES:
+        raise ReconciliationError(f"Crosswalk has {len(fips_to_area)} counties, expected {EXPECTED_COUNTIES}")
+    return fips_to_area
+
+def validate_filings(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Validate filings: required keys, SERFF format, collisions and duplicates raise."""
+    if not isinstance(entries, list):
+        raise FilingValidationError(f"Filings input must be a list, received {type(entries).__name__}")
+    seen_serff: Dict[str, str] = {}
+    normalized: List[Dict[str, Any]] = []
+    for idx, item in enumerate(entries):
+        if not isinstance(item, dict):
+            raise FilingValidationError(f"Item at index {idx} is not a dictionary: {item!r}")
+        carrier = str(item.get("carrier") or "").strip()
+        serff_id = str(item.get("serff_id") or "").strip()
+        if not carrier or not serff_id:
+            raise FilingValidationError(f"Filing at index {idx} missing 'carrier'/'serff_id': {item!r}")
+        if not SERFF_REGEX.match(serff_id):
+            raise FilingValidationError(f"Malformed SERFF ID '{serff_id}' for '{carrier}'.")
+        if serff_id in seen_serff:
+            if seen_serff[serff_id] != carrier:
+                raise FilingValidationError(f"SERFF ID collision: '{serff_id}' assigned to both '{seen_serff[serff_id]}' and '{carrier}'.")
+            raise FilingValidationError(f"Duplicate filing for ('{carrier}', '{serff_id}') at index {idx}.")
+        seen_serff[serff_id] = carrier
+        clean = dict(item)
+        clean["carrier"], clean["serff_id"] = carrier, serff_id
+        ras = clean.get("rating_areas", [])
+        if isinstance(ras, (list, tuple, set)):
+            clean["rating_areas"] = sorted(int(r) for r in ras)
+        normalized.append(clean)
+    return normalized
+
+def _canonicalize(row: Dict[str, str]) -> Dict[str, str]:
+    out = dict(row)
+    for legacy, canon in COLUMN_ALIASES.items():
+        if legacy in row and canon not in row:
+            out[canon] = row[legacy]
+            logger.info("Normalized legacy column '%s' -> '%s'", legacy, canon)
+    return out
+
+def load_filings_from_csv(csv_path) -> List[Dict[str, Any]]:
+    """Load carrier filings from CSV; group rows by serff_id with per-area accumulators."""
+    if not csv_path.exists():
+        logger.warning("Filings CSV not found at '%s'.", csv_path)
+        return []
+    filings_map: Dict[str, Dict[str, Any]] = {}
+    with Path(csv_path).open("r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            row = _canonicalize(row)
+            carrier = (row.get("carrier") or "").strip()
+            serff_id = (row.get("serff_id") or "").strip()
+            if not carrier:
+                raise FilingValidationError(f"Row missing 'carrier': {row!r}")
+            if not serff_id:
+                serff_id = "SYNT-%09d" % (zlib.crc32(carrier.encode("utf-8")) % 10**9)
+                logger.info("Synthesized SERFF ID %s for legacy row (carrier '%s')", serff_id, carrier)
+            try:
+                rate_change = float(str(row.get("rate_change", "")).replace("%", "").replace(",", ""))
+                rating_area = int(float(row.get("rating_area", "")))
+                covered = float(str(row.get("covered_lives", "0")).replace(",", "") or 0.0)
+            except ValueError as exc:
+                raise FilingValidationError(f"Unparseable numeric in filings CSV row: {row!r}") from exc
+            verified = str(row.get("verified", "false")).strip().lower() in ("true", "1", "yes")
+            rec = filings_map.setdefault(serff_id, {
+                "carrier": carrier, "serff_id": serff_id, "rate_change": rate_change,
+                "rating_areas": [], "rate_by_area": {}, "lives_by_area": {}, "verified": verified,
+            })
+            if rating_area not in rec["rating_areas"]:
+                rec["rating_areas"].append(rating_area)
+            # lives accumulate; store weighted numerator (rate x lives) per area
+            rec["rate_by_area"][rating_area] = rec["rate_by_area"].get(rating_area, 0.0) + rate_change * covered
+            rec["lives_by_area"][rating_area] = rec["lives_by_area"].get(rating_area, 0.0) + covered
+            if not verified:
+                rec["verified"] = False
+    for rec in filings_map.values():
+        total_lives = sum(rec["lives_by_area"].values())
+        if total_lives > 0:
+            rec["rate_change"] = round(sum(rec["rate_by_area"].values()) / total_lives, 2)
+    return validate_filings(list(filings_map.values()))
+
+def compute_rating_area_exposure(filings: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+    """Covered-lives weighted rate change per rating area; unweighted fallback logged."""
+    exposure: Dict[int, Dict[str, Any]] = {}
+    for area in range(1, 10):
+        covering = [f for f in filings if area in f.get("rating_areas", [])]
+        if not covering:
+            exposure[area] = {"weighted_rate_change": None, "basis": "no_active_carrier", "verified": False}
+            continue
+        rows = [(f.get("rate_change", 0.0), f.get("lives_by_area", {}).get(area, 0.0)) for f in covering]
+        total_lives = sum(l for _, l in rows)
+        if total_lives > 0:
+            weighted, basis = sum(r * l for r, l in rows) / total_lives, "covered_lives"
+        else:
+            logger.warning("No covered-lives data for RA %d — unweighted fallback.", area)
+            weighted, basis = sum(r for r, _ in rows) / len(covering), "unweighted_fallback"
+        exposure[area] = {
+            "weighted_rate_change": round(weighted, 2), "carrier_count": len(covering),
+            "total_covered_lives": int(total_lives), "basis": basis,
+            "verified": all(f.get("verified", False) for f in covering),
+        }
+    return exposure
+
+def build_county_rate_matrix(filings: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """County x carrier matrix with market-share weighted exposure per county."""
+    fips_to_area = load_crosswalk()
+    for filing in filings or CARRIER_RATE_FILINGS:
+        bad = set(filing["rating_areas"]) - VALID_RATING_AREAS
+        if bad:
+            raise ReconciliationError(f"{filing['carrier']}: invalid rating areas {sorted(bad)}")
+        for area in filing["rating_areas"]:
+            for data in fips_to_area.values():
+                if data["rating_area"] == area:
+                    data["carriers"].append({"carrier": filing["carrier"], "approved_rate_change": filing["rate_change"], "market_share": filing["share"]})
+    for data in fips_to_area.values():
+        if data["carriers"]:
+            total = sum(c["market_share"] for c in data["carriers"])
+            if total <= 0:
+                raise ReconciliationError(f"Zero or negative total market share in county {data['county_name']}")
+            data["weighted_rate_increase"] = round(sum(c["approved_rate_change"] * c["market_share"] for c in data["carriers"]) / total, 2)
+        else:
+            data["weighted_rate_increase"] = None
+    return fips_to_area
+
+def write_county_exposure(out_path: Path = EXPOSURE_OUTPUT_PATH) -> Path:
+    """Export county rate exposure CSV for bootstrap/04_audit.py."""
+    matrix = build_county_rate_matrix()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["fips", "county_name", "rating_area", "carrier_count", "weighted_rate_increase"])
+        for fips in sorted(matrix):
+            r = matrix[fips]
+            w.writerow([fips, r["county_name"], r["rating_area"], len(r["carriers"]), r["weighted_rate_increase"] if r["weighted_rate_increase"] is not None else ""])
+    logger.info("Wrote exposure for %d counties to %s", len(matrix), out_path)
+    return out_path
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    write_county_exposure()
+
+=== computed data files main.py would read from ===
+==> data/private/audit_aggregates_2026.csv <==
+rating_area,total_records,total_weight,weighted_avg_rate
+1,4,1785.0,391.4221
+2,2,95.0,550.6421
+4,4,4630.0,317.9114
+
+==> data/private/audit_anomalies_2026.csv <==
+reason,county,rate,age,plan_type,raw_record
+Invalid or non-numeric rate value: 'not-a-number',Allegheny,not-a-number,35,Silver,"{""county"": ""Allegheny"", ""rate"": ""not-a-number"", ""age"": ""35"", ""plan_type"": ""Silver"", ""weight"": ""0"", ""source_note"": ""deliberate anomaly row""}"
+Invalid or non-numeric rate value: '',Cameron,,29,Bronze,"{""county"": ""Cameron"", ""rate"": """", ""age"": ""29"", ""plan_type"": ""Bronze"", ""weight"": ""0"", ""source_note"": ""deliberate anomaly row (empty rate)""}"
+County not found in crosswalk,UNKNOWNVILLE,199.99,40,Silver,"{""county"": ""UNKNOWNVILLE"", ""rate"": ""199.99"", ""age"": ""40"", ""plan_type"": ""Silver"", ""weight"": ""0"", ""source_note"": ""deliberate anomaly row (unknown county)""}"
+
+==> data/private/carrier_aggregates_2026.csv <==
+rating_area,carrier_name,records,total_weight,weighted_avg_rate_change
+1,Highmark Inc.,1,18700.00,14.5000
+1,Oscar Health,1,3200.00,-5.2000
+4,Ambetter Health of PA,1,9800.00,37.8000
+4,Geisinger Health Plan,1,5400.00,11.6000
+
+==> data/private/carrier_anomalies_2026.csv <==
+source,reason,raw_record
+carrier_rates,Rating area '99' not found in crosswalk,"{""carrier_name"": ""Highmark Inc."", ""approved_rate_change"": ""10.0%"", ""rating_area"": ""99"", ""covered_lives"": ""500"", ""source_note"": ""deliberate anomaly row (area 99 not in crosswalk)""}"
+carrier_rates,Invalid rate change value: 'bad-value',"{""carrier_name"": ""QwikCare Mutual"", ""approved_rate_change"": ""bad-value"", ""rating_area"": ""4"", ""covered_lives"": ""100"", ""source_note"": ""deliberate anomaly row (unparseable rate)""}"
+county_terminations,County not found in crosswalk: 'Nowhereville',"{""county"": ""Nowhereville"", ""termination_count"": ""55"", ""total_enrollees"": ""600"", ""source_note"": ""deliberate anomaly row (unknown county)""}"
+
+==> data/private/county_termination_aggregates_2026.csv <==
+rating_area,counties_reporting,total_terminations,total_enrollees,termination_rate_pct
+1,1,310,12400,2.50%
+2,1,12,890,1.35%
+4,1,1450,48200,3.01%
+
+=== current src tree ===
+src/paths.py
+src/__init__.py
+src/__pycache__/__init__.cpython-313.pyc
+src/api/__init__.py
+src/api/__pycache__/__init__.cpython-313.pyc
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ ls -la
+total 72
+drwxr-xr-x 13 droid users 4096 Sep  6 23:51 .
+drwx------ 65 droid users 4096 Sep  6 23:36 ..
+drwxr-xr-x  8 droid users 4096 Sep  6 23:51 .git
+drwxr-xr-x  3 droid users 4096 Sep  6 06:57 .github
+-rw-r--r--  1 droid users  139 Sep  6 23:48 .gitignore
+drwxr-xr-x  5 droid users 4096 Sep  6 23:34 .venv
+drwxr-xr-x  2 droid users 4096 Sep  6 23:34 .venv_logs
+-rw-r--r--  1 droid users 2104 Sep  6 23:36 HANDOVER.json
+-rw-r--r--  1 droid users 2999 Sep  6 09:35 README.md
+drwxr-xr-x  2 droid users 4096 Sep  6 06:57 audit
+drwxr-xr-x  3 droid users 4096 Sep  6 20:34 bootstrap
+-rw-r--r--  1 droid users  863 Sep  6 23:51 commit_cleanup_and_inspect.sh
+drwxr-xr-x  4 droid users 4096 Sep  6 07:27 data
+drwxr-xr-x  4 droid users 4096 Sep  6 22:05 docs
+-rw-r--r--  1 droid users  332 Sep  6 23:22 requirements.txt
+drwxr-xr-x  3 droid users 4096 Sep  6 20:34 scripts
+drwxr-xr-x  4 droid users 4096 Sep  6 23:34 src
+drwxr-xr-x  4 droid users 4096 Sep  6 23:36 tests
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ cat << 'EOF' > get_fixture_and_verify.sh
+#!/usr/bin/env bash
+set -uo pipefail
+cd /home/droid/pennsylvania-health-insurance-audit-2026
+
+echo "=== GOLDEN FIXTURE (full, this is the contract) ==="
+cat tests/fixtures/key_statistics_golden.json
+
+echo ""
+echo "=== git status ==="
+git status --short
+
+echo ""
+echo "=== git log (last 5) ==="
+git log --oneline -5
+
+echo ""
+echo "=== is origin/main up to date? ==="
+git fetch -q
+bash get_fixture_and_verify.sht push || echo "not
+=== GOLDEN FIXTURE (full, this is the contract) ===
+{
+  "_meta": {
+    "source_document": "Pennsylvania_Health_Insurance_August_2026_Status_Report.pdf",
+    "section": "Key Statistics",
+    "rule": "Every numeric field in /metrics/summary must equal a row here. New API numbers require a new golden row WITH a citation, or CI fails."
+  },
+  "golden": {
+    "peak_enrollment_2025": { "value": 497000, "citation": "~497,000 — PHIEA (2026a)" },
+    "enrollment_july_1_2026": { "value": 431270, "citation": "431,270 — PHIEA (2026a)" },
+    "cumulative_coverage_lost_since_oe2026_start": { "value": 177000, "citation": "177,000+ — PHIEA (2026a)" },
+    "post_oe_cancellations_feb_to_jul_2026": { "value": 94000, "citation": "94,000 — PHIEA (2026a)" },
+    "avg_net_premium_increase_retained_enrollees_pct": { "value": 102, "citation": "102% — PHIEA (2026a)" },
+    "statewide_approved_gross_rate_increase_pct": { "value": 21.5, "citation": "21.5% — PID (2026a)" },
+    "requested_increases_denied_by_pid_usd": { "value": 50100000, "citation": "$50.1M — PID (2026a)" },
+    "federal_eptc_value_lost_annual_usd": { "value": 600000000, "citation": "~$600M — PHIEA (2026a)" },
+    "act54_appropriated_usd": { "value": 0, "citation": "$0 as of May 2026 — ForHealthInsurance.com (2026)" }
+  }
+}
+
+=== git status ===
+?? get_fixture_and_verify.sh
+
+=== git log (last 5) ===
+bdc049f (HEAD -> main, origin/main) chore(repo): remove scaffold scripts, harden .gitignore
+5ae1858 test(quarantine): golden_metrics pending src/api/main.py implementation
+43cb64f chore(env): confirm venv + deps clean, pre-quarantine checkpoint
+c8b5786 chore(env): checkpoint pre-env-fix 2026-09-06T23:34:24+00:00
+9218050 feat(pipeline): add initial pipeline state with 8/8 passing guards
+
+=== is origin/main up to date? ===
+(empty above = fully pushed)
+
+=== cleanup: remove leftover script + dir, recommit if needed ===
+Enumerating objects: 4, done.
+Counting objects: 100% (4/4), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 753 bytes | 753.00 KiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/bilbywilby/pennsylvania-health-insurance-audit-2026.git
+   bdc049f..39002c5  main -> main
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ cat << 'EOF' > build_metrics_api.sh
+#!/usr/bin/env bash
+set -uo pipefail
+cd /home/droid/pennsylvania-health-insurance-audit-2026
+
+git add -A
+git commit -q -m "chore: pre-metrics-api checkpoint" --allow-empty
+CHECKPOINT=$(git rev-parse HEAD)
+rollback() { echo "!!! FAILED — rolling back"; git reset --hard "$CHECKPOINT"; }
+trap rollback ERR
+
+mkdir -p data/public
+
+cat > data/public/key_statistics_2026.json << 'JSON'
+{
+  "_meta": {
+    "source_document": "Pennsylvania_Health_Insurbash build_metrics_api.shv-parse HEAD)", all test
+.....................................................................    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+69 passed, 2 warnings in 0.43s
+Enumerating objects: 22, done.
+Counting objects: 100% (22/22), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (14/14), done.
+Writing objects: 100% (14/14), 5.48 KiB | 623.00 KiB/s, done.
+Total 14 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 3 local objects.
+To https://github.com/bilbywilby/pennsylvania-health-insurance-audit-2026.git
+   39002c5..43eed3e  main -> main
+[OK] done: 43eed3e6b2c06a9bc68267e670181d0849b3829a
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ ls -la
+total 76
+drwxr-xr-x 12 droid users 4096 Sep  7 00:08 .
+drwx------ 65 droid users 4096 Sep  6 23:52 ..
+drwxr-xr-x  8 droid users 4096 Sep  7 00:08 .git
+drwxr-xr-x  3 droid users 4096 Sep  6 06:57 .github
+-rw-r--r--  1 droid users  139 Sep  6 23:48 .gitignore
+drwxr-xr-x  5 droid users 4096 Sep  6 23:34 .venv
+-rw-r--r--  1 droid users 2236 Sep  7 00:08 HANDOVER.json
+-rw-r--r--  1 droid users 2999 Sep  6 09:35 README.md
+drwxr-xr-x  2 droid users 4096 Sep  6 06:57 audit
+drwxr-xr-x  3 droid users 4096 Sep  6 20:34 bootstrap
+-rw-r--r--  1 droid users 5405 Sep  7 00:08 build_metrics_api.sh
+drwxr-xr-x  4 droid users 4096 Sep  6 07:27 data
+drwxr-xr-x  4 droid users 4096 Sep  6 22:05 docs
+-rw-r--r--  1 droid users  749 Sep  6 23:52 get_fixture_and_verify.sh
+-rw-r--r--  1 droid users  332 Sep  6 23:22 requirements.txt
+drwxr-xr-x  3 droid users 4096 Sep  6 20:34 scripts
+drwxr-xr-x  4 droid users 4096 Sep  6 23:34 src
+drwxr-xr-x  4 droid users 4096 Sep  7 00:08 tests
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ 

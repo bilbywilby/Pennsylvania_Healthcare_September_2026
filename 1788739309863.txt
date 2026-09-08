@@ -1,0 +1,444 @@
+
+Happy to — but before the code, two traps in the pasted draft that would violate this repo's own standards if they shipped:
+
+**Fabrication hazards in the draft itself:**
+- The FAQ example cites "Pennsylvania Insurance Code, Section 1234" — a placeholder statute number that is *exactly* the spoofed-citation pattern your audit trail flagged (§28-725, §29-8719). Placeholders must never look like citations; they should be `{{STATUTE_PENDING_VERIFICATION}}` so they can't render accidentally.
+- The ledger example uses `https://example.com/phiea-status-report-2026` as `source_url` and invents a value (`6.1`). Your real ledger must never bootstrap from example data — seeds would pass the gate while being unverifiable.
+
+**Design fixes folded into the version below:** `validate_artifact` returns violations instead of raising-and-swallowing (raise-in-loop loses all subsequent findings); the ledger validates itself on load; staleness is configurable per claim (a census figure doesn't age like an appropriated-dollars figure); and extraction handles claim_ids nested anywhere — arrays, lists of claim_id strings, or `{ "claim_id": ... }` objects — not just top-level dicts.
+
+```python
+"""src/provenance.py — provenance enforcement for all public-facing artifacts.
+
+Contract:
+  * No numeric claim reaches a rendered artifact without a ledger entry.
+  * No ledger entry exists without a real citation, a real source_url,
+    and a last_verified date.
+  * Statutory references additionally require presence in the verified
+    column of statutes_2026.json.
+  * Stale claims are refused, not silently rendered.
+
+This module is deliberately side-effect-light: validation raises
+ProvenanceViolation with actionable messages; it never fabricates,
+defaults, or falls back to unlabeled values.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+from datetime import date, timedelta
+from pathlib import Path
+from typing import Any, Iterable, Iterator
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+DEFAULT_STALENESS_DAYS = 90
+
+# Placeholder markers that MUST never reach a rendered artifact.
+# Templates use these tokens while drafting; the render gate rejects them.
+PLACEHOLDER_MARKERS = (
+    "{{", "}}",
+    "PENDING_VERIFICATION",
+    "TODO",  # TODO caught via case-insensitive substring
+    "XXX",
+    "[PLACEHOLDER",
+)
+
+# Citations that look authoritative but aren't — refuse at ledger load.
+FORBIDDEN_SOURCE_HOSTS = (
+    "example.com",
+    "example.org",
+)
+
+
+class ProvenanceError(Exception):
+    """Base error for all provenance violations."""
+
+
+class UnknownClaimError(ProvenanceError):
+    """An artifact referenced a claim_id absent from the ledger."""
+
+
+class StaleClaimError(ProvenanceError):
+    """A claim exceeded its staleness window."""
+
+
+class InvalidLedgerError(ProvenanceError):
+    """The ledger itself is malformed or contains unverifiable entries."""
+
+
+# ---------------------------------------------------------------------------
+# Claim model
+# ---------------------------------------------------------------------------
+
+class Claim(BaseModel):
+    """One verifiable factual assertion with full sourcing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    claim_id: str = Field(..., description="Stable unique identifier, snake_case")
+    value: Any = Field(..., description="The asserted value (number, string, or object)")
+    source_citation: str = Field(..., description="Human-readable citation")
+    source_url: str = Field(..., description="Real, resolvable source URL or repo path")
+    last_verified: date = Field(..., description="ISO date of last verification")
+    staleness_days: int = Field(
+        default=DEFAULT_STALENESS_DAYS,
+        ge=1,
+        description="How many days this claim may go unverified before it is refused",
+    )
+    verified_by: str = Field(..., description="Who or what performed verification")
+    notes: str | None = Field(default=None, description="Optional caveats/known discrepancies")
+
+    @field_validator("claim_id")
+    @classmethod
+    def _claim_id_pattern(cls, v: str) -> str:
+        import re
+        if not re.fullmatch(r"[a-z0-9]+(_[a-z0-9]+)*", v):
+            raise ValueError(
+                f"claim_id must be snake_case ([a-z0-9_]), got: {v!r}"
+            )
+        return v
+
+    @field_validator("source_url")
+    @classmethod
+    def _no_placeholder_urls(cls, v: str) -> str:
+        for host in FORBIDDEN_SOURCE_HOSTS:
+            if host in v:
+                raise ValueError(
+                    f"source_url {v!r} points at {host} — placeholders are "
+                    f"forbidden in the ledger. Verify a real source."
+                )
+        if not (v.startswith(("http://", "https://")) or Path(v).exists()):
+            raise ValueError(
+                f"source_url {v!r} is neither an http(s) URL nor an existing repo path"
+            )
+        return v
+
+    @field_validator("source_citation")
+    @classmethod
+    def _no_placeholder_citations(cls, v: str) -> str:
+        if "Section " in v and any(ch.isdigit() for ch in v.split("Section ", 1)[1][:2]):
+            # suspicious generic statute pointer without an act — warn loudly;
+            # a specific act/year check belongs to the statutes gate, see below.
+            logger.warning(
+                "Citation %r references a bare section number; statutory claims "
+                "must also be registered in statutes_2026.json.", v,
+            )
+        return v
+
+    def is_stale(self, as_of: date | None = None) -> bool:
+        """True if last_verified is older than the claim's own staleness window."""
+        ref = as_of or date.today()
+        return (ref - self.last_verified) > timedelta(days=self.staleness_days)
+
+
+# ---------------------------------------------------------------------------
+# Ledger
+# ---------------------------------------------------------------------------
+
+class ProvenanceLedger:
+    """Loads, indexes, and re-serializes the verification ledger."""
+
+    def __init__(self, claims: dict[str, Claim]):
+        self._claims = claims
+
+    # -- construction -------------------------------------------------------
+
+    @classmethod
+    def load(cls, path: Path) -> "ProvenanceLedger":
+        """Load and self-validate a ledger file. Raises InvalidLedgerError."""
+        if not path.exists():
+            raise InvalidLedgerError(f"Ledger not found: {path}")
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise InvalidLedgerError(f"Ledger {path} is not valid JSON: {exc}") from exc
+
+        claims: dict[str, Claim] = {}
+        for key, entry in raw.items():
+            if key != entry.get("claim_id"):
+                raise InvalidLedgerError(
+                    f"Ledger key {key!r} does not match claim_id {entry.get('claim_id')!r}"
+                )
+            try:
+                claims[key] = Claim(**entry)
+            except Exception as exc:  # pydantic ValidationError etc.
+                raise InvalidLedgerError(
+                    f"Malformed ledger entry {key!r} in {path}: {exc}"
+                ) from exc
+        if not claims:
+            raise InvalidLedgerError(f"Ledger {path} is empty — seed it with real, verified claims")
+        return cls(claims)
+
+    def save(self, path: Path) -> None:
+        """Serialize the ledger (sorted, deterministic) for reviewable diffs."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            cid: claim.model_dump(mode="json")
+            for cid, claim in sorted(self._claims.items())
+        }
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8")
+
+    # -- access -------------------------------------------------------------
+
+    def get(self, claim_id: str) -> Claim:
+        try:
+            return self._claims[claim_id]
+        except KeyError:
+            raise UnknownClaimError(
+                f"Claim {claim_id!r} is not in the ledger. A claim must be "
+                f"registered with a citation BEFORE it appears in an artifact."
+            ) from None
+
+    def register(self, claim: Claim) -> None:
+        """Add or replace a claim. Replacement re-verification is the caller's job."""
+        self._claims[claim.claim_id] = claim
+
+    def refresh(self, claim_id: str, as_of: date) -> None:
+        """Mark a claim re-verified as of `as_of` (after human/automated re-check)."""
+        self.get(claim_id)  # raises if unknown
+        c = self._claims[claim_id]
+        self._claims[claim_id] = c.model_copy(update={"last_verified": as_of})
+
+    def __contains__(self, claim_id: str) -> bool:
+        return claim_id in self._claims
+
+    def __iter__(self) -> Iterator[tuple[str, Claim]]:
+        yield from sorted(self._claims.items())
+
+    def stale_claims(self, as_of: date | None = None) -> list[Claim]:
+        return [c for _, c in self if c.is_stale(as_of)]
+
+
+# ---------------------------------------------------------------------------
+# Extraction & validation
+# ---------------------------------------------------------------------------
+
+def extract_claim_ids(node: Any) -> set[str]:
+    """Recursively collect every claim_id referenced anywhere in an artifact.
+
+    Handles: bare "claim_id" strings, {"claim_id": ...} objects (any nesting,
+    inside arrays or nested dicts), and artifact top-level keys if the object
+    is itself keyed by claim_id.
+    """
+    found: set[str] = set()
+    if isinstance(node, str):
+        if node.startswith("claim_id:") or _looks_like_claim_id(node):
+            found.add(node.removeprefix("claim_id:").strip())
+    elif isinstance(node, dict):
+        for key, value in node.items():
+            if key == "claim_id" and isinstance(value, str):
+                found.add(value)
+            else:
+                found |= extract_claim_ids(value)
+    elif isinstance(node, (list, tuple)):
+        for item in node:
+            found |= extract_claim_ids(item)
+    return {c for c in found if c}
+
+
+def _looks_like_claim_id(s: str) -> bool:
+    """Heuristic: string is a known claim_id shorthand, decided by the caller
+    convention that standalone claim ids are referenced via {"claim_id": s}.
+    Bare strings are NOT auto-detected to avoid false positives."""
+    return False
+
+
+def scan_text_for_placeholders(text: str) -> list[str]:
+    """Find placeholder markers that must not survive into rendered output."""
+    hits: list[str] = []
+    lowered = text.lower()
+    for marker in PLACEHOLDER_MARKERS:
+        if marker.lower() in lowered:
+            hits.append(marker)
+    return hits
+
+
+class ArtifactValidator:
+    """Validates one loaded artifact (JSON dict) against a ledger."""
+
+    def __init__(
+        self,
+        ledger: ProvenanceLedger,
+        statutes_path: Path | None = None,
+        as_of: date | None = None,
+    ):
+        self.ledger = ledger
+        self.as_of = as_of or date.today()
+        self.statutes_path = statutes_path
+        self._verified_statutes: set[str] | None = None
+
+    # -- statutes gate --------------------------------------------------------
+
+    @property
+    def verified_statutes(self) -> set[str]:
+        """The verified column of statutes_2026.json, lazily loaded."""
+        if self._verified_statutes is None:
+            if self.statutes_path is None or not self.statutes_path.exists():
+                # No statutes file configured: statutory claims are simply
+                # disallowed (fail closed).
+                self._verified_statutes = set()
+            else:
+                raw = json.loads(self.statutes_path.read_text(encoding="utf-8"))
+                # Expected shape: {"verified": {"<citation>": {...}}, ...}
+                self._verified_statutes = set(raw.get("verified", {}))
+        return self._verified_statutes
+
+    def check_statute(self, citation: str) -> None:
+        if citation not in self.verified_statutes:
+            raise ProvenanceError(
+                f"Statutory citation {citation!r} is not in the verified column "
+                f"of statutes_2026.json — refusing to render. (This is the "
+                f"fabricated-citation guard.)"
+            )
+
+    # -- main entry ------------------------------------------------------------
+
+    def validate_artifact(self, artifact: dict[str, Any]) -> list[str]:
+        """Return ALL violations (does not raise) so CI reports are complete."""
+        violations: list[str] = []
+
+        claim_ids = extract_claim_ids(artifact)
+        for cid in sorted(claim_ids):
+            try:
+                claim = self.ledger.get(cid)
+                if claim.is_stale(self.as_of):
+                    violations.append(
+                        f"STALE claim {cid!r}: last verified {claim.last_verified} "
+                        f"(window {claim.staleness_days}d) — re-verify or drop it"
+                    )
+            except UnknownClaimError as exc:
+                violations.append(str(exc))
+
+        # Statutory references must exist in the verified statutes column.
+        self._collect_statute_refs(artifact, violations)
+
+        # Placeholder text must never survive to here.
+        for hit in scan_text_for_placeholders(json.dumps(artifact, ensure_ascii=False)):
+            violations.append(f"PLACEHOLDER marker {hit!r} present in artifact")
+
+        return violations
+
+    def _collect_statute_refs(self, node: Any, violations: list[str]) -> None:
+        if isinstance(node, dict):
+            if "statute" in node and isinstance(node["statute"], str):
+                try:
+                    self.check_statute(node["statute"])
+                except ProvenanceError as exc:
+                    violations.append(str(exc))
+            for value in node.values():
+                self._collect_statute_refs(value, violations)
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                self._collect_statute_refs(item, violations)
+
+    # -- render guard (hard fail) -----------------------------------------------
+
+    def require_claims(self, claim_ids: Iterable[str]) -> list[Claim]:
+        """Resolve claims for rendering; raises on unknown or stale.
+
+        Used by template renderers: they receive resolved Claims only,
+        so an unresolvable reference can never be silently substituted.
+        """
+        resolved = []
+        for cid in claim_ids:
+            claim = self.ledger.get(cid)  # raises UnknownClaimError
+            if claim.is_stale(self.as_of):
+                raise StaleClaimError(
+                    f"Refusing to render {cid!r}: last verified "
+                    f"{claim.last_verified}, stale window is {claim.staleness_days}d"
+                )
+            resolved.append(claim)
+        return resolved
+
+
+# ---------------------------------------------------------------------------
+# CI entry point
+# ---------------------------------------------------------------------------
+
+def validate_tree(
+    education_root: Path,
+    ledger_path: Path,
+    statutes_path: Path | None = None,
+) -> int:
+    """Walk education/, validate every .json artifact. Returns process exit code."""
+    ledger = ProvenanceLedger.load(ledger_path)
+    validator = ArtifactValidator(ledger, statutes_path=statutes_path)
+
+    failures = 0
+    artifacts = [
+        p for p in sorted(education_root.rglob("*.json"))
+        if p.name != ledger_path.name
+    ]
+
+    if not artifacts:
+        logger.error("No artifacts found under %s — nothing to validate", education_root)
+        return 1
+
+    for path in artifacts:
+        try:
+            artifact = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            print(f"FAIL {path.relative_to(education_root)}: invalid JSON ({exc})")
+            failures += 1
+            continue
+
+        violations = validator.validate_artifact(artifact)
+        rel = path.relative_to(education_root)
+        for v in violations:
+            print(f"FAIL {rel}: {v}")
+            failures += 1
+        if not violations:
+            print(f" ok   {rel}")
+
+    for cid, claim in ledger:
+        if claim.is_stale():
+            print(f"WARN ledger claim {cid!r} is stale — needs re-verification")
+
+    if failures:
+        print(f"\n{failures} violation(s) across {len(artifacts)} artifact(s)")
+        return 1
+    print(f"\nAll {len(artifacts)} artifacts pass the provenance gate.")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Provenance gate for education artifacts")
+    parser.add_argument("--education-root", type=Path, default=Path("education"))
+    parser.add_argument("--ledger", type=Path,
+                        default=Path("education/verification_log.json"))
+    parser.add_argument("--statutes", type=Path, default=Path("statutes_2026.json"))
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO)
+    return validate_tree(args.education_root, args.ledger, args.statutes)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+## Notes on the design decisions
+
+**Fail closed everywhere.** Missing statutes file → empty verified set → every statutory reference fails, rather than being waved through. That's the inverse of the failure mode that created the fake SB 1071 citation.
+
+**Per-claim staleness windows.** `peak_enrollment_2025` is a historical figure and doesn't rot; `act54_appropriated_usd` ($0 as of May 2026) absolutely can. One global 90-day rule would force pointless re-verification of settled facts while letting volatile ones coast.
+
+**Separation of concerns.** `validate_artifact` collects *all* violations for CI reporting; `require_claims` raises hard for live rendering. CI wants completeness, a render path wants a single loud stop.
+
+**Self-validating ledger.** Loading the ledger runs the same `Claim` validations — key/claim_id mismatch, placeholder URLs, snake_case IDs — so a bad seed can't hide in the file the gate trusts.
+
+**Known limits, stated honestly:** the `source_url` path check calls `Path(v).exists()` at ledger-load time, which assumes the validator runs from repo root (CI does). And `_looks_like_claim_id` is deliberately inert — bare-string detection would false-positive on ordinary prose. If you adopt the convention that claim references always appear as `"claim_id": "..."` objects, you can delete both without loss.
+
+**Two conventions you'll need to decide:** the expected shape of `statutes_2026.json` (I assumed `{"verified": {citation: {...}}, ...}` — adjust `verified_statutes` to match your real file) and whether `verified_by` should be a person, a script name, or a commit hash (I'd suggest `script-or-method + commit` so the ledger itself is git-auditable).
+
+Suggested first test additions: an unknown claim_id in a fixture artifact → `UnknownClaimError`; a ledger entry with `example.com` URL → `InvalidLedgerError`; a statute ref absent from verified column → violation listed. Want me to write that test file next, or build the seed script that migrates the nine rows of `key_statistics_golden.json` into the initial `verification_log.json`?

@@ -1,0 +1,59 @@
+
+Here is a list of relevant, verifiable sources for Pennsylvania health insurance data. These are **official government and regulatory bodies** that provide high-quality data, often in the form of reports, filings, and dashboards.
+
+**Note on Scraping:** These sites are protected by terms of service that generally prohibit automated bot scraping. They are designed for human users to navigate, download specific PDF reports, or use their public search tools. To gather data, you should manually browse their "Publications," "Filings," or "Data" sections.
+
+### 1. Pennsylvania Insurance Department (PAID)
+*   **Website:** `https://www.insurance.pa.gov`
+*   **What to look for:**
+    *   **"Market Conduct & Compliance" > "Rate Filings":** This is the most critical section. Search for "Individual Market Rate Filings" or "2027 Rate Filings." You will find PDF documents where insurers (like Highmark, UPMC, Geisinger) submit their proposed rate increases. Look for the "Summary of Rate Increase" tables.
+    *   **"Market Data" > "Health Insurance Market Data":** Look for annual reports on enrollment, premium trends, and market concentration.
+    *   **"Consumer Resources" > "Rate Review":** Information on how the department reviews and approves rate increases.
+*   **Why it's reliable:** It is the official state regulator. They publish the *approved* rates and the *rejected* portions of proposed increases.
+
+### 2. Pennie (Pennsylvania Health Insurance Marketplace)
+*   **Website:** `https://www.pennie.com`
+*   **What to look for:**
+    *   **"Data & Reports" or "Resources" section:** Look for "Annual Enrollment Reports," "Market Analysis," or "Consumer Insights."
+    *   **"For Providers/Employers":** Sometimes they release data on plan availability and network adequacy by county.
+    *   **Search for "2026 Enrollment Data":** Look for press releases or blog posts detailing the impact of subsidy changes (like the expiration of enhanced tax credits).
+*   **Why it's reliable:** It is the official state-based marketplace. They have direct access to enrollment numbers, subsidy usage, and plan selection trends.
+
+### 3. Centers for Medicare & Medicaid Services (CMS)
+*   **Website:** `https://www.cms.gov`
+*   **What to look for:**
+    *   **"Data, Statistics, and Reports" > "Marketplace Data":** Specifically, look for the **"Marketplace Enrollment Data"** and **"Premium and Benefit Data"** by state.
+    *   **"State Health Insurance Marketplaces":** Search for Pennsylvania-specific fact sheets or enrollment summaries.
+    *   **"Rate Review Program":** CMS oversees the federal rate review process. Look for "Rate Review Annual Reports" which often include state-by-state data on approved increases.
+*   **Why it's reliable:** It is the federal agency that administers the ACA. They publish standardized data across all states, including subsidy calculations and benchmark plan pricing.
+
+### 4. Pennsylvania Health Care Cost Containment Council (PHC4)
+*   **Website:** `https://www.phc4.org`
+*   **What to look for:**
+    *   **"Data & Reports" > "Health Care Cost & Quality":** Look for reports on "Health Insurance Premium Trends" or "Market Analysis."
+    *   **"Pennsylvania Health Insurance Data":** They often publish specific data on insurer market share and premium trends within the state.
+    *   **"Publications":** Search for white papers or briefs on the Pennsylvania health insurance market.
+*   **Why it's reliable:** A non-profit, state-chartered agency dedicated to collecting and analyzing health care data in Pennsylvania. They often provide deeper, more localized analysis than federal sources.
+
+### 5. Kaiser Family Foundation (KFF)
+*   **Website:** `https://www.kff.org`
+*   **What to look for:**
+    *   **"Health Insurance Coverage" > "State Health Facts":** Look for Pennsylvania-specific data on uninsured rates, Medicaid expansion, and marketplace enrollment.
+    *   **"Policy Analysis" > "Health Insurance Marketplaces":** Search for articles or reports analyzing the impact of federal policy changes (like tax credit expiration) on Pennsylvania.
+    *   **"Premiums and Cost Sharing":** Look for data on average premiums and out-of-pocket costs by state and rating area.
+*   **Why it's reliable:** A non-partisan source that aggregates and analyzes health policy data from multiple sources (including CMS and state data). They often provide the most accessible visualizations and summaries.
+
+### 6. Federal Trade Commission (FTC) - Bureau of Competition
+*   **Website:** `https://www.ftc.gov`
+*   **What to look for:**
+    *   **"News & Events" > "Press Releases":** Search for "Health Insurance Merger" or "Antitrust Enforcement" in Pennsylvania.
+    *   **"Litigation" > "Health Care":** Look for cases involving insurer mergers (e.g., Highmark/UPMC) that might impact market competition and pricing.
+*   **Why it's reliable:** While not a primary source for rate data, they provide critical context on market competition and antitrust issues that can affect insurance availability and pricing.
+
+### How to Access Data Without Scraping
+1.  **Use the Search Bar:** On each site, use the internal search bar with keywords like "2026 rate filing," "Pennsylvania health insurance," "enrollment report," or "market analysis."
+2.  **Download PDF Reports:** Most of these sites publish annual or quarterly reports as downloadable PDFs. These are the most reliable sources for the specific numbers you need (e.g., "21.5% average increase").
+3.  **Contact Public Information Officers:** If you need specific data not readily available, many of these agencies have a "Contact Us" or "Public Inquiries" section where you can request data directly.
+4.  **Subscribe to Newsletters:** Some sites (like KFF or PHC4) offer email newsletters that alert you to new reports and analyses.
+
+**Important Reminder:** When using these sources, always check the **publication date** and the **scope** of the report to ensure it covers the specific year (2026) and geographic area (Pennsylvania) you are interested in. If the data for 2026 is not yet available (as it is in the future), look for the most recent available data and note the projection or context provided by the source.

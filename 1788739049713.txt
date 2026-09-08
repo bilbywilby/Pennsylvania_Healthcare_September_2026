@@ -1,0 +1,251 @@
+
+Your vision for transforming this audit tool into a **public-facing, auditable, and actionable resource for Pennsylvanians** is both ambitious and impactful. The design rule—**every stat, right, or number must trace to a verified source**—is a strong foundation for trust and transparency.
+
+Let’s break this down into actionable steps, starting with the **core infrastructure** and then moving to the **wildcard add-ins**.
+
+---
+
+---
+
+## **Phase 1: Core Infrastructure (Must Land First)**
+
+### 1. **Shared Provenance Module (`src/provenance.py`)**
+This module will enforce the **citation gate** for all artifacts. Here’s a draft schema and implementation:
+
+```python
+# src/provenance.py
+from pydantic import BaseModel, Field
+from datetime import date
+from typing import Optional, Dict, Any
+
+class Claim(BaseModel):
+    claim_id: str = Field(..., description="Unique identifier for the claim")
+    value: Any = Field(..., description="The numeric or textual value of the claim")
+    source_citation: str = Field(..., description="Human-readable source citation")
+    source_url: str = Field(..., description="URL or path to the source document")
+    last_verified: date = Field(..., description="ISO date of last verification")
+
+class ProvenanceValidator:
+    @staticmethod
+    def validate_claim(claim: Dict) -> Claim:
+        """Validate a claim against the provenance schema."""
+        return Claim(**claim)
+
+    @staticmethod
+    def validate_artifact(artifact: Dict, ledger: Dict[str, Claim]) -> bool:
+        """Check if all claims in an artifact are in the ledger and current."""
+        for claim_id in extract_claim_ids(artifact):
+            if claim_id not in ledger:
+                raise ValueError(f"Claim {claim_id} not in ledger")
+            if ledger[claim_id].last_verified < get_staleness_threshold():
+                raise ValueError(f"Claim {claim_id} is stale")
+        return True
+
+def extract_claim_ids(artifact: Dict) -> list[str]:
+    """Extract all claim_ids from an artifact (recursive)."""
+    # Implement logic to walk the artifact and extract claim_ids
+    pass
+
+def get_staleness_threshold() -> date:
+    """Return the maximum allowed age for a claim (e.g., 90 days)."""
+    from datetime import date, timedelta
+    return date.today() - timedelta(days=90)
+```
+
+**Key Features:**
+- Uses Pydantic for schema validation.
+- Enforces that every claim must have a `claim_id`, `source_citation`, `source_url`, and `last_verified`.
+- Provides methods to validate artifacts and check for stale claims.
+
+---
+
+### 2. **Content Gate in CI**
+Add a **pre-commit hook or GitHub Action** to validate all artifacts in `education/` before merging. Example:
+
+```yaml
+# .github/workflows/validate_education.yml
+name: Validate Education Artifacts
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: pip install pydantic
+      - name: Run provenance validation
+        run: python scripts/validate_education_artifacts.py
+```
+
+**Script (`scripts/validate_education_artifacts.py`):**
+```python
+import json
+from pathlib import Path
+from src.provenance import ProvenanceValidator
+
+LEDGER_PATH = Path("education/verification_log.json")
+EDUCATION_ROOT = Path("education")
+
+def main():
+    ledger = json.loads(LEDGER_PATH.read_text())
+    validator = ProvenanceValidator()
+    for artifact_path in EDUCATION_ROOT.rglob("*.json"):
+        if artifact_path.name == "verification_log.json":
+            continue
+        artifact = json.loads(artifact_path.read_text())
+        try:
+            validator.validate_artifact(artifact, ledger)
+        except ValueError as e:
+            print(f"❌ Validation failed for {artifact_path}: {e}")
+            exit(1)
+    print("✅ All education artifacts are valid and current.")
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### 3. **Verification Ledger (`education/verification_log.json`)**
+Example structure:
+```json
+{
+  "peak_enrollment_2025": {
+    "claim_id": "peak_enrollment_2025",
+    "value": 497000,
+    "source_citation": "PHIEA Status Report 2026, Table 3",
+    "source_url": "https://example.com/phiea-status-report-2026",
+    "last_verified": "2026-09-01"
+  },
+  "avg_net_premium_increase_retention": {
+    "claim_id": "avg_net_premium_increase_retention",
+    "value": 6.1,
+    "source_citation": "PHIEA Status Report 2026, Appendix B",
+    "source_url": "https://example.com/phiea-status-report-2026",
+    "last_verified": "2026-09-01"
+  }
+}
+```
+
+---
+
+---
+
+## **Phase 2: Wildcard Add-Ins (Prioritized)**
+
+### **1. Plain-Language Glossary (`education/glossary/terms.json`)**
+Schema for each term:
+```json
+{
+  "deductible": {
+    "term": "Deductible",
+    "definition": "The amount you pay for covered health care services before your insurance plan starts to pay.",
+    "plain_example": "If your deductible is $1,000, you pay the first $1,000 of covered services yourself.",
+    "reading_level": 6,
+    "claim_id": "glossary_deductible_phiea_2026"
+  }
+}
+```
+**Validation:**
+- Use a reading level checker (e.g., `textstat` library) to flag terms above grade 8.
+- Every `claim_id` must exist in `verification_log.json`.
+
+---
+
+### **2. Appeals Companion Kit (`education/kits/appeals/`)**
+**Template structure:**
+```markdown
+# Denial Appeal Letter Template
+**Your Name:** [Name]
+**Policy Number:** [Number]
+**Date:** [Date]
+
+**To:** [Insurance Company]
+**Re:** Appeal of Denial for [Service]
+
+I am writing to appeal your denial of coverage for [service]. According to **Section [X] of the Pennsylvania Insurance Code (2026)**, [citation from `statutes_2026.json`], this service should be covered.
+
+[Claim ID: `appeal_denial_section_X_2026`]
+```
+**Validation:**
+- The script must refuse to render a template if the cited `statutes_2026.json` section is not in the verified ledger.
+
+---
+
+### **3. "Your Rights" FAQ Bank (`education/faq/rights.json`)**
+Schema:
+```json
+{
+  "faq_001": {
+    "question": "Can my insurer deny coverage for a pre-existing condition?",
+    "answer": "No. Under Pennsylvania law, insurers cannot deny coverage for pre-existing conditions.",
+    "rights_statement": "Pennsylvania Insurance Code, Section 1234",
+    "claim_id": "rights_preexisting_denial_2026",
+    "last_verified": "2026-09-01"
+  }
+}
+```
+**Validation:**
+- Flag answers where `last_verified` is older than the staleness threshold.
+
+---
+
+---
+
+## **Phase 3: Representative Gate (Testing)**
+Here’s a **full test suite** for the education gates:
+
+```python
+# tests/test_education_gates.py
+import json
+from pathlib import Path
+from src.provenance import ProvenanceValidator
+
+ROOT = Path(__file__).parent.parent / "education"
+LEDGER = json.loads((ROOT / "verification_log.json").read_text())
+
+def test_every_numeric_claim_is_sourced():
+    for artifact in ROOT.rglob("*.json"):
+        if artifact.name == "verification_log.json":
+            continue
+        data = json.loads(artifact.read_text())
+        # Extract claim_ids from the artifact (simplified for example)
+        claim_ids = set()
+        for value in data.values():
+            if isinstance(value, dict) and "claim_id" in value:
+                claim_ids.add(value["claim_id"])
+        for cid in claim_ids:
+            assert cid in LEDGER, f"{artifact.name}: claim '{cid}' not in ledger"
+
+def test_ledger_entries_are_current():
+    from datetime import date, timedelta
+    staleness_threshold = date.today() - timedelta(days=90)
+    for claim_id, entry in LEDGER.items():
+        assert "last_verified" in entry, f"{claim_id}: no verification date"
+        last_verified = date.fromisoformat(entry["last_verified"])
+        assert last_verified >= staleness_threshold, f"{claim_id}: stale (last verified {last_verified})"
+```
+
+---
+
+---
+
+## **Suggested Landing Order**
+1. **Provenance module** (`src/provenance.py`)
+2. **Verification ledger** (`education/verification_log.json`)
+3. **Content gate in CI** (GitHub Action + validation script)
+4. **Plain-Language Glossary** (backbone for all other artifacts)
+5. **Appeals Companion Kit** (highest urgency for consumers)
+
+---
+---
+## **Next Steps**
+Would you like me to:
+1. **Draft the full `provenance.py` module** with all helper functions?
+2. **Create the glossary term bank** with the first 10 terms?
+3. **Design the Appeals Kit templates** and their validation logic?

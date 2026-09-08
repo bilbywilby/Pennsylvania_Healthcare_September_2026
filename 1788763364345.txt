@@ -1,0 +1,18 @@
+
+I interpreted “last month” as **August 7–September 7, 2026**. Only one source below has a verifiable publication date inside that window; official pages with no displayed publication date are included and marked `date_status=unknown`.
+
+```csv
+source_id,title,publisher,publication_date,date_status,within_date_range,source_type,relevance,url
+1,"Pennie drops: PA's insurance marketplace suffers massive decline in enrollment","City & State Pennsylvania","2026-08-18","published","yes","news analysis","Pennie enrollment decline, subsidy expiration, uninsured population, Pennsylvania health-system effects","https://www.cityandstatepa.com/politics/2026/08/pennie-drops-pas-insurance-marketplace-suffers-massive-decline-enrollment/415495/"
+2,"Medicaid & CHIP Renewals Home","Pennsylvania Department of Human Services","","unknown","unknown","official government","Medicaid and CHIP renewal procedures, COMPASS, notices, coverage loss, Pennie referrals","https://www.pa.gov/agencies/dhs/resources/medicaid/medicaid-chip-renewals"
+3,"Medicaid / Medical Assistance","Pennsylvania Department of Human Services","","unknown","unknown","official government","Pennsylvania Medicaid eligibility, 2026 income limits, HealthChoices, applications, benefits","https://www.pa.gov/agencies/dhs/resources/medicaid"
+4,"Changes Coming to Medicaid in Pennsylvania in January 2027","Pennsylvania Department of Human Services","","unknown","unknown","official government","2027 Medicaid work requirements, six-month renewals, September 2026 communications, reporting requirements","https://www.pa.gov/agencies/dhs/resources/medicaid/medicaid-changes"
+5,"Children's Health Insurance Program (CHIP)","Pennsylvania Department of Human Services","","unknown","unknown","official government","Pennsylvania CHIP eligibility, applications, renewals, provider resources","https://www.pa.gov/agencies/dhs/resources/chip"
+6,"Pennsylvania Family Health Insurance 2026: CHIP, Pennie Plans & Enrollment Guide","ForHealthInsurance.com","","unknown","unknown","commercial guide","Pennie, CHIP, Medical Assistance, family coverage comparisons and estimated costs","https://www.forhealthinsurance.com/pennsylvania-family-health-insurance/"
+7,"Health Insurance in Pennsylvania 2026","Franklin Benefits Group","","unknown","unknown","commercial benefits guide","2026 Pennsylvania premiums, rate increases, Pennie, Medicaid, CHIP, Medicare, employer coverage","https://franklinbenefitsgroup.com/feeds/blog/health-insurance-cost-pennsylvania"
+8,"Medicare and Pennie Resources","PhillyHealthCares","","unknown","unknown","community resource guide","Enrollment periods, Medicaid, CHIP, Medicare, Pennie, Special Enrollment Periods","https://www.phillyhealthcares.org/copy-of-snap-resources-1"
+9,"Shapiro Administration Announces Proposed 2026 Health Insurance Rate Updates","Pennsylvania Insurance Department","2025-08-01","published","no","official government","Proposed 2026 individual and small-group premium increases and rate-review process","https://www.pa.gov/agencies/insurance/newsroom/shapiro-admin-announces-proposed-2026-health-insurance-rate-updates"
+10,"Pennie's 2026 Health Insurance Open Enrollment Starts Tomorrow","Pennie","2025-10-31","published","no","official government","2026 open enrollment dates, premium tax credits, plan protections and Pennie assistance","https://agency.pennie.com/pennies-2026-health-insurance-open-enrollment-starts-tomorrow/"
+```
+
+The CSV includes **all sources identified in the follow-up research**, including undated official pages and older background sources so they are not silently omitted.

@@ -1,0 +1,485 @@
+
+Here are the Python code and configuration files for the **Pennsylvania Provenance Engine**, designed to audit, track, and document the health insurance market data (based on the hypothetical 2026 scenario we discussed).
+
+These files are provided as **text blocks** for you to copy and save manually.
+
+### 1. Project Structure
+You should create the following directory structure:
+```text
+pa-provenance-engine/
+├── config/
+│   └── settings.py
+├── src/
+│   └── provenance_engine/
+│       ├── __init__.py
+│       ├── auditor.py
+│       ├── validator.py
+│       └── reporter.py
+├── tests/
+│   ├── __init__.py
+│   ├── test_auditor.py
+│   └── test_validator.py
+├── data/
+│   └── sample_2026_data.json
+├── requirements.txt
+├── pytest.ini
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+└── README.md
+```
+
+---
+
+### 2. Configuration & Settings
+
+**File:** `config/settings.py`
+```python
+"""
+Configuration settings for the Pennsylvania Provenance Engine.
+Contains metadata for the 2026 hypothetical audit.
+"""
+
+import os
+
+class Config:
+    """Base configuration."""
+    APP_NAME = "PA Provenance Engine"
+    VERSION = "1.0.0"
+    AUDIT_YEAR = 2026
+    AUDIT_MONTH = "September"
+    DATA_SOURCE = "Hypothetical Scenario / User Provided"
+    
+    # Rating Areas Configuration
+    RATING_AREAS = {
+        1: ["Erie", "Crawford", "Mercer", "Venango", "Clarion", "Forest", "Warren", "McKean"],
+        2: ["Elk", "Cameron", "Potter"],
+        3: ["Tioga", "Clinton", "Lycoming", "Sullivan", "Bradford", "Susquehanna", "Wyoming", "Lackawanna", "Wayne", "Pike", "Monroe", "Carbon", "Luzerne"],
+        4: ["Lawrence", "Beaver", "Washington", "Greene", "Butler", "Allegheny", "Westmoreland", "Armstrong", "Indiana", "Fayette"],
+        5: ["Jefferson", "Clearfield", "Cambria", "Somerset", "Bedford", "Blair", "Huntingdon"],
+        6: ["Centre", "Mifflin", "Union", "Snyder", "Montour", "Northumberland", "Columbia", "Schuylkill", "Lehigh", "Northampton"],
+        7: ["Adams", "York", "Lancaster", "Berks"],
+        8: ["Chester", "Delaware", "Montgomery", "Bucks", "Philadelphia"],
+        9: ["Fulton", "Franklin", "Cumberland", "Perry", "Juniata", "Dauphin", "Lebanon"]
+    }
+
+    # Carriers and Hypothetical Rate Increases (2026)
+    # Note: These are placeholders based on the user scenario.
+    CARRIERS_2026 = {
+        "Ambetter Health of Pennsylvania": 37.8,
+        "Capital Advantage Assurance": 24.6,
+        "Geisinger Health Plan": 11.6,
+        "Geisinger Quality Options": 13.8,
+        "Health Partners Plans": 16.7,
+        "Highmark": 17.7,
+        "Highmark Benefits Group": 18.4,
+        "Highmark Coverage Advantage": 14.5,
+        "Keystone Health Plan Central": 22.4,
+        "Keystone Health Plan East": 22.0
+    }
+
+    # 2027 Rate Requests (Hypothetical)
+    CARRIERS_2027_REQUESTS = {
+        "Ambetter Health of Pennsylvania": 40.90,
+        "Keystone Health Plan Central": 33.83,
+        "Highmark Benefits Group": 21.40,
+        "Partners Insurance Company": 20.51,
+        "QCC Insurance Company": 19.88,
+        "Capital Advantage Assurance": 18.32,
+        "Highmark": 16.16,
+        "Health Partners Plans": 15.90,
+        "UPMC Health Plan": 15.82,
+        "Oscar Health Plan": 15.39
+    }
+
+    # Provenance Metadata
+    PROVENANCE_ID = "PA-2026-AUDIT-001"
+    DISCLAIMER = "This data is hypothetical and for educational purposes only. Not verified facts."
+```
+
+**File:** `requirements.txt`
+```text
+pytest>=7.0.0
+pytest-cov>=4.0.0
+python-dateutil>=2.8.2
+pydantic>=2.0.0
+```
+
+**File:** `pytest.ini`
+```ini
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -v --strict-markers
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    e2e: End-to-end tests
+```
+
+---
+
+### 3. Core Python Logic
+
+**File:** `src/provenance_engine/__init__.py`
+```python
+"""Pennsylvania Provenance Engine Package."""
+from .auditor import MarketAuditor
+from .validator import RateValidator
+from .reporter import ReportGenerator
+
+__all__ = ["MarketAuditor", "RateValidator", "ReportGenerator"]
+```
+
+**File:** `src/provenance_engine/auditor.py`
+```python
+"""
+Market Auditor Module.
+Handles data ingestion and basic statistical analysis of the 2026 scenario.
+"""
+from typing import Dict, List
+from config.settings import Config
+
+class MarketAuditor:
+    """Audits market data for the 2026 hypothetical scenario."""
+
+    def __init__(self, rating_areas: Dict[int, List[str]] = None):
+        self.rating_areas = rating_areas or Config.RATING_AREAS
+        self.carriers_2026 = Config.CARRIERS_2026
+        self.carriers_2027 = Config.CARRIERS_2027_REQUESTS
+        self.disclaimer = Config.DISCLAIMER
+
+    def calculate_weighted_average(self, rates: Dict[str, float]) -> float:
+        """Calculates the weighted average rate increase."""
+        if not rates:
+            return 0.0
+        # In a real scenario, weights would be based on enrollment numbers.
+        # Here we assume equal weighting for the hypothetical scenario.
+        return sum(rates.values()) / len(rates)
+
+    def get_high_risk_carriers(self, threshold: float = 20.0) -> List[str]:
+        """Identifies carriers with rate increases above the threshold."""
+        return [carrier for carrier, rate in self.carriers_2026.items() if rate > threshold]
+
+    def generate_summary_report(self) -> Dict:
+        """Generates a summary of the audit findings."""
+        avg_2026 = self.calculate_weighted_average(self.carriers_2026)
+        avg_2027 = self.calculate_weighted_average(self.carriers_2027)
+        high_risk = self.get_high_risk_carriers()
+
+        return {
+            "audit_id": Config.PROVENANCE_ID,
+            "year": Config.AUDIT_YEAR,
+            "disclaimer": self.disclaimer,
+            "statistics": {
+                "average_rate_increase_2026": round(avg_2026, 2),
+                "average_rate_request_2027": round(avg_2027, 2),
+                "carriers_above_20_percent": len(high_risk),
+                "high_risk_carriers": high_risk
+            },
+            "rating_areas_count": len(self.rating_areas)
+        }
+```
+
+**File:** `src/provenance_engine/validator.py`
+```python
+"""
+Rate Validator Module.
+Checks for logical consistency and data integrity in the hypothetical data.
+"""
+from typing import Dict, List
+from config.settings import Config
+
+class RateValidator:
+    """Validates rate increases against hypothetical constraints."""
+
+    def __init__(self, carriers_2026: Dict[str, float], carriers_2027: Dict[str, float]):
+        self.carriers_2026 = carriers_2026
+        self.carriers_2027 = carriers_2027
+        self.errors: List[str] = []
+        self.warnings: List[str] = []
+
+    def validate_positive_rates(self) -> bool:
+        """Ensures all rates are positive."""
+        valid = True
+        for carrier, rate in self.carriers_2026.items():
+            if rate < 0:
+                self.errors.append(f"Negative rate found for {carrier} in 2026.")
+                valid = False
+        for carrier, rate in self.carriers_2027.items():
+            if rate < 0:
+                self.errors.append(f"Negative rate found for {carrier} in 2027.")
+                valid = False
+        return valid
+
+    def validate_consistency(self) -> bool:
+        """Checks if 2027 requests are logically consistent with 2026 (heuristic)."""
+        # In a real scenario, we might check if a carrier increased significantly in 2026 
+        # but decreased in 2027 without a stated reason.
+        for carrier in self.carriers_2026:
+            if carrier in self.carriers_2027:
+                if self.carriers_2027[carrier] < self.carriers_2026[carrier]:
+                    self.warnings.append(f"{carrier} shows a decrease in 2027 request vs 2026 increase.")
+        return len(self.errors) == 0
+
+    def run_validation(self) -> Dict:
+        """Runs all validation checks."""
+        self.errors = []
+        self.warnings = []
+        
+        self.validate_positive_rates()
+        self.validate_consistency()
+
+        return {
+            "valid": len(self.errors) == 0,
+            "errors": self.errors,
+            "warnings": self.warnings
+        }
+```
+
+**File:** `src/provenance_engine/reporter.py`
+```python
+"""
+Report Generator Module.
+Formats the audit findings into a human-readable white paper format.
+"""
+from typing import Dict
+from config.settings import Config
+
+class ReportGenerator:
+    """Generates formatted reports from audit data."""
+
+    def __init__(self, summary: Dict, validation: Dict):
+        self.summary = summary
+        self.validation = validation
+
+    def generate_text_report(self) -> str:
+        """Generates a plain text white paper."""
+        lines = [
+            "=" * 80,
+            f"PENNSYLVANIA PROVENANCE ENGINE REPORT",
+            f"ID: {self.summary['audit_id']}",
+            f"Year: {self.summary['year']}",
+            "=" * 80,
+            "",
+            "DISCLAIMER:",
+            self.summary['disclaimer'],
+            "",
+            "STATISTICAL SUMMARY:",
+            f"- Average 2026 Rate Increase: {self.summary['statistics']['average_rate_increase_2026']}%",
+            f"- Average 2027 Rate Request: {self.summary['statistics']['average_rate_request_2027']}%",
+            f"- Carriers with >20% Increase: {self.summary['statistics']['carriers_above_20_percent']}",
+            "",
+            "HIGH RISK CARRIERS:",
+            ", ".join(self.summary['statistics']['high_risk_carriers']) if self.summary['statistics']['high_risk_carriers'] else "None",
+            "",
+            "VALIDATION RESULTS:",
+            f"- Status: {'PASSED' if self.validation['valid'] else 'FAILED'}",
+        ]
+        
+        if self.validation['warnings']:
+            lines.append("WARNINGS:")
+            for w in self.validation['warnings']:
+                lines.append(f"  - {w}")
+        
+        if self.validation['errors']:
+            lines.append("ERRORS:")
+            for e in self.validation['errors']:
+                lines.append(f"  - {e}")
+
+        lines.append("")
+        lines.append("=" * 80)
+        
+        return "\n".join(lines)
+```
+
+---
+
+### 4. Tests
+
+**File:** `tests/test_auditor.py`
+```python
+"""Unit tests for the Market Auditor."""
+import pytest
+from src.provenance_engine.auditor import MarketAuditor
+
+@pytest.fixture
+def auditor():
+    return MarketAuditor()
+
+def test_calculate_weighted_average(auditor):
+    """Test average calculation."""
+    avg = auditor.calculate_weighted_average(auditor.carriers_2026)
+    assert 10 < avg < 30  # Expecting ~21.5 based on config
+
+def test_get_high_risk_carriers(auditor):
+    """Test high risk carrier identification."""
+    high_risk = auditor.get_high_risk_carriers(20.0)
+    assert len(high_risk) > 0
+    assert "Ambetter Health of Pennsylvania" in high_risk
+
+def test_generate_summary_report(auditor):
+    """Test report generation."""
+    report = auditor.generate_summary_report()
+    assert "audit_id" in report
+    assert "statistics" in report
+    assert "disclaimer" in report
+```
+
+**File:** `tests/test_validator.py`
+```python
+"""Unit tests for the Rate Validator."""
+import pytest
+from src.provenance_engine.validator import RateValidator
+
+@pytest.fixture
+def validator():
+    return RateValidator(
+        {"CarrierA": 10.0, "CarrierB": 20.0},
+        {"CarrierA": 15.0, "CarrierB": 25.0}
+    )
+
+def test_validate_positive_rates(validator):
+    """Test positive rate validation."""
+    result = validator.run_validation()
+    assert result['valid'] is True
+    assert len(result['errors']) == 0
+
+def test_validation_warnings(validator):
+    """Test warning generation."""
+    result = validator.run_validation()
+    # CarrierA increased from 10 to 15, CarrierB from 20 to 25. No decrease.
+    # This test checks if warnings are empty when logic holds.
+    # We expect warnings only if 2027 < 2026.
+    assert len(result['warnings']) == 0
+
+def test_negative_rate_error():
+    """Test negative rate detection."""
+    v = RateValidator({"Bad": -5.0}, {})
+    result = v.run_validation()
+    assert result['valid'] is False
+    assert len(result['errors']) > 0
+```
+
+---
+
+### 5. GitHub Actions Workflow
+
+**File:** `.github/workflows/ci.yml`
+```yaml
+name: PA Provenance Engine CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Lint with flake8 (optional)
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exclude config from linting if needed
+        # flake8 tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run tests with pytest
+      run: |
+        pytest --cov=src --cov-report=xml
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11'
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+```
+
+---
+
+### 6. Sample Data (Optional)
+
+**File:** `data/sample_2026_data.json`
+```json
+{
+  "metadata": {
+    "audit_id": "PA-2026-AUDIT-001",
+    "date": "2026-09-06",
+    "status": "Hypothetical Scenario"
+  },
+  "market_overview": {
+    "total_enrollees": 486000,
+    "disenrollment_estimate": 85000,
+    "bronze_shift_estimate": 33000,
+    "average_rate_increase": 21.5
+  },
+  "carriers": {
+    "2026": {
+      "Ambetter Health of Pennsylvania": 37.8,
+      "Highmark": 17.7
+    },
+    "2027_requests": {
+      "Ambetter Health of Pennsylvania": 40.90,
+      "Highmark": 16.16
+    }
+  }
+}
+```
+
+---
+
+### How to Deploy
+1.  **Create the directories** using your terminal:
+    ```bash
+    mkdir -p pa-provenance-engine/{config,src/provenance_engine,data,tests,.github/workflows}
+    ```
+2.  **Copy the files** above into their respective locations.
+3.  **Install dependencies**:
+    ```bash
+    cd pa-provenance-engine
+    pip install -r requirements.txt
+    ```
+4.  **Run tests**:
+    ```bash
+    pytest
+    ```
+5.  **Run the engine** (conceptual example):
+    ```python
+    # In a Python shell or script:
+    from src.provenance_engine.auditor import MarketAuditor
+    from src.provenance_engine.reporter import ReportGenerator
+    
+    auditor = MarketAuditor()
+    summary = auditor.generate_summary_report()
+    from src.provenance_engine.validator import RateValidator
+    validator = RateValidator(auditor.carriers_2026, auditor.carriers_2027)
+    validation = validator.run_validation()
+    
+    reporter = ReportGenerator(summary, validation)
+    print(reporter.generate_text_report())
+    ```
+
+This setup provides a clean, modular, and testable foundation for your hypothetical audit project.

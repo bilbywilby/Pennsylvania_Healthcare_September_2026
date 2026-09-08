@@ -1,0 +1,304 @@
+
+Title: Verified Per-Carrier 2027 Rate Filings
+Extracted directly from the Pennsylvania Insurance Department (PID) primary announcement (published July 23, 2026):
+Individual Market Requests (Weighted Average: 17.1%)
+ * Ambetter Health of PA: 40.90% (Rating areas 1–9; includes 23.44% silver-to-silver + 17.46% bronze-to-silver mapping due to bronze exit)
+ * Capital Advantage Assurance Co: 18.32% (Rating areas 6, 7, 9)
+ * Geisinger Health Plan: 10.46% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Geisinger Quality Options: 12.95% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Health Partners Plans: 15.90% (Rating areas 3, 6, 8)
+ * Highmark Benefits Group: 21.40% (Rating areas 3, 8)
+ * Highmark Inc: 16.16% (Rating areas 1, 2, 4, 5, 6, 7, 9)
+ * Keystone Health Plan Central: 33.83% (Rating areas 6, 7, 9)
+ * Keystone Health Plan East: 14.68% (Rating area 8)
+ * Oscar Health Plan of PA: 15.39% (Rating areas 3, 6, 7, 9)
+ * Partners Insurance Co: 20.51% (Rating areas 3, 6, 8)
+ * QCC Insurance Co: 19.88% (Rating area 8)
+Small Group Market Requests (Weighted Average: 11.5%)
+ * Geisinger Quality Options: 4.05% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Highmark Benefits Group: 16.99% (Rating areas 6, 7, 9)
+ * Highmark Care Benefits: 19.95% (Rating area 3)
+ * Highmark Coverage Advantage: 14.63% (Rating areas 1, 2, 4, 5, 6)
+ * Highmark Inc: 15.57% (Rating areas 1, 2, 4, 5, 6, 7, 9)
+ * Highmark Senior Health Co: 14.32% (Rating area 8)
+ * UnitedHealthcare of PA: Rate request includes annual adjustments and mapping transition of Gold/Silver small group plans down to Bronze.
+Verified Litigation Record: Open Enrollment Reversal
+The specific litigation that halted the federal 9-week open enrollment rule is [City of Columbus v. Kennedy (Columbus II), No. 26-2215 (D. Md.)](https://clearinghouse.net/case/46755/).
+ * July 16, 2026: The U.S. District Court for the District of Maryland granted the plaintiffs' motion for a stay on provisions of the 2027 Notice of Benefit and Payment Parameters (NBPP) Final Rule (including the open enrollment duration limits). (Note: "Columbus I," No. 1:25-cv-02114-BAH, addressed the prior 2025 rule).
+ * July 31, 2026: CMS issued standard guidance acknowledging the Columbus II stay, confirming that Federally-facilitated Exchange and State-based Exchange open enrollment for Plan Year 2027 reverts to November 1, 2026 – January 15, 2027.
+Updated Section 9 Prose Draft
+### 9.1 Filing Timeline and Context
+
+Insurers participating in Pennsylvania's individual and small group markets submitted proposed 2027 rates to the Pennsylvania Insurance Department (PID) by the May 15, 2026 filing deadline. PID published the received filings on July 23, 2026, opening a formal public comment period through August 22, 2026 (PID, 2026). The requested rates arrive against the demand-side backdrop documented in prior sections: the expiration of enhanced premium tax credits in December 2025 roughly doubled net monthly premiums for marketplace enrollees, precipitating the cancellation series documented in Section 8. The 2027 filings represent the first pricing cycle in which carriers priced that observed attrition into their risk pools.
+
+### 9.2 Individual Market Requests
+
+Filings for the individual marketplace reflect an enrollment-weighted average requested increase of 17.1% (PID, 2026). Per-carrier requests range from Geisinger Health Plan at 10.46% (Rating Areas 2, 3, 5, 6, 7, 9) to Ambetter Health of Pennsylvania at 40.90% across all rating areas (PID, 2026). PID's release explicitly decomposes Ambetter's request into a 23.44% silver-to-silver base increase plus a 17.46% bronze-to-silver mapping differential driven by Ambetter’s planned exit from the bronze metal tier for Plan Year 2027 (PID, 2026). Discontinued bronze enrollees retain access to bronze plans through alternative participating carriers. Additional regional carriers filed notable increases, including Keystone Health Plan Central at 33.83% and Highmark Benefits Group at 21.40% in Rating Areas 3 and 8 (PID, 2026).
+
+### 9.3 Small Group Market Requests
+
+Small group filings reflect an enrollment-weighted average requested increase of 11.5% (PID, 2026). Requested changes range from Geisinger Quality Options at 4.05% to Highmark Care Benefits at 19.95% (PID, 2026). Highmark Coverage Advantage submitted a 14.63% requested increase across Rating Areas 1, 2, 4, 5, and 6, while UnitedHealthcare’s filing incorporated plan structural mappings transitioning Gold and Silver small-group offerings into Bronze tier structures (PID, 2026).
+
+### 9.4 Updated Attrition Series
+
+Pennie's affordability dashboard (updated August 10, 2026) supersedes the July 1 figures reported in prior drafts. As of August 1, 2026, active enrollment stood at 422,869, reflecting 108,000 consumers dropping coverage since the close of OE 2026 on January 31, and over 191,000 cumulative cancellations when including open enrollment terminations (Pennie, 2026). The verified series—486,000 (Feb 1), 471,442 (March 24), 452,000 (May 1), 431,270 (July 1), and 422,869 (Aug 1)—maintains the standard reporting separation between open enrollment non-effectuations (85,000) and post-OE mid-year drops.
+
+### 9.5 Regulatory Volatility: OE 2027 Schedule Reversal
+
+The open enrollment schedule for Plan Year 2027 changed twice within five months. In March 2026, Pennie's board voted to shorten OE 2027 to October 15–December 15, conforming to federal regulations capping exchange open enrollment windows at nine weeks (PORH, 2026a). On July 16, 2026, the U.S. District Court for the District of Maryland stayed the federal duration restrictions in *City of Columbus v. Kennedy (Columbus II)*, No. 26-2215 (D. Md.) (CMS, 2026). Following subsequent CMS administrative guidance issued July 31, Pennie reinstated the traditional fifteen-week window: Open Enrollment 2027 will run **November 1, 2026 through January 15, 2027**, with coverage effective January 1 or February 1 depending on selection date (PHLP, 2026).
+
+This reversal restores coverage access past the January 1 plan threshold for non-effectuated enrollees. However, the litigation-driven shift highlights that marketplace rules are subject to ongoing judicial challenge. Final 2027 rates remain subject to PID review; PID's official release states final approved rates will be published in the fall (PID, 2026).
+
+
+Model: Gpt 5.6 Luna
+Date: Sep 7, 08:22 AM
+
+--- User ---
+Verified Per-Carrier 2027 Rate Filings
+Extracted directly from the Pennsylvania Insurance Department (PID) primary announcement (published July 23, 2026):
+Individual Market Requests (Weighted Average: 17.1%)
+ * Ambetter Health of PA: 40.90% (Rating areas 1–9; includes 23.44% silver-to-silver + 17.46% bronze-to-silver mapping due to bronze exit)
+ * Capital Advantage Assurance Co: 18.32% (Rating areas 6, 7, 9)
+ * Geisinger Health Plan: 10.46% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Geisinger Quality Options: 12.95% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Health Partners Plans: 15.90% (Rating areas 3, 6, 8)
+ * Highmark Benefits Group: 21.40% (Rating areas 3, 8)
+ * Highmark Inc: 16.16% (Rating areas 1, 2, 4, 5, 6, 7, 9)
+ * Keystone Health Plan Central: 33.83% (Rating areas 6, 7, 9)
+ * Keystone Health Plan East: 14.68% (Rating area 8)
+ * Oscar Health Plan of PA: 15.39% (Rating areas 3, 6, 7, 9)
+ * Partners Insurance Co: 20.51% (Rating areas 3, 6, 8)
+ * QCC Insurance Co: 19.88% (Rating area 8)
+Small Group Market Requests (Weighted Average: 11.5%)
+ * Geisinger Quality Options: 4.05% (Rating areas 2, 3, 5, 6, 7, 9)
+ * Highmark Benefits Group: 16.99% (Rating areas 6, 7, 9)
+ * Highmark Care Benefits: 19.95% (Rating area 3)
+ * Highmark Coverage Advantage: 14.63% (Rating areas 1, 2, 4, 5, 6)
+ * Highmark Inc: 15.57% (Rating areas 1, 2, 4, 5, 6, 7, 9)
+ * Highmark Senior Health Co: 14.32% (Rating area 8)
+ * UnitedHealthcare of PA: Rate request includes annual adjustments and mapping transition of Gold/Silver small group plans down to Bronze.
+Verified Litigation Record: Open Enrollment Reversal
+The specific litigation that halted the federal 9-week open enrollment rule is [City of Columbus v. Kennedy (Columbus II), No. 26-2215 (D. Md.)](https://clearinghouse.net/case/46755/).
+ * July 16, 2026: The U.S. District Court for the District of Maryland granted the plaintiffs' motion for a stay on provisions of the 2027 Notice of Benefit and Payment Parameters (NBPP) Final Rule (including the open enrollment duration limits). (Note: "Columbus I," No. 1:25-cv-02114-BAH, addressed the prior 2025 rule).
+ * July 31, 2026: CMS issued standard guidance acknowledging the Columbus II stay, confirming that Federally-facilitated Exchange and State-based Exchange open enrollment for Plan Year 2027 reverts to November 1, 2026 – January 15, 2027.
+Updated Section 9 Prose Draft
+### 9.1 Filing Timeline and Context
+
+Insurers participating in Pennsylvania's individual and small group markets submitted proposed 2027 rates to the Pennsylvania Insurance Department (PID) by the May 15, 2026 filing deadline. PID published the received filings on July 23, 2026, opening a formal public comment period through August 22, 2026 (PID, 2026). The requested rates arrive against the demand-side backdrop documented in prior sections: the expiration of enhanced premium tax credits in December 2025 roughly doubled net monthly premiums for marketplace enrollees, precipitating the cancellation series documented in Section 8. The 2027 filings represent the first pricing cycle in which carriers priced that observed attrition into their risk pools.
+
+### 9.2 Individual Market Requests
+
+Filings for the individual marketplace reflect an enrollment-weighted average requested increase of 17.1% (PID, 2026). Per-carrier requests range from Geisinger Health Plan at 10.46% (Rating Areas 2, 3, 5, 6, 7, 9) to Ambetter Health of Pennsylvania at 40.90% across all rating areas (PID, 2026). PID's release explicitly decomposes Ambetter's request into a 23.44% silver-to-silver base increase plus a 17.46% bronze-to-silver mapping differential driven by Ambetter’s planned exit from the bronze metal tier for Plan Year 2027 (PID, 2026). Discontinued bronze enrollees retain access to bronze plans through alternative participating carriers. Additional regional carriers filed notable increases, including Keystone Health Plan Central at 33.83% and Highmark Benefits Group at 21.40% in Rating Areas 3 and 8 (PID, 2026).
+
+### 9.3 Small Group Market Requests
+
+Small group filings reflect an enrollment-weighted average requested increase of 11.5% (PID, 2026). Requested changes range from Geisinger Quality Options at 4.05% to Highmark Care Benefits at 19.95% (PID, 2026). Highmark Coverage Advantage submitted a 14.63% requested increase across Rating Areas 1, 2, 4, 5, and 6, while UnitedHealthcare’s filing incorporated plan structural mappings transitioning Gold and Silver small-group offerings into Bronze tier structures (PID, 2026).
+
+### 9.4 Updated Attrition Series
+
+Pennie's affordability dashboard (updated August 10, 2026) supersedes the July 1 figures reported in prior drafts. As of August 1, 2026, active enrollment stood at 422,869, reflecting 108,000 consumers dropping coverage since the close of OE 2026 on January 31, and over 191,000 cumulative cancellations when including open enrollment terminations (Pennie, 2026). The verified series—486,000 (Feb 1), 471,442 (March 24), 452,000 (May 1), 431,270 (July 1), and 422,869 (Aug 1)—maintains the standard reporting separation between open enrollment non-effectuations (85,000) and post-OE mid-year drops.
+
+### 9.5 Regulatory Volatility: OE 2027 Schedule Reversal
+
+The open enrollment schedule for Plan Year 2027 changed twice within five months. In March 2026, Pennie's board voted to shorten OE 2027 to October 15–December 15, conforming to federal regulations capping exchange open enrollment windows at nine weeks (PORH, 2026a). On July 16, 2026, the U.S. District Court for the District of Maryland stayed the federal duration restrictions in *City of Columbus v. Kennedy (Columbus II)*, No. 26-2215 (D. Md.) (CMS, 2026). Following subsequent CMS administrative guidance issued July 31, Pennie reinstated the traditional fifteen-week window: Open Enrollment 2027 will run **November 1, 2026 through January 15, 2027**, with coverage effective January 1 or February 1 depending on selection date (PHLP, 2026).
+
+This reversal restores coverage access past the January 1 plan threshold for non-effectuated enrollees. However, the litigation-driven shift highlights that marketplace rules are subject to ongoing judicial challenge. Final 2027 rates remain subject to PID review; PID's official release states final approved rates will be published in the fall (PID, 2026).
+
+
+
+--- User ---
+Format nicely and build graphs where it will help delay the information a generate an exhaustive timeline of events in a .csv format
+
+Apa format in line text citation
+
+--- Gpt 5.6 Luna ---
+**Searching for user needs**
+
+I realize I need to initiate a search right away since the user wants specific formatting, like graphs, perhaps text graphs, and an exhaustive timeline in CSV. I also need to ensure that I include APA inline citations. It’s crucial that I verify the current claims through a search that encompasses primary PID, court, CMS, and Pennie. I think a broad query might be the best approach for this single call.
+**Clarifying citation and data needs**
+
+I’m thinking about the web search guidance on not writing source names or domains, especially since the user wants APA citations. It seems like citing names is essential here. 
+
+I also need to compile an exhaustive timeline of events with each date while calculating attrition losses from 486k to 422,869. I’ve noted the data discrepancies in the provided source as well, like UPMC's rates and the missing percentage for United. 
+
+I just need to make sure I don’t invent any details!
+**Clarifying timeline and statistics**
+
+I’m reviewing the updated prose that mentions the Aug 10 dashboard with the figure of 422,869 and 191k cancellations. The verified series says there have been 108k cancellations since Jan 31, which includes the 191k during open enrollment. 
+
+I need to ensure the timeline includes key dates, like subsidy expiration in December 2025, close of open enrollment on Jan 31, and several events through July and August. I just want to precisely organize these important dates and source information accurately!
+# Pennsylvania 2027 Health Insurance Rate Filings and Open Enrollment Timeline
+
+*Prepared from the Pennsylvania Insurance Department’s July 23, 2026 announcement and the supplied Pennie, CMS, and litigation records. Requested rates are not final approved premiums.*
+
+## Executive summary
+
+Pennsylvania insurers requested an enrollment-weighted average premium increase of **17.1% in the individual market** and **11.5% in the small-group market** for Plan Year 2027. The Pennsylvania Insurance Department stated that final rates would be published in the fall after review of the filings, objections, and public comments (Pennsylvania Insurance Department [PID], 2026). <citation src="2"></citation>
+
+The largest individual-market request was **Ambetter Health of Pennsylvania at 40.90%**. PID explained that this figure combines a **23.44% silver-to-silver increase** with a **17.46% bronze-to-silver mapping differential** resulting from Ambetter’s planned withdrawal from the bronze tier. Consumers losing Ambetter bronze plans were expected to have access to bronze plans offered by other carriers (PID, 2026). <citation src="2"></citation>
+
+The 2027 open-enrollment schedule also changed. Pennie initially moved toward a shorter October 15–December 15 enrollment period, but litigation over the federal nine-week limit resulted in restoration of the traditional **November 1, 2026–January 15, 2027** schedule (Pennsylvania Office of Rural Health [PORH], 2026). <citation src="5"></citation>
+
+## 2027 individual-market rate requests
+
+The individual-market requests supplied in the record are listed below. The percentages are **average requested rate changes**, not necessarily the change a particular consumer will experience.
+
+| Carrier | Requested increase | Rating areas |
+|---|---:|---|
+| Ambetter Health of Pennsylvania | 40.90% | 1–9 |
+| Capital Advantage Assurance Company | 18.32% | 6, 7, 9 |
+| Geisinger Health Plan | 10.46% | 2, 3, 5, 6, 7, 9 |
+| Geisinger Quality Options | 12.95% | 2, 3, 5, 6, 7, 9 |
+| Health Partners Plans | 15.90% | 3, 6, 8 |
+| Highmark Benefits Group | 21.40% | 3, 8 |
+| Highmark Inc. | 16.16% | 1, 2, 4, 5, 6, 7, 9 |
+| Keystone Health Plan Central | 33.83% | 6, 7, 9 |
+| Keystone Health Plan East | 14.68% | 8 |
+| Oscar Health Plan of Pennsylvania | 15.39% | 3, 6, 7, 9 |
+| Partners Insurance Company | 20.51% | 3, 6, 8 |
+| QCC Insurance Company | 19.88% | 8 |
+
+**Additional individual-market filings identified in PID’s primary announcement:** UPMC Health Network, Inc. requested 12.03%, and UPMC Health Plan, Inc. requested 15.82%. These two filings were not included in the supplied carrier list (PID, 2026). <citation src="2"></citation>
+
+### Individual-market graph
+
+Each block represents approximately one percentage point.
+
+```text
+Ambetter Health of PA       40.90% | █████████████████████████████████████████
+Keystone Health Plan Central 33.83% | ██████████████████████████████████
+Highmark Benefits Group     21.40% | █████████████████████
+Partners Insurance Co       20.51% | ████████████████████
+QCC Insurance Co             19.88% | ████████████████████
+Capital Advantage            18.32% | ██████████████████
+Highmark Inc                 16.16% | ████████████████
+Health Partners Plans       15.90% | ████████████████
+Oscar Health Plan of PA     15.39% | ███████████████
+Keystone Health Plan East   14.68% | ██████████████
+Geisinger Quality Options   12.95% | █████████████
+Geisinger Health Plan       10.46% | ██████████
+```
+
+The difference between the highest and lowest supplied individual-market requests is **30.44 percentage points**. Ambetter’s request is approximately **3.9 times** Geisinger Health Plan’s request, although the two carriers may serve different regions and plan populations.
+
+## Ambetter’s plan-mapping effect
+
+Ambetter’s reported 40.90% request has two components:
+
+```text
+Silver-to-silver increase       23.44% | ███████████████████████
+Bronze-to-silver mapping        17.46% | █████████████████
+Total reported request          40.90% | █████████████████████████████████████████
+```
+
+The second component reflects the transition of affected bronze enrollees into silver plans after Ambetter’s planned exit from the bronze metal tier. Therefore, the 40.90% figure should not be interpreted as a uniform premium increase for every current Ambetter member.
+
+## 2027 small-group market rate requests
+
+The supplied record includes the following small-group filings:
+
+| Carrier | Requested increase | Rating areas or notes |
+|---|---:|---|
+| Geisinger Quality Options | 4.05% | 2, 3, 5, 6, 7, 9 |
+| Highmark Benefits Group | 16.99% | 6, 7, 9 |
+| Highmark Care Benefits | 19.95% | 3 |
+| Highmark Coverage Advantage | 14.63% | 1, 2, 4, 5, 6 |
+| Highmark Inc. | 15.57% | 1, 2, 4, 5, 6, 7, 9 |
+| Highmark Senior Health Company | 14.32% | 8 |
+| UnitedHealthcare of Pennsylvania | Not stated | Includes annual adjustments and Gold/Silver-to-Bronze plan mapping |
+
+PID’s primary announcement also identified additional small-group filings omitted from the supplied list, including Capital Advantage Assurance Company at 16.11%, Geisinger Health Plan at 3.74%, Independence Assurance Company at 8.95%, and Keystone Health Plan Central at 20.93% (PID, 2026). <citation src="2"></citation>
+
+### Small-group graph
+
+```text
+Highmark Care Benefits       19.95% | ████████████████████
+Highmark Benefits Group      16.99% | █████████████████
+Highmark Inc                 15.57% | ████████████████
+Highmark Coverage Advantage  14.63% | ███████████████
+Highmark Senior Health Co.   14.32% | ██████████████
+Geisinger Quality Options     4.05% | ████
+```
+
+The supplied small-group requests range from **4.05% to 19.95%**, a spread of **15.90 percentage points**. The enrollment-weighted small-group average, however, is **11.5%**, so the average cannot be reproduced by simply averaging the carrier percentages (PID, 2026). <citation src="2"></citation>
+
+## Enrollment attrition
+
+The supplied Pennie series reports the following active-enrollment levels:
+
+```text
+Feb. 1   486,000 | ██████████████████████████████████████████████████
+Mar. 24  471,442 | ███████████████████████████████████████████████
+May 1    452,000 | █████████████████████████████████████████████
+July 1   431,270 | ███████████████████████████████████████████
+Aug. 1   422,869 | ██████████████████████████████████████████
+```
+
+From February 1 to August 1, the reported active enrollment declined by **63,131 people**, or approximately **13.0%**. The supplied August figures distinguish between:
+
+- **85,000 open-enrollment non-effectuations**, meaning people who selected coverage but did not complete the steps necessary for coverage to take effect; and
+- **More than 191,000 cumulative cancellations** when open-enrollment terminations are included.
+
+Those categories should not be added together without confirming whether they are mutually exclusive. The August 10 dashboard also reported that 108,000 consumers had dropped coverage since the close of Open Enrollment 2026, while the cumulative figure included open-enrollment terminations.
+
+The reported attrition occurred after enhanced federal premium tax credits expired at the end of 2025. Contemporary reporting described average monthly premium payments as having increased by approximately 102% for Pennie enrollees after the expiration of the enhanced credits (WVIA, 2026). <citation src="4"></citation>
+
+## Open Enrollment 2027 schedule
+
+The revised schedule is:
+
+- **Open Enrollment begins:** November 1, 2026
+- **Open Enrollment ends:** January 15, 2027
+- **Coverage effective January 1:** For selections made by the applicable December deadline
+- **Coverage effective February 1:** For selections made later during the enrollment period
+
+The schedule was restored after the U.S. District Court for the District of Maryland stayed provisions of the 2027 Notice of Benefit and Payment Parameters that would have limited exchange open enrollment to nine weeks. Pennie subsequently reinstated the November 1–January 15 schedule (PORH, 2026). <citation src="5"></citation>
+
+## Exhaustive event timeline — CSV
+
+```csv
+date,event,market_or_subject,description,source, status_or_significance
+2025-12-31,Expiration of enhanced premium tax credits,Federal subsidy policy,Enhanced federal premium tax credits expired at the end of 2025, which increased net premiums for many marketplace consumers and contributed to subsequent cancellations,"Pennsylvania Insurance Department (2026); WVIA (2026)",Historical context
+2026-01-01,Subsidy expiration effects begin,Individual market,Consumers began experiencing the full effect of the expiration of enhanced premium tax credits on 2026 premiums,"WVIA (2026)",Historical context
+2026-01-31,Close of Open Enrollment 2026,Pennie,Open Enrollment 2026 ended; later Pennie reporting measured post-enrollment coverage losses against this date,"Pennie (2026), as supplied",Historical reference point
+2026-02-01,Active enrollment measurement,Pennie,Active enrollment was reported at approximately 486000,"Pennie (2026), as supplied",Beginning of supplied attrition series
+2026-03-01,Approximate timing of Pennie board action,Pennie and federal open enrollment rules,Pennie's board voted to shorten Plan Year 2027 open enrollment to October 15 through December 15 to conform to the federal nine-week limit,"Pennsylvania Office of Rural Health (2026), as supplied",Initial 2027 schedule
+2026-03-24,Active enrollment measurement,Pennie,Active enrollment was reported at 471442,"Pennie (2026), as supplied",Attrition series
+2026-05-15,2027 rate filing deadline,Individual and small-group markets,Insurers submitted proposed 2027 rates to the Pennsylvania Insurance Department by the filing deadline,"Pennsylvania Insurance Department (2026)",Regulatory deadline
+2026-05-01,Active enrollment measurement,Pennie,Active enrollment was reported at approximately 452000,"Pennie (2026), as supplied",Attrition series
+2026-07-01,Active enrollment measurement,Pennie,Active enrollment was reported at 431270,"Pennie (2026), as supplied",Attrition series
+2026-07-16,District court stay,Open Enrollment 2027 litigation,"The U.S. District Court for the District of Maryland granted plaintiffs' motion for a stay affecting provisions of the 2027 Notice of Benefit and Payment Parameters, including federal open enrollment duration limits","City of Columbus v. Kennedy (Columbus II), No. 26-2215 (D. Md.), as supplied",Nine-week restriction temporarily halted
+2026-07-23,PID publishes proposed rate filings,Individual and small-group markets,"The Pennsylvania Insurance Department announced proposed 2027 rate changes. Enrollment-weighted requests averaged 17.1% in the individual market and 11.5% in the small-group market","Pennsylvania Insurance Department (2026)",Public release and beginning of comment period
+2026-07-23,Public comment period begins,Individual and small-group markets,PID opened public comments on proposed 2027 rate filings,"Pennsylvania Insurance Department (2026)",Comments accepted through 2026-08-22
+2026-07-23,Ambetter rate decomposition announced,Individual market,PID reported Ambetter's 40.90% request as a combination of a 23.44% silver-to-silver increase and a 17.46% bronze-to-silver mapping differential,"Pennsylvania Insurance Department (2026)",Bronze-tier exit and plan mapping
+2026-07-25,Public explanation of schedule restoration,Open Enrollment 2027,The Pennsylvania Office of Rural Health reported that Pennie would restore open enrollment to November 1, 2026 through January 15, 2027,"Pennsylvania Office of Rural Health (2026)",Schedule reversal publicly described
+2026-07-31,CMS guidance acknowledging stay,Open Enrollment 2027,CMS issued guidance acknowledging the Columbus II stay and confirming restoration of the November 1, 2026 through January 15, 2027 schedule,"CMS (2026), as supplied",Federal administrative confirmation
+2026-08-01,Active enrollment measurement,Pennie,Active enrollment stood at 422869,"Pennie (2026), as supplied",Latest enrollment count in supplied series
+2026-08-01,Reported post-enrollment coverage loss,Pennie,Approximately 108000 consumers had dropped coverage since the close of Open Enrollment 2026,"Pennie (2026), as supplied",Post-OE attrition measure
+2026-08-01,Reported cumulative cancellations,Pennie,More than 191000 cumulative cancellations were reported when open-enrollment terminations were included,"Pennie (2026), as supplied",Broader attrition measure
+2026-08-01,Reported open-enrollment non-effectuations,Pennie,Approximately 85000 consumers were classified separately as open-enrollment non-effectuations,"Pennie (2026), as supplied",Separate reporting category
+2026-08-10,Affordability dashboard update,Pennie,Pennie's affordability dashboard was updated and superseded the July 1 figures in prior drafts,"Pennie (2026), as supplied",Updated data source
+2026-08-10,Reported premium burden increase,Pennie,Average monthly premium payments were reported to have increased by approximately 102% after enhanced tax credits expired,"Pennie (2026), as reported by WVIA (2026)",Affordability context
+2026-08-22,Public comment deadline,Individual and small-group markets,Deadline for public comments on proposed 2027 rate filings,"Pennsylvania Insurance Department (2026)",Regulatory deadline
+2026-09-07,Status date,2027 rate review,Proposed rates remained subject to PID review and final approval; final rates were expected in the fall,"Pennsylvania Insurance Department (2026)",Current status date
+2026-09-30,Expected rate-finalization target,2027 rate review,The supplied record states that PID officials hoped rates would be finalized by the end of September, although this was an expectation rather than a formal deadline,"WVIA (2026)",Expected but not guaranteed
+2026-11-01,Open Enrollment 2027 begins,Individual market,The restored fifteen-week Pennie open enrollment period begins,"Pennsylvania Office of Rural Health (2026); CMS (2026), as supplied",Enrollment begins
+2026-12-15,Original shortened-period endpoint,Open Enrollment 2027,This was the endpoint under the earlier October 15 through December 15 schedule and is no longer the final endpoint,"Pennie/PORH (2026), as supplied",Superseded schedule
+2027-01-01,First possible coverage effective date,Individual market,Plans selected by the applicable December deadline may take effect,"Pennsylvania Office of Rural Health (2026)",Coverage effective date
+2027-01-15,Open Enrollment 2027 ends,Individual market,The restored Pennie open enrollment period closes,"Pennsylvania Office of Rural Health (2026); CMS (2026), as supplied",Final enrollment deadline
+2027-02-01,Second possible coverage effective date,Individual market,Plans selected later during the restored enrollment period may take effect,"Pennsylvania Office of Rural Health (2026)",Coverage effective date
+2027-Fall,Final 2027 rates expected,Individual and small-group markets,PID stated that final approved rates would be published in the fall after review,"Pennsylvania Insurance Department (2026)",Future regulatory milestone
+```
+
+## APA-style references
+
+Pennsylvania Insurance Department. (2026, July 23). *Shapiro administration receives proposed 2027 health insurance rates; plans to carefully examine companies’ proposals and reject excessive, inadequate, or unfairly discriminatory increases*. <citation src="2"></citation>
+
+Pennsylvania Office of Rural Health. (2026, July 25). *PA health insurance exchange 2027 open enrollment period returns to November 1, 2026–January 15, 2027*. <citation src="5"></citation>
+
+WVIA. (2026, September 6). *Pa. health insurers propose 2027 rate hikes as Pennsylvanians grapple with rising costs*. <citation src="4"></citation>
+
+*City of Columbus v. Kennedy* (Columbus II), No. 26-2215 (D. Md.) (2026), as described in the supplied litigation record.
+
+CMS. (2026, July 31). *Guidance acknowledging the stay of the 2027 Notice of Benefit and Payment Parameters*, as described in the supplied record.
+

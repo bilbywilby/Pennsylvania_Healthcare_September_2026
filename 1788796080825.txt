@@ -1,0 +1,485 @@
+
+  Downloading detect_installer-0.2.1-py3-none-any.whl.metadata (1.2 kB)
+Collecting agent-detector>=1.1.0 (from fastapi-cloud-cli>=0.1.1->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Downloading agent_detector-2.0.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2>=3.1.5->fastapi[all])
+  Using cached markupsafe-3.0.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (2.7 kB)
+Collecting python-dotenv>=0.21.0 (from pydantic-settings>=2.0.0->fastapi[all])
+  Using cached python_dotenv-1.2.3-py3-none-any.whl.metadata (29 kB)
+Collecting rich>=13.7.1 (from rich-toolkit>=0.14.8->fastapi-cli>=0.0.32->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Using cached rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.32->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Using cached markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in ./.venv/lib/python3.13/site-packages (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.32->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all]) (2.21.0)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.32->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting urllib3>=1.26.11 (from sentry-sdk>=2.20.0->fastapi-cloud-cli>=0.1.1->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Using cached urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Collecting shellingham>=1.3.0 (from typer>=0.16.0->fastapi-cli>=0.0.32->fastapi-cli[standard]>=0.0.32; extra == "all"->fastapi[all])
+  Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting httptools>=0.8.0 (from uvicorn[standard]>=0.12.0; extra == "all"->fastapi[all])
+  Using cached httptools-0.8.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (3.5 kB)
+Collecting uvloop>=0.15.1 (from uvicorn[standard]>=0.12.0; extra == "all"->fastapi[all])
+  Using cached uvloop-0.22.1-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (4.9 kB)
+Collecting watchfiles>=0.20 (from uvicorn[standard]>=0.12.0; extra == "all"->fastapi[all])
+  Using cached watchfiles-1.2.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (4.9 kB)
+Collecting websockets>=13.0 (from uvicorn[standard]>=0.12.0; extra == "all"->fastapi[all])
+  Downloading websockets-17.1-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (6.3 kB)
+Downloading uvicorn-0.52.4-py3-none-any.whl (79 kB)
+Downloading click-8.5.0-py3-none-any.whl (125 kB)
+Downloading email_validator-2.3.0-py3-none-any.whl (35 kB)
+Downloading dnspython-2.8.0-py3-none-any.whl (331 kB)
+Downloading fastapi_cli-0.0.32-py3-none-any.whl (14 kB)
+Downloading fastapi_cloud_cli-0.25.0-py3-none-any.whl (107 kB)
+Downloading agent_detector-2.0.0-py3-none-any.whl (9.4 kB)
+Downloading detect_installer-0.2.1-py3-none-any.whl (5.4 kB)
+Downloading fastar-0.12.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (754 kB)
+   ━━━━━━━━━━━━━ 754.2/754.2   13.2 MB/s  0:00:00
+                 kB                              
+Using cached itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Using cached markupsafe-3.0.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (24 kB)
+Downloading pydantic_extra_types-2.11.1-py3-none-any.whl (79 kB)
+Using cached pydantic_settings-2.15.0-py3-none-any.whl (69 kB)
+Using cached python_dotenv-1.2.3-py3-none-any.whl (22 kB)
+Using cached python_multipart-0.0.32-py3-none-any.whl (30 kB)
+Using cached pyyaml-6.0.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (767 kB)
+Downloading rich_toolkit-0.20.4-py3-none-any.whl (36 kB)
+Using cached rich-15.0.0-py3-none-any.whl (310 kB)
+Using cached markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading rignore-0.8.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (884 kB)
+   ━━━━━━━━━━━━━━ 884.6/884.6   6.1 MB/s  0:00:00
+                  kB                             
+Downloading sentry_sdk-2.68.1-py3-none-any.whl (520 kB)
+Downloading typer-0.27.2-py3-none-any.whl (123 kB)
+Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Using cached urllib3-2.7.0-py3-none-any.whl (131 kB)
+Using cached httptools-0.8.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (482 kB)
+Using cached uvloop-0.22.1-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.3 MB)
+Using cached watchfiles-1.2.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (452 kB)
+Downloading websockets-17.1-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (225 kB)
+Installing collected packages: websockets, uvloop, urllib3, shellingham, rignore, pyyaml, python-multipart, python-dotenv, mdurl, MarkupSafe, itsdangerous, httptools, fastar, dnspython, detect-installer, click, agent-detector, watchfiles, uvicorn, sentry-sdk, markdown-it-py, jinja2, email-validator, rich, pydantic-settings, pydantic-extra-types, typer, rich-toolkit, fastapi-cloud-cli, fastapi-cli
+Successfully installed MarkupSafe-3.0.3 agent-detector-2.0.0 click-8.5.0 detect-installer-0.2.1 dnspython-2.8.0 email-validator-2.3.0 fastapi-cli-0.0.32 fastapi-cloud-cli-0.25.0 fastar-0.12.0 httptools-0.8.0 itsdangerous-2.2.0 jinja2-3.1.6 markdown-it-py-4.2.0 mdurl-0.1.2 pydantic-extra-types-2.11.1 pydantic-settings-2.15.0 python-dotenv-1.2.3 python-multipart-0.0.32 pyyaml-6.0.3 rich-15.0.0 rich-toolkit-0.20.4 rignore-0.8.1 sentry-sdk-2.68.1 shellingham-1.5.4 typer-0.27.2 urllib3-2.7.0 uvicorn-0.52.4 uvloop-0.22.1 watchfiles-1.2.0 websockets-17.1
+OK
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main 
+❯ nano requirements.txt
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ [tool.poetry.dependencies]
+bash: [tool.poetry.dependencies]: command not found
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ python = "^3.13"
+python: can't open file '/home/droid/pennsylvania-health-insurance-audit-2026/=': [Errno 2] No such file or directory
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ fastapi = "0.112.0"
+Usage: fastapi [OPTIONS] COMMAND [ARGS]...
+Try 'fastapi -h' for help.
+╭─ Error ───────────────────────────────────────╮
+│ No such command '='.                          │
+╰───────────────────────────────────────────────╯
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ pydantic = "2.7.4"
+bash: pydantic: command not found
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ uvicorn = "0.30.1"
+Usage: uvicorn [OPTIONS] APP
+Try 'uvicorn --help' for help.
+
+Error: Got unexpected extra argument (0.30.1)
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ # 1. Open the file in nano (or your favorite editor)
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ nano requirements.txt
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ pytest tests/ -v
+============== test session starts ==============
+platform linux -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /home/droid/pennsylvania-health-insurance-audit-2026/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/droid/pennsylvania-health-insurance-audit-2026
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 96 items                              
+
+tests/test_audit_integration.py::TestAnomalyExporter::test_case_insensitive_county_match_is_not_an_anomaly PASSED [  1%]
+tests/test_audit_integration.py::TestAnomalyExporter::test_currency_and_percent_formatted_rates_are_sanitized PASSED [  2%]
+tests/test_audit_integration.py::TestAnomalyExporter::test_invalid_rate_is_logged_as_anomaly PASSED [  3%]
+tests/test_audit_integration.py::TestAnomalyExporter::test_missing_county_is_logged_as_anomaly PASSED [  4%]
+tests/test_audit_integration.py::TestAnomalyExporter::test_no_anomaly_file_written_when_all_records_valid PASSED [  5%]
+tests/test_audit_integration.py::TestRatingAreaAggregation::test_records_excluded_from_aggregation_when_anomalous PASSED [  6%]
+tests/test_audit_integration.py::TestRatingAreaAggregation::test_weighted_average_per_area_unweighted_default PASSED [  7%]
+tests/test_audit_integration.py::TestRatingAreaAggregation::test_weighted_average_respects_explicit_weight_column PASSED [  8%]
+tests/test_audit_integration.py::TestEdgeCases::test_bom_encoded_csv_is_read_correctly PASSED [  9%]
+tests/test_audit_integration.py::TestEdgeCases::test_embedded_comma_in_quoted_rate_field_is_sanitized PASSED [ 10%]
+tests/test_audit_integration.py::TestEdgeCases::test_empty_rates_file_produces_no_records_without_crashing PASSED [ 11%]
+tests/test_audit_integration.py::TestEdgeCases::test_header_whitespace_and_case_variation_is_normalized PASSED [ 12%]
+tests/test_audit_integration.py::TestEdgeCases::test_missing_required_column_aborts_via_sys_exit PASSED [ 13%]
+tests/test_audit_integration.py::TestEdgeCases::test_negative_rate_is_invalid PASSED [ 14%]
+tests/test_audit_integration.py::TestEdgeCases::test_whitespace_only_county_is_treated_as_missing PASSED [ 15%]
+tests/test_audit_integration.py::TestEdgeCases::test_zero_or_negative_weight_falls_back_to_unweighted PASSED [ 16%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_invalid_rate_change_is_flagged PASSED [ 17%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_missing_carrier_file_raises_schema_error PASSED [ 18%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_missing_carrier_header_raises_schema_error PASSED [ 19%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_negative_rate_change_is_preserved_not_flagged PASSED [ 20%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_unknown_rating_area_is_flagged_not_silently_kept PASSED [ 21%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_unweighted_rows_default_to_simple_average PASSED [ 22%]
+tests/test_carrier_ingestion_integration.py::TestCarrierRateIngestion::test_weighted_carrier_rate_aggregation PASSED [ 23%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_county_termination_rate_calculation PASSED [ 25%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_missing_termination_file_raises_schema_error PASSED [ 26%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_missing_termination_header_raises_schema_error PASSED [ 27%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_negative_termination_count_is_invalid PASSED [ 28%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_termination_rate_defaults_to_zero_without_enrollee_column PASSED [ 29%]
+tests/test_carrier_ingestion_integration.py::TestCountyTerminationIngestion::test_unknown_county_is_flagged_and_excluded PASSED [ 30%]
+tests/test_carrier_ingestion_integration.py::TestAnomalyFileBehavior::test_anomalies_from_both_sources_are_combined_in_one_file PASSED [ 31%]
+tests/test_carrier_ingestion_integration.py::TestAnomalyFileBehavior::test_no_anomaly_file_written_when_all_records_valid PASSED [ 32%]
+tests/test_golden_metrics.py::test_every_metric_matches_reported_value PASSED [ 33%]
+tests/test_golden_metrics.py::test_no_uncited_new_metrics PASSED [ 34%]
+tests/test_golden_metrics.py::test_act54_block_matches_pennie_published PASSED [ 35%]
+tests/test_golden_metrics.py::test_golden_fixture_integrity PASSED [ 36%]
+tests/test_no_typo_keys.py::test_no_misspelled_applicable_keys PASSED [ 37%]
+tests/test_provenance.py::TestDigest::test_digest_computed_on_construction FAILED [ 38%]
+tests/test_provenance.py::TestDigest::test_field_order_does_not_affect_digest FAILED [ 39%]
+tests/test_provenance.py::TestDigest::test_tampered_value_rejected_on_reload FAILED [ 40%]
+tests/test_provenance.py::TestDigest::test_tampered_citation_rejected_on_reload FAILED [ 41%]
+tests/test_provenance.py::TestDigest::test_untouched_round_trip_reloads_clean FAILED [ 42%]
+tests/test_provenance.py::TestLedger::test_register_new_claim PASSED [ 43%]
+tests/test_provenance.py::TestLedger::test_register_duplicate_without_overwrite_raises PASSED [ 44%]
+tests/test_provenance.py::TestLedger::test_unknown_claim_raises PASSED [ 45%]
+tests/test_provenance.py::TestLedger::test_refresh_updates_date_and_verifier PASSED [ 46%]
+tests/test_provenance.py::TestLedger::test_empty_ledger_file_refused PASSED [ 47%]
+tests/test_provenance.py::TestLedger::test_forbidden_source_host_rejected PASSED [ 48%]
+tests/test_provenance.py::TestStaleness::test_boundary_day_not_stale PASSED [ 50%]
+tests/test_provenance.py::TestStaleness::test_one_day_over_is_stale PASSED [ 51%]
+tests/test_provenance.py::TestStaleness::test_require_claims_raises_on_stale PASSED [ 52%]
+tests/test_provenance.py::TestStaleness::test_require_claims_returns_fresh PASSED [ 53%]
+tests/test_provenance.py::TestStatutesGate::test_missing_statutes_file_fails_closed PASSED [ 54%]
+tests/test_provenance.py::TestStatutesGate::test_unverified_statute_rejected PASSED [ 55%]
+tests/test_provenance.py::TestStatutesGate::test_verified_statute_passes FAILED [ 56%]
+tests/test_provenance.py::TestClaimExtraction::test_extract_dict_claim_id PASSED [ 57%]
+tests/test_provenance.py::TestClaimExtraction::test_extract_prefixed_string PASSED [ 58%]
+tests/test_provenance.py::TestClaimExtraction::test_extract_nested PASSED [ 59%]
+tests/test_provenance.py::TestPlaceholders::test_detects_todo PASSED [ 60%]
+tests/test_provenance.py::TestPlaceholders::test_clean_text_has_none PASSED [ 61%]
+tests/test_provenance.py::TestGoldenSeed::test_seed_requires_citation PASSED [ 62%]
+tests/test_provenance.py::TestGoldenSeed::test_seed_success FAILED [ 63%]
+tests/test_report_metrics_parity.py::test_every_summary_metric_appears_in_report SKIPPED [ 64%]
+tests/test_report_metrics_parity.py::test_report_has_no_orphan_precision_drift SKIPPED [ 65%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_exactly_67_unique_counties PASSED [ 66%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[1-8] PASSED [ 67%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[2-3] PASSED [ 68%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[3-13] PASSED [ 69%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[4-10] PASSED [ 70%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[5-7] PASSED [ 71%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[6-10] PASSED [ 72%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[7-4] PASSED [ 73%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[8-5] PASSED [ 75%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_every_area_has_expected_count[9-7] PASSED [ 76%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42001-Adams-7] PASSED [ 77%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42003-Allegheny-4] PASSED [ 78%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42101-Philadelphia-8] PASSED [ 79%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42049-Erie-1] PASSED [ 80%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42133-York-7] PASSED [ 81%]
+tests/test_schema_reconciliation.py::TestCountyIntegrity::test_known_county_pins[42099-Perry-9] PASSED [ 82%]
+tests/test_schema_reconciliation.py::TestCarrierAttribution::test_every_county_has_active_carriers PASSED [ 83%]
+tests/test_schema_reconciliation.py::TestCarrierAttribution::test_upmc_in_pittsburgh_metro PASSED [ 84%]
+tests/test_schema_reconciliation.py::TestCarrierAttribution::test_no_attribution_outside_filing_areas PASSED [ 85%]
+tests/test_schema_reconciliation.py::TestCarrierAttribution::test_partners_negative_change_preserved PASSED [ 86%]
+tests/test_schema_reconciliation.py::TestCarrierAttribution::test_weighted_engine_applies_shares PASSED [ 87%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_duplicate_fips_raises PASSED [ 88%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_non_pa_fips_raises PASSED [ 89%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_wrong_county_count_raises PASSED [ 90%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_cross_carrier_serff_collision_raises PASSED [ 91%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_malformed_serff_raises PASSED [ 92%]
+tests/test_schema_reconciliation.py::TestValidationGuards::test_zero_total_share_raises PASSED [ 93%]
+tests/test_schema_reconciliation.py::TestFilingLoader::test_validated_filings_flow_through_exposure PASSED [ 94%]
+tests/test_schema_reconciliation.py::TestFilingLoader::test_unverified_row_poisons_group PASSED [ 95%]
+tests/test_schema_reconciliation.py::TestFilingLoader::test_legacy_column_names_are_normalized PASSED [ 96%]
+tests/test_schema_reconciliation.py::TestFilingLoader::test_missing_carrier_raises PASSED [ 97%]
+tests/test_schema_reconciliation.py::TestFilingLoader::test_unparseable_numeric_raises PASSED [ 98%]
+tests/test_schema_reconciliation.py::TestExposureBridge::test_write_county_exposure_csv PASSED [100%]
+
+=================== FAILURES ====================
+_ TestDigest.test_digest_computed_on_construction _
+
+self = <test_provenance.TestDigest object at 0xffffa1b19590>
+
+    def test_digest_computed_on_construction(self):
+        c = make_claim()
+>       assert c.digest and len(c.digest) == 64
+               ^^^^^^^^
+
+tests/test_provenance.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Claim(claim_id='test_claim', value=42, source_citation='PID Annual Report 2026, p.14', source_url='https://test.local/report', last_verified=datetime.date(2026, 9, 7), staleness_days=90, verified_by='test', notes=None)
+item = 'digest'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Claim' object has no attribute 'digest'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+_ TestDigest.test_field_order_does_not_affect_digest _
+
+self = <test_provenance.TestDigest object at 0xffffa1b19810>
+
+    def test_field_order_does_not_affect_digest(self):
+        c1 = make_claim()
+        c2 = Claim(
+            verified_by="test", claim_id="test_claim",
+            source_url="https://test.local/report", value=42,
+            last_verified=date(2026, 9, 7),
+            source_citation="PID Annual Report 2026, p.14",
+        )
+>       assert c1.digest == c2.digest
+               ^^^^^^^^^
+
+tests/test_provenance.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Claim(claim_id='test_claim', value=42, source_citation='PID Annual Report 2026, p.14', source_url='https://test.local/report', last_verified=datetime.date(2026, 9, 7), staleness_days=90, verified_by='test', notes=None)
+item = 'digest'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Claim' object has no attribute 'digest'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+_ TestDigest.test_tampered_value_rejected_on_reload _
+
+self = <test_provenance.TestDigest object at 0xffffa1bc3820>
+tmp_path = PosixPath('/tmp/pytest-of-droid/pytest-0/test_tampered_value_rejected_o0')
+
+    def test_tampered_value_rejected_on_reload(self, tmp_path):
+        ledger = ProvenanceLedger({"a": make_claim(claim_id="a")})
+        p = tmp_path / "log.json"
+        ledger.save(p)
+        raw = json.loads(p.read_text())
+        raw["a"]["value"] = 999  # edited without recomputing digest
+        p.write_text(json.dumps(raw))
+>       with pytest.raises(InvalidLedgerError, match="digest mismatch"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE InvalidLedgerError
+
+tests/test_provenance.py:46: Failed
+_ TestDigest.test_tampered_citation_rejected_on_reload _
+
+self = <test_provenance.TestDigest object at 0xffffa1bc3950>
+tmp_path = PosixPath('/tmp/pytest-of-droid/pytest-0/test_tampered_citation_rejecte0')
+
+    def test_tampered_citation_rejected_on_reload(self, tmp_path):
+        ledger = ProvenanceLedger({"a": make_claim(claim_id="a")})
+        p = tmp_path / "log.json"
+        ledger.save(p)
+        raw = json.loads(p.read_text())
+        raw["a"]["source_citation"] = "Fabricated Report, p.1"
+        p.write_text(json.dumps(raw))
+>       with pytest.raises(InvalidLedgerError, match="digest mismatch"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE InvalidLedgerError
+
+tests/test_provenance.py:56: Failed
+_ TestDigest.test_untouched_round_trip_reloads_clean _
+
+self = <test_provenance.TestDigest object at 0xffffa1b25eb0>
+tmp_path = PosixPath('/tmp/pytest-of-droid/pytest-0/test_untouched_round_trip_relo0')
+
+    def test_untouched_round_trip_reloads_clean(self, tmp_path):
+        ledger = ProvenanceLedger({"a": make_claim(claim_id="a")})
+        p = tmp_path / "log.json"
+        ledger.save(p)
+        reloaded = ProvenanceLedger.load(p)
+        assert reloaded.get("a").value == 42
+>       assert reloaded.get("a").digest == ledger.get("a").digest
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_provenance.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Claim(claim_id='a', value=42, source_citation='PID Annual Report 2026, p.14', source_url='https://test.local/report', last_verified=datetime.date(2026, 9, 7), staleness_days=90, verified_by='test', notes=None)
+item = 'digest'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Claim' object has no attribute 'digest'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+_ TestStatutesGate.test_verified_statute_passes _
+
+self = <test_provenance.TestStatutesGate object at 0xffffa1790050>
+tmp_path = PosixPath('/tmp/pytest-of-droid/pytest-0/test_verified_statute_passes0')
+
+    def test_verified_statute_passes(self, tmp_path):
+        sp = tmp_path / "statutes.json"
+        sp.write_text(json.dumps({"verified": {"Act 68 of 1998": {}}}))
+        ledger = ProvenanceLedger({"a": make_claim(claim_id="a")})
+        v = ArtifactValidator(ledger, statutes_path=sp)
+>       assert v.validate_artifact({"a": {"statute": "Act 68 of 1998"}}) == []
+E       assert ['PLACEHOLDER... in artifact'] == []
+E         
+E         Left contains one more item: "PLACEHOLDER marker '}}' present in artifact"
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     "PLACEHOLDER marker '}}' present in artifact",
+E         + ]
+
+tests/test_provenance.py:148: AssertionError
+_______ TestGoldenSeed.test_seed_success ________
+
+self = <test_provenance.TestGoldenSeed object at 0xffffa1b1a490>
+tmp_path = PosixPath('/tmp/pytest-of-droid/pytest-0/test_seed_success0')
+
+    def test_seed_success(self, tmp_path):
+        fp = tmp_path / "golden.json"
+        fp.write_text(json.dumps({
+            "golden": {"x": {"value": 1, "citation": "Some Report (2026)"}}
+        }))
+        ledger = seed_from_golden_fixture(fp, "https://test.local", "test",
+                                          as_of=date(2026, 9, 7))
+        assert ledger.get("x").value == 1
+>       assert ledger.get("x").digest
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_provenance.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Claim(claim_id='x', value=1, source_citation='Some Report (2026)', source_url='https://test.local', last_verified=datetime.date(2026, 9, 7), staleness_days=90, verified_by='test', notes=None)
+item = 'digest'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Claim' object has no attribute 'digest'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+=============== warnings summary ================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/droid/pennsylvania-health-insurance-audit-2026/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============ short test summary info ============
+FAILED tests/test_provenance.py::TestDigest::test_digest_computed_on_construction - AttributeError: 'Claim' object has no attrib...
+FAILED tests/test_provenance.py::TestDigest::test_field_order_does_not_affect_digest - AttributeError: 'Claim' object has no attrib...
+FAILED tests/test_provenance.py::TestDigest::test_tampered_value_rejected_on_reload - Failed: DID NOT RAISE InvalidLedgerError
+FAILED tests/test_provenance.py::TestDigest::test_tampered_citation_rejected_on_reload - Failed: DID NOT RAISE InvalidLedgerError
+FAILED tests/test_provenance.py::TestDigest::test_untouched_round_trip_reloads_clean - AttributeError: 'Claim' object has no attrib...
+FAILED tests/test_provenance.py::TestStatutesGate::test_verified_statute_passes - assert ['PLACEHOLDER... in artifact'] == []
+FAILED tests/test_provenance.py::TestGoldenSeed::test_seed_success - AttributeError: 'Claim' object has no attrib...
+= 7 failed, 87 passed, 2 skipped, 1 warning in 0.82s =
+
+░▒▓pennsylvania-health-insurance-audit-2026 on  main [!] 
+❯ 

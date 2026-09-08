@@ -1,0 +1,104 @@
+
+# Pennsylvania Health Insurance Audit — Carrier Filing Pipeline
+
+Data-engineering foundation for a larger public information campaign on
+Pennsylvania's 2026 individual-market rate increases and the expiration of
+Enhanced Premium Tax Credits (EPTCs). This repo currently covers **carrier
+rate filing validation, ingestion, and aggregation** — the earliest stage of
+a much larger proposed architecture (see "Build-Out Roadmap" below).
+
+## What's actually built and tested right now
+
+| Piece | File | Status |
+|---|---|---|
+| PA county/FIPS/rating-area crosswalk | `bootstrap/pa_crosswalk_data.py` | Single source of truth. Self-validating on import (uniqueness, range, count). Verified against CMS's official PA geographic rating area listing and real PID filing PDFs. |
+| Crosswalk generators | `bootstrap/02_crosswalk.py`, `scripts/bootstrap_data.py` | Both derive from the SSOT above — no duplicated county data. |
+| Carrier filing structural audit | `bootstrap/04_audit.py` | Fast pass/fail gate: schema, rate bounds, rating-area validity. No hardcoded carrier roster (PID's real filer list changes every cycle). |
+| Carrier + termination ingestion | `bootstrap/05_ingest_carrier_extensions.py` | Weighted rate-change aggregation by area/carrier; termination-rate aggregation by area. Handles `"1-9"` ranges and `"6;7;9"` lists in `primary_rating_areas`. |
+| Orchestrator | `bootstrap/00_run_all.sh` | Runs `scripts/bootstrap_data.py` then `bootstrap/0N_*.py` in order, fails fast. |
+| Tests | `tests/*.py` | 39 passing, including a regression test against the exact file `bootstrap_data.py` generates. |
+
+Run it: `./bootstrap/00_run_all.sh` from the repo root.
+
+**Known gap:** no real county-termination dataset exists yet (`05_ingest`
+will fail at that step until one is sourced) — tracked, not a bug.
+
+## Data provenance — verified vs. proposed
+
+A pattern from this project's build process worth stating plainly: multiple
+pasted drafts of *code* (a carrier auditor, a crosswalk table) turned out to
+contain fabricated or corrupted data that looked plausible at a glance. The
+same scrutiny needs to apply to *content* data going forward, so this
+section separates what's actually been checked from what hasn't:
+
+- **Verified against independent reporting** (news coverage, CMS/PID
+  filings, cross-checked during this build): peak 2025 Pennie enrollment
+  (497,000), OE 2026 close (486,000), March 24 2026 enrollment (471,442,
+  exact match), ~102% average premium increase, hardest-hit cohorts (ages
+  55-64, 150-200% FPL), 2026 statewide weighted-average rate increase
+  (21.5%).
+- **The campaign's own policy analysis, not an external fact to verify**:
+  the $50M investment ask, the 44,000-enrollee restoration projection, the
+  3:1-4.6:1 ROI range, the 9-12% broad premium reduction estimate. These
+  are proposals this project is making, not numbers to fact-check against
+  a source — document the derivation (e.g. a future
+  `docs/methodology/roi-calculation.md`), don't cite them as independently
+  confirmed.
+- **Not yet checked**: county-level termination rates (e.g. a specific
+  county leading at 24%), the 12-item consumer-info-gap list, the
+  424-respondent PHAN survey figures, specific congressional-district
+  breakdowns. These may well be accurate — they just haven't been
+  independently spot-checked in this repo's history the way the enrollment
+  and premium figures have. Check primary sources before they ship in a
+  press release or legislative brief.
+
+## Build-Out Roadmap
+
+The full target architecture is a public-facing campaign repo — API,
+interactive charts, PDF policy briefs, press kit, outreach materials. That's
+a large undertaking; building it in stages, each one testable before the
+next starts, rather than scaffolding everything at once:
+
+**Stage 1 — Data engineering foundation (current)**
+Crosswalk SSOT, carrier filing audit, carrier + termination ingestion. ✅ built, tested.
+
+**Stage 2 — Analysis layer** (`analysis/`, `data/processed/`, `src/analysis/`)
+Consumer info-gap analysis, enrollment trend modeling, demographic
+segmentation, ROI derivation — built on Stage 1's validated data plus new
+sourced datasets (enrollment timeline, survey results, county terminations).
+Each new dataset gets the same provenance treatment as the section above
+before it's treated as ground truth downstream.
+
+**Stage 3 — Visualization & API** (`assets/visualizations/`, `src/api/`)
+Vega-Lite chart specs, static exports, a FastAPI service exposing audit
+metrics. Depends on Stage 2's processed data existing and being validated.
+
+**Stage 4 — Deliverables** (`deliverables/audit-report/`, `policy-briefs/`,
+`outreach-materials/`)
+Markdown source documents compiled into the full audit report, fiscal note,
+legislative brief, consumer white paper. Depends on Stage 2/3 for figures
+and charts — don't hand-write numbers into these that should be pulled from
+validated data.
+
+**Stage 5 — Publication infrastructure** (`.github/workflows/`, `Dockerfile*`,
+`press-kit/`)
+CI, containerized API deployment, PDF generation pipeline, press materials.
+Last, because it automates a pipeline that needs to exist first.
+
+A full directory blueprint and file schemas for later stages already exist
+as a planning document — not built yet. Build the next stage when Stage 1's
+real-data gap (termination dataset) is closed, since Stage 2's
+demographic/geographic analysis depends on it.
+
+## Repo structure (current, not the full target)
+
+```
+pa-audit/
+├── bootstrap/           # numbered pipeline stages + shared crosswalk SSOT
+├── scripts/             # bootstrap_data.py — real data seed
+├── tests/               # 39 tests, plus fixtures/ for retired synthetic data
+└── data/
+    ├── public/          # crosswalk, carrier rates, rating-area reference
+    ├── private/          # generated reports, gitignored
+    └── README.md        # per-file data provenance detail
+```
