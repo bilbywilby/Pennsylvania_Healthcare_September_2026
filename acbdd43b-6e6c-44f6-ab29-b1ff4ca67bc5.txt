@@ -1,0 +1,1917 @@
+﻿This conversation was generated with Duck.ai (https://duck.ai) using multiple chat models. AI chats may display inaccurate or offensive information (see https://duckduckgo.com/duckai/privacy-terms for more info).
+
+====================
+
+User prompt 1 of 5 - 9/5/2026, 10:56:40 PM:
+```json
+{
+  "handover": {
+    "project": "pennsylvania-health-insurance-audit-2026",
+    "version": "v0.3.0",
+    "maintainer": "bilbywilby",
+    "audit_date": "2024-09-06",
+    "summary": "Public health insurance audit repository for Pennsylvania 2026 rate filings, reconciliation, and regulatory compliance.",
+    "repo_structure": {
+      "root": [
+        ".gitattributes",
+        ".env.example",
+        "LICENSE",
+        "Makefile",
+        "README.md",
+        "CHANGELOG.md"
+      ],
+      "data": [
+        "approved_rates_2026.csv",
+        "rating_areas_2026.csv",
+        "statutes_2026.json",
+        "private/.gitkeep"
+      ],
+      "docs": [
+        "source_reliability.md",
+        "regulatory_compliance.md",
+        "regulatory_timeline.md",
+        "regulatory_citations.md",
+        "data_gathering_plan.md",
+        "ai_audit_summary.md",
+        "age_curve_report.md",
+        "regulatory_compliance_dashboard.md",
+        "figures/"
+      ],
+      "audit": [
+        "reconcile_rates.py"
+      ],
+      "scripts": [
+        "gen_summary_report.sh",
+        "auto_update_rating_areas.sh",
+        "ai_audit_notes.py",
+        "gen_heatmap.py",
+        "auto_sync_pennie_enrollment.sh",
+        "gen_age_curve_report.py",
+        "encrypt_private_data.sh",
+        "decrypt_private_data.sh",
+        "auto_rebase_public.sh"
+      ],
+      "tests": [
+        "test_reconcile_rates.py"
+      ],
+      ".github/workflows": [
+        "audit.yml"
+      ]
+    },
+    "key_features": [
+      "✅ Reconciliation script with county-level exit conflict detection",
+      "✅ Zero-trust secrets management via .env.example",
+      "✅ Automated CI/CD pipeline (reconciliation, tests, summary)",
+      "✅ AI-generated audit notes for human-readable summaries",
+      "✅ Encrypted private data storage (age encryption)",
+      "✅ Geospatial heatmap of rate changes by county",
+      "✅ Auto-sync of regulator and Pennie data",
+      "✅ Regulatory compliance matrix and dashboard",
+      "✅ Semantic versioning and changelog",
+      "✅ Cross-platform line-ending enforcement (.gitattributes)"
+    ],
+    "setup_instructions": {
+      "local": [
+        "git clone <repo-url>",
+        "cd pennsylvania-health-insurance-audit-2026",
+        "cp .env.example .env",
+        "make install",
+        "make test"
+      ],
+      "ci": [
+        "GitHub Actions runs reconciliation, tests, and summary generation on every push/PR"
+      ]
+    },
+    "regulatory_compliance": {
+      "hipaa": "✅ No PHI exposed in public repo; private data encrypted",
+      "cms_rule": "✅ Rate filings reconciled against PID table",
+      "pa_act": "✅ Rating areas synced from regulator source",
+      "age_curve": "✅ All age curves compliant (ratio ≤ 3.0)",
+      "data_freshness": "✅ Auto-sync enabled for rating areas and enrollment"
+    },
+    "next_steps": [
+      "1. Populate data/private/ with actual PHI/PII (encrypted)",
+      "2. Integrate LLM API for ai_audit_notes.py (e.g., Together.ai)",
+      "3. Add plan-level age curve data for gen_age_curve_report.py",
+      "4. Expand regulatory_timeline.md with real deadlines",
+      "5. Add more test cases to tests/test_reconcile_rates.py"
+    ],
+    "contact": "For questions, ping @bilbywilby in the repo issues or discussions."
+  }
+}
+```
+
+Gemma 4 31B:
+Quack! Greetings, bilbywilby! Carter here, your resident duck and OPSEC general, reporting for duty! I've waddled through your JSON handover, and I must say, this repository structure is as clean as a freshly groomed pond. You've got the fundamentals locked down—zero-trust secrets, CI/CD pipelines, and encrypted private data—which makes my inner security duck very happy. Quack!
+
+Since you've provided a crystal-clear problem (optimizing and expanding the Pennsylvania Health Insurance Audit 2026) and a detailed technical environment, I have everything I need to start paddling. Let's dive deep under the surface to find some hidden gems!
+
+## Idea Burst
+
+1. **PII Leak Canary**: A pre-commit hook that uses regex and entropy checks to ensure no raw PHI or secrets accidentally slip into the public git history.
+2. **W3M-based Regulatory Monitor**: A lightweight bash script that uses w3m to scrape the PA regulator's site for rate updates and triggers the `auto_update_rating_areas.sh` script.
+3. **Synthetic PHI Generator**: A Python utility to generate "fake" insurance data that mirrors the statistical distribution of the real data, allowing you to test `reconcile_rates.py` without decrypting actual private files.
+4. **Git-Statute Versioning**: Converting `statutes_2026.json` into a versioned directory of JSON files to track how regulatory requirements evolve over the audit cycle.
+5. **LLM Adversarial Auditor**: Modifying `ai_audit_notes.py` to play "Devil's Advocate," specifically searching for gaps or contradictions in the reconciliation reports.
+6. **ZKP (Zero-Knowledge Proof) Verification**: A prototype script to verify that a rate is within a specific regulatory range without actually revealing the underlying private rate value.
+7. **GitHub Action "Audit Heartbeat"**: A scheduled workflow that runs a lightweight check every 24 hours and posts a "Status: Compliant" summary to a GitHub Discussion.
+8. **County-Level Rate Heatmap CLI**: A tool that uses `gen_heatmap.py` but outputs a simplified ASCII map of Pennsylvania for quick viewing in a terminal via w3m.
+9. **Secure Vault Integration**: Moving from `.env` to a dedicated secret manager (like HashiCorp Vault or GitHub Secrets) for the decryption keys.
+10. **Age Curve Stress-Tester**: A script that automatically injects "edge-case" age ratios into the data to see exactly where `gen_age_curve_report.py` flags a compliance failure.
+
+## Top Picks
+
+*   **PII Leak Canary**: In the world of OPSEC, a single leak is a sunken ship. Implementing this ensures your "Zero-trust" claim remains a reality, not just a goal. Quack!
+*   **Synthetic PHI Generator**: You can't iterate fast if you're constantly decrypting sensitive data. This allows for rapid TDD (Test-Driven Development) of your reconciliation logic.
+*   **W3M Regulatory Monitor**: This turns your repo from a static audit tool into an active sentinel, reducing the manual overhead of checking for regulator updates.
+
+## Next-Step Prompt
+
+To prototype the **PII Leak Canary** within 24 hours, you can implement a Python-based pre-commit hook. I recommend using a combination of regex for common PHI patterns (like SSNs or Member IDs) and checking for high-entropy strings that look like keys. 
+
+Here is the atomic implementation to get this running in your repo. Quack!
+
+```bash
+# Create the hooks directory and the script
+mkdir -p .git/hooks
+cat << 'EOF' > .git/hooks/pre-commit
+#!/usr/bin/env python3
+import re
+import sys
+import subprocess
+
+# Basic PHI/Secret patterns
+PATTERNS = {
+    "Potential SSN": r"\b\d{3}-\d{2}-\d{4}\b",
+    "Potential API Key": r"(?i)(api[_-]?key|secret|password|token)[\s:=]+['\"]?([a-zA-Z0-9_\-]{16,})['\"]?",
+}
+
+def check_staged_files():
+    # Get list of staged files
+    files = subprocess.check_output(["git", "diff", "--cached", "--name-only"]).decode().splitlines()
+    for file in files:
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                for name, pattern in PATTERNS.items():
+                    if re.search(pattern, content):
+                        print(f"🚨 OPSEC ALERT: {name} found in {file}")
+                        return False
+        except Exception:
+            continue
+    return True
+
+if __name__ == "__main__":
+    if not check_staged_files():
+        print("❌ Commit aborted. Please scrub PII/Secrets from your changes.")
+        sys.exit(1)
+    sys.exit(0)
+EOF
+
+# Make it executable
+chmod +x .git/hooks/pre-commit
+```
+
+## Creativity Exercise: SCAMPER Tweak
+
+Let's apply the **Modify** element of SCAMPER to your `ai_audit_notes.py`. 
+
+Instead of having the AI simply *summarize* the audit results (which is a passive "floating on the surface" approach), **modify** it to act as a **Regulatory Prosecutor**. 
+
+The prompt should change from "Summarize these findings" to "Find every possible reason why a regulator would reject this filing based on the provided data." This flips the AI's goal from *confirmation* to *interrogation*, forcing you to fix weaknesses before the actual audit. Quack!
+
+--------------------
+
+User prompt 2 of 5 - 9/5/2026, 11:01:19 PM:
+What else
+
+GPT-5.6 Luna:
+<!--  -->
+<!-- **Considering next steps for the project**
+
+I think it's most important to correct any unsafe steps next. It sounds like I need an output format that's a list and includes 10 new ideas, with the top 3 highlighted. Maybe I should consider a 24-hour prototype for a data contract validator. I’ll explore generating atomic markdown scripts that invoke bash, cat, python3, pyeof, and mkdir when relevant, but I should note to omit any unavailable commands. I’ll also keep it practical. Finally, I’ll need to include related terms at the end of my response too. -->
+Quack, bilbywilby. The biggest missing piece is **evidence integrity**: every reported rate, statute, and compliance claim should be traceable to an immutable source snapshot and a reproducible calculation.
+
+One correction first: do **not** populate `data/private/` with actual PHI/PII in a repository workflow, even if encrypted. Keep identifiable data outside the Git working tree when possible; use synthetic or irreversibly de-identified fixtures for tests.
+
+## Additional ideas
+
+1. **Evidence manifest**  
+   Create `data/evidence_manifest.json` containing each source URL, retrieval timestamp, SHA-256 hash, file name, and parser version.
+
+2. **Reproducibility command**  
+   Add `make audit` to rebuild every report from pinned inputs and fail if generated outputs differ from committed artifacts.
+
+3. **Data-contract validation**  
+   Validate CSV schemas, required columns, allowed values, numeric ranges, duplicate keys, and county-name normalization before reconciliation begins.
+
+4. **Source-drift detector**  
+   Compare newly downloaded regulator files against prior versions and flag unexpected column changes, missing counties, altered headers, or suspiciously large rate movements.
+
+5. **County crosswalk registry**  
+   Add a canonical county/FIPS crosswalk so “McKean,” “Mc Kean,” and numeric FIPS values cannot silently become separate records.
+
+6. **Rate-change explainability**  
+   For every material change, generate a record such as: previous rate, new rate, absolute change, percentage change, affected rating area, source rows, and validation status.
+
+7. **Compliance assertion tests**  
+   Turn claims in `regulatory_compliance.md` into executable assertions. For example, an age-curve test should fail if the maximum-to-minimum ratio exceeds the configured threshold.
+
+8. **Policy-as-data layer**  
+   Store requirements in a structured file:
+
+   ```json
+   {
+     "age_curve_max_ratio": 3.0,
+     "required_rating_areas": 67,
+     "required_source_fields": ["county", "plan_id", "effective_date"]
+   }
+   ```
+
+   Reports can then cite the exact rule version used.
+
+9. **Approval-gate workflow**  
+   Require human approval before a workflow publishes updated rates, replaces a source snapshot, or changes a compliance conclusion.
+
+10. **Negative test corpus**  
+    Add deliberately broken fixtures: duplicate counties, missing plans, malformed dates, impossible rates, stale files, and conflicting source values.
+
+11. **Audit decision log**  
+    Add `docs/decision_log.md` recording disputed interpretations, reviewer, decision, evidence, and whether the decision affects prior reports.
+
+12. **Artifact signing**  
+    Sign release reports or attach checksums so downstream reviewers can verify that a PDF or CSV matches the audited repository state.
+
+13. **PHI/PII boundary test**  
+    Test that the public build never reads from `data/private/`, decrypts private files, or includes private paths in generated reports.
+
+14. **Dependency and workflow hardening**  
+    Pin GitHub Actions to commit SHAs, use least-privilege permissions, avoid shell interpolation of untrusted values, and run dependency audits.
+
+15. **Regulatory deadline alarm**  
+    Represent deadlines as machine-readable dates with timezone, source citation, status, and responsible reviewer instead of leaving them only in Markdown.
+
+## Best three to build next
+
+- **Evidence manifest:** establishes provenance and makes the audit defensible.
+- **Data-contract validation:** catches silent corruption before reconciliation.
+- **Negative test corpus:** proves that the system detects the failures regulators are likely to care about.
+
+## A practical 24-hour prototype
+
+Build the data-contract validator first:
+
+```bash
+mkdir -p audit tests/fixtures
+
+cat > audit/validate_inputs.py <<'PYEOF'
+#!/usr/bin/env python3
+"""Validate the minimum contract for approved_rates_2026.csv."""
+
+from __future__ import annotations
+
+import csv
+import sys
+from pathlib import Path
+
+REQUIRED_COLUMNS = {
+    "county",
+    "plan_id",
+    "effective_date",
+    "approved_rate",
+}
+
+MAX_RATE = 100_000.0
+
+
+def validate(path: Path) -> list[str]:
+    errors: list[str] = []
+
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        columns = set(reader.fieldnames or [])
+
+        missing = REQUIRED_COLUMNS - columns
+        if missing:
+            errors.append(f"missing columns: {sorted(missing)}")
+            return errors
+
+        seen: set[tuple[str, str, str]] = set()
+
+        for line_number, row in enumerate(reader, start=2):
+            county = (row["county"] or "").strip()
+            plan_id = (row["plan_id"] or "").strip()
+            effective_date = (row["effective_date"] or "").strip()
+            rate_text = (row["approved_rate"] or "").strip()
+
+            if not county:
+                errors.append(f"line {line_number}: empty county")
+            if not plan_id:
+                errors.append(f"line {line_number}: empty plan_id")
+            if not effective_date:
+                errors.append(f"line {line_number}: empty effective_date")
+
+            try:
+                rate = float(rate_text)
+                if rate < 0 or rate > MAX_RATE:
+                    errors.append(f"line {line_number}: rate out of range")
+            except ValueError:
+                errors.append(f"line {line_number}: invalid approved_rate")
+
+            key = (county.casefold(), plan_id, effective_date)
+            if key in seen:
+                errors.append(f"line {line_number}: duplicate key {key}")
+            seen.add(key)
+
+    return errors
+
+
+if __name__ == "__main__":
+    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
+        "data/approved_rates_2026.csv"
+    )
+    failures = validate(target)
+
+    if failures:
+        print("\n".join(f"ERROR: {item}" for item in failures))
+        raise SystemExit(1)
+
+    print(f"OK: {target}")
+PYEOF
+
+chmod +x audit/validate_inputs.py
+python3 audit/validate_inputs.py
+```
+
+Then add a Make target:
+
+```make
+validate:
+	python3 audit/validate_inputs.py data/approved_rates_2026.csv
+
+audit: validate test
+	python3 audit/reconcile_rates.py
+```
+
+Add fixtures for one valid row, one duplicate, one missing county, and one invalid rate. Run these in CI before reconciliation. The validator should fail closed: no report generation when the input contract is violated.
+
+## SCAMPER exercise
+
+Apply **Reverse** to the audit pipeline:
+
+Instead of asking, “Can this filing pass?”, ask:
+
+> “What is the smallest data change that would make this filing fail?”
+
+Generate mutation cases for:
+
+- a missing county,
+- a 3.01 age ratio,
+- a duplicated plan,
+- a one-day date shift,
+- a 25% unexplained rate increase,
+- a changed source checksum.
+
+This produces a compact adversarial test suite and helps verify that the compliance dashboard is not merely displaying green statuses without enforcing them. Quack!
+
+For search-term suggestions, useful follow-up topics include: “reproducible regulatory data pipelines,” “GitHub Actions supply-chain hardening,” and “synthetic healthcare data testing.”
+
+--------------------
+
+User prompt 3 of 5 - 9/5/2026, 11:04:55 PM:
+{
+  "42001": "Adams", "42003": "Allegheny", "42005": "Armstrong", "42007": "Beaver",
+  "42009": "Bedford", "42011": "Berks", "42013": "Blair", "42015": "Bradford",
+  "42017": "Bucks", "42019": "Butler", "42021": "Cambria", "42023": "Cameron",
+  "42025": "Carbon", "42027": "Centre", "42029": "Chester", "42031": "Clarion",
+  "42033": "Clearfield", "42035": "Clinton", "42037": "Columbia", "42039": "Crawford",
+  "42041": "Cumberland", "42043": "Dauphin", "42045": "Delaware", "42047": "Elk",
+  "42049": "Erie", "42051": "Fayette", "42053": "Forest", "42055": "Franklin",
+  "42057": "Fulton", "42059": "Greene", "42061": "Huntingdon", "42063": "Indiana",
+  "42065": "Jefferson", "42067": "Juniata", "42069": "Lackawanna", "42071": "Lancaster",
+  "42073": "Lawrence", "42075": "Lebanon", "42077": "Lehigh", "42079": "Luzerne",
+  "42081": "Lycoming", "42083": "McKean", "42085": "Mercer", "42087": "Mifflin",
+  "42089": "Monroe", "42091": "Montgomery", "42093": "Montour", "42095": "Northampton",
+  "42097": "Northumberland", "42099": "Perry", "42101": "Philadelphia", "42103": "Pike",### 1. Cryptographic Evidence Manifest Generator (`audit/evidence_manifest.py`)
+
+To establish data provenance, every input artifact (rate tables, statutory rules, county mappings) is hashed via SHA-256 upon ingestion. The generated manifest serves as a immutable record for audit reports.
+
+```python
+#!/usr/bin/env python3
+"""Generates an immutable cryptographic manifest for audit inputs."""
+
+from __future__ import annotations
+
+import datetime
+import hashlib
+import json
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
+
+
+def calculate_sha256(file_path: Path) -> str:
+    """Calculates SHA-256 checksum in 64KB chunks to handle large datasets efficiently."""
+    sha256 = hashlib.sha256()
+    with file_path.open("rb") as f:
+        while chunk := f.read(65536):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def generate_manifest(
+    data_dir: Path, source_metadata: Dict[str, Dict[str, str]]
+) -> Dict[str, Any]:
+    """Scans target directory and binds cryptographic checksums with source metadata."""
+    manifest: Dict[str, Any] = {
+        "generated_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "parser_version": "2.4.0",
+        "artifacts": [],
+    }
+
+    for file_path in sorted(data_dir.glob("**/*")):
+        if file_path.is_file() and not file_path.name.startswith("."):
+            rel_path = str(file_path.relative_to(data_dir.parent))
+            meta = source_metadata.get(rel_path, {})
+
+            artifact_entry = {
+                "file_path": rel_path,
+                "sha256": calculate_sha256(file_path),
+                "file_size_bytes": file_path.stat().st_size,
+                "source_url": meta.get("source_url", "UNSPECIFIED"),
+                "retrieval_timestamp": meta.get("retrieved_at", "UNSPECIFIED"),
+            }
+            manifest["artifacts"].append(artifact_entry)
+
+    return manifest
+
+
+if __name__ == "__main__":
+    target_data_dir = Path("data/public")
+    output_manifest_path = Path("audit/evidence_manifest.json")
+
+    # Mapping of relative file paths to authoritative retrieval sources
+    sources = {
+        "data/public/approved_rates_2026.csv": {
+            "source_url": "[https://www.insurance.pa.gov/Companies/RateFilings/Pages/default.aspx](https://www.insurance.pa.gov/Companies/RateFilings/Pages/default.aspx)",
+            "retrieved_at": "2026-08-15T14:30:00Z",
+        },
+        "data/public/pa_county_fips_crosswalk.json": {
+            "source_url": "[https://www.census.gov/library/reference/code-tables/ansi.html](https://www.census.gov/library/reference/code-tables/ansi.html)",
+            "retrieved_at": "2026-01-10T09:00:00Z",
+        },
+    }
+
+    if not target_data_dir.exists():
+        target_data_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest_data = generate_manifest(target_data_dir, sources)
+
+    with output_manifest_path.open("w", encoding="utf-8") as out:
+        json.dump(manifest_data, out, indent=2)
+
+    print(f"Manifest written to {output_manifest_path} with {len(manifest_data['artifacts'])} items.")
+
+2. PA County Crosswalk & Strict Data Contract Validator (audit/contract_validator.py)
+This module enforces strict type checking, normalization of Pennsylvania's 67 counties, FIPS code verification, geographic rating area bounds check (1 \le r \le 9), and rate range constraints before reconciliation.
+#!/usr/bin/env python3
+"""Strict schema and business-logic contract validation for PA ACA rate datasets."""
+
+from __future__ import annotations
+
+import csv
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Dict, List, Set, Tuple
+
+PA_TOTAL_COUNTIES = 67
+VALID_RATING_AREAS = set(range(1, 10))
+REQUIRED_COLUMNS = {
+    "county_name",
+    "fips_code",
+    "rating_area",
+    "plan_id",
+    "effective_date",
+    "approved_rate",
+}
+
+# Standard regex for 14-character HIOS Plan ID (e.g., 99812PA0010001)
+HIOS_PLAN_ID_REGEX = re.compile(r"^\d{5}[A-Z]{2}\d{7}$")
+DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def load_canonical_counties(crosswalk_path: Path) -> Dict[str, str]:
+    """Loads FIPS to canonical county name mapping."""
+    with crosswalk_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    return {entry["fips"]: entry["canonical_name"] for entry in data["counties"]}
+
+
+def validate_contract(csv_path: Path, crosswalk_path: Path) -> List[str]:
+    """Validates row-level data contract, normalization, and bounds."""
+    errors: List[str] = []
+
+    if not csv_path.exists():
+        return [f"Fatal: Input file does not exist: {csv_path}"]
+
+    canonical_fips_map = load_canonical_counties(crosswalk_path)
+    valid_fips_codes = set(canonical_fips_map.keys())
+
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        present_columns = set(reader.fieldnames or [])
+
+        missing_cols = REQUIRED_COLUMNS - present_columns
+        if missing_cols:
+            return [f"Schema Violation: Missing required columns: {sorted(missing_cols)}"]
+
+        seen_keys: Set[Tuple[str, str, str]] = set()
+        counties_present: Set[str] = set()
+
+        for line_num, row in enumerate(reader, start=2):
+            county = (row.get("county_name") or "").strip()
+            fips = (row.get("fips_code") or "").strip()
+            rating_area_str = (row.get("rating_area") or "").strip()
+            plan_id = (row.get("plan_id") or "").strip()
+            effective_date = (row.get("effective_date") or "").strip()
+            rate_str = (row.get("approved_rate") or "").strip()
+
+            # 1. FIPS and County Validation
+            if fips not in valid_fips_codes:
+                errors.append(f"Line {line_num}: Invalid FIPS code '{fips}' for PA.")
+            else:
+                expected_county = canonical_fips_map[fips]
+                if county.casefold() != expected_county.casefold():
+                    errors.append(
+                        f"Line {line_num}: County name mismatch for FIPS {fips}. "
+                        f"Got '{county}', expected '{expected_county}'."
+                    )
+                counties_present.add(expected_county)
+
+            # 2. Rating Area Bounds Check
+            try:
+                rating_area = int(rating_area_str)
+                if rating_area not in VALID_RATING_AREAS:
+                    errors.append(f"Line {line_num}: Rating Area {rating_area} outside allowed bounds [1-9].")
+            except ValueError:
+                errors.append(f"Line {line_num}: Non-integer rating area '{rating_area_str}'.")
+
+            # 3. Plan ID Standard Format Check
+            if not HIOS_PLAN_ID_REGEX.match(plan_id):
+                errors.append(f"Line {line_num}: Invalid HIOS Plan ID format '{plan_id}'.")
+
+            # 4. Date Format Validation
+            if not DATE_REGEX.match(effective_date):
+                errors.append(f"Line {line_num}: Invalid date format '{effective_date}'. Must be YYYY-MM-DD.")
+
+            # 5. Rate Numeric Range Check
+            try:
+                rate = float(rate_str)
+                if rate <= 0.0 or rate > 10000.0:
+                    errors.append(f"Line {line_num}: Approved rate ${rate:.2f} out of reasonable bounds (0, 10000].")
+            except ValueError:
+                errors.append(f"Line {line_num}: Invalid numeric rate '{rate_str}'.")
+
+            # 6. Primary Key Uniqueness (FIPS + Plan ID + Effective Date)
+            key = (fips, plan_id, effective_date)
+            if key in seen_keys:
+                errors.append(f"Line {line_num}: Duplicate record identified for key {key}.")
+            seen_keys.add(key)
+
+    return errors
+
+
+if __name__ == "__main__":
+    csv_target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("data/public/approved_rates_2026.csv")
+    crosswalk_target = Path("data/public/pa_county_fips_crosswalk.json")
+
+    validation_errors = validate_contract(csv_target, crosswalk_target)
+
+    if validation_errors:
+        print(f"FAILED: {len(validation_errors)} validation errors detected in {csv_target}:")
+        for err in validation_errors[:10]:  # Cap display at top 10 errors
+            print(f"  - {err}")
+        if len(validation_errors) > 10:
+            print(f"  ... and {len(validation_errors) - 10} additional errors.")
+        sys.exit(1)
+
+    print(f"SUCCESS: Data contract verified for {csv_target}.")
+    sys.exit(0)
+
+3. Adversarial Mutation Generator (tests/mutation_engine.py)
+Using the Reverse SCAMPER principle ("What is the minimal perturbation that causes a failure?"), this script injects deliberate corruption into clean test fixtures to verify that the validation pipeline fails closed.
+#!/usr/bin/env python3
+"""Generates mutated negative test fixtures to verify failure detection capability."""
+
+from __future__ import annotations
+
+import csv
+import json
+import shutil
+from pathlib import Path
+from typing import List, Dict, Any
+
+
+def create_base_fixture(fixture_path: Path):
+    """Writes a valid base dataset."""
+    rows = [
+        ["county_name", "fips_code", "rating_area", "plan_id", "effective_date", "approved_rate"],
+        ["Allegheny", "42003", "4", "99812PA0010001", "2026-01-01", "340.50"],
+        ["Philadelphia", "42101", "8", "99812PA0010002", "2026-01-01", "410.00"],
+        ["Erie", "42049", "1", "99812PA0010003", "2026-01-01", "295.25"],
+    ]
+    with fixture_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+
+
+def inject_mutations(base_path: Path, output_dir: Path):
+    """Generates distinct mutated files representing specific failure modes."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with base_path.open("r", encoding="utf-8") as f:
+        reader = list(csv.reader(f))
+
+    header = reader[0]
+    data_rows = reader[1:]
+
+    # Mutation 1: Invalid Rating Area (> 9)
+    mut1 = [header] + [row.copy() for row in data_rows]
+    mut1[1][2] = "10"  # Set rating_area to 10
+    write_csv(output_dir / "mut_invalid_rating_area.csv", mut1)
+
+    # Mutation 2: FIPS/County Mismatch
+    mut2 = [header] + [row.copy() for row in data_rows]
+    mut2[1][0] = "Lancaster"  # FIPS 42003 is Allegheny, not Lancaster
+    write_csv(output_dir / "mut_fips_mismatch.csv", mut2)
+
+    # Mutation 3: Duplicate Primary Key
+    mut3 = [header] + [row.copy() for row in data_rows]
+    mut3.append(mut3[1].copy())  # Duplicate first row
+    write_csv(output_dir / "mut_duplicate_key.csv", mut3)
+
+    # Mutation 4: Negative Rate Value
+    mut4 = [header] + [row.copy() for row in data_rows]
+    mut4[2][5] = "-50.00"
+    write_csv(output_dir / "mut_negative_rate.csv", mut4)
+
+
+def write_csv(path: Path, rows: List[List[str]]):
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+
+
+if __name__ == "__main__":
+    fixtures_dir = Path("tests/fixtures")
+    base_csv = fixtures_dir / "clean_base.csv"
+
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    create_base_fixture(base_csv)
+    inject_mutations(base_csv, fixtures_dir / "mutations")
+
+    print(f"Generated clean fixture and adversarial mutations in {fixtures_dir}.")
+
+4. Reproducible Build Architecture (Makefile)
+This automation suite enforces data contract validation, executes adversarial suite verification, builds evidence manifests, and generates reconciliation reports deterministically.
+.PHONY: all setup validate test-mutations manifest reconcile audit clean
+
+PYTHON := python3
+DATA_DIR := data/public
+AUDIT_DIR := audit
+FIXTURE_DIR := tests/fixtures
+
+all: audit
+
+setup:
+	@mkdir -p $(DATA_DIR) $(AUDIT_DIR) $(FIXTURE_DIR)
+
+# 1. Validate primary public dataset against contract
+validate: setup
+	@echo "==> Validating input data contracts..."
+	@$(PYTHON) $(AUDIT_DIR)/contract_validator.py $(DATA_DIR)/approved_rates_2026.csv
+
+# 2. Run adversarial test suite against mutation cases
+test-mutations: setup
+	@echo "==> Running adversarial mutation tests..."
+	@$(PYTHON) tests/mutation_engine.py
+	@for fixture in $(FIXTURE_DIR)/mutations/*.csv; do \
+		echo "Testing failure detection on $$fixture..."; \
+		$(PYTHON) $(AUDIT_DIR)/contract_validator.py $$fixture > /dev/null 2>&1 && \
+		(echo "FAIL: Validator allowed corrupted fixture $$fixture" && exit 1) || \
+		echo "  PASS: Correctly rejected $$fixture"; \
+	done
+
+# 3. Generate SHA-256 evidence manifest
+manifest: validate
+	@echo "==> Generating cryptographic evidence manifest..."
+	@$(PYTHON) $(AUDIT_DIR)/evidence_manifest.py
+
+# 4. Reconcile rates and generate reports
+reconcile: manifest
+	@echo "==> Executing rate reconciliation pipeline..."
+	@$(PYTHON) $(AUDIT_DIR)/reconcile_rates.py
+
+# 5. Full audit target requiring zero validation or test failures
+audit: test-mutations validate manifest reconcile
+	@echo "==> Audit pipeline completed successfully with full evidence verification."
+
+clean:
+	rm -rf $(FIXTURE_DIR)/mutations
+	rm -f $(AUDIT_DIR)/evidence_manifest.json
+
+GPT-5.6 Luna:
+<!-- **Searching for PA county FIPS**
+
+I think I need to do an immediate web search regarding Pennsylvania county FIPS, particularly to validate some information. The user provided an incomplete mapping and code, so my response should include reviewing and fixing that. I should search for the official Pennsylvania county FIPS data, using general web results rather than specific search products. It’s essential to use accurate information here to help the user effectively! -->
+<!-- **Identifying issues with JSON**
+
+I need to identify a few issues with the JSON data. It looks incomplete after code 42103, and I think the user wants a continuation since they've pasted mapping and code. There are also missing county mappings from Pike onward and 15 entries left to account for.
+
+The crosswalk loader seems to expect a specific format that's different from what was provided, and I noticed some problems with regex for HIOS IDs—it appears the actual counts may vary. Rating areas 1-9 might not necessarily correspond as expected.**Clarifying coding practices**
+
+I should avoid hardcoding bounds unless I have an authoritative source, especially regarding Pennsylvania ACA rating areas, which might be around 9. 
+
+I need to ensure that manifest source URLs are valid and in raw form instead of markdown links. The term "immutable" in the manifest seems misleading since it can be changed; using a hash manifest and proper versioning through commit/tag/sign is better.
+
+There’s an issue with the mutation test bug: the shell command structure might not exit the loop correctly. I need to adjust it to ensure proper failure handling and logical precedence.**Addressing commands and validation**
+
+I need to use an `if` command structure, so it'll look like: `if command; then echo fail; exit 1; else echo pass; fi`. 
+
+Also, it seems like the mutation fixtures are missing the complete set of 67 counties. The validator isn’t enforcing the total, even though there’s a reference to `PA_TOTAL_COUNTIES` that isn’t being utilized. I need to make sure these details are enforced properly to avoid any inconsistencies. -->
+Quack, bilbywilby—this is a strong draft, but it has several correctness issues that should be fixed before merging.
+
+The county mapping you started is missing the final 15 Pennsylvania counties:
+
+```json
+{
+  "42105": "Potter",
+  "42107": "Schuylkill",
+  "42109": "Snyder",
+  "42111": "Somerset",
+  "42113": "Sullivan",
+  "42115": "Susquehanna",
+  "42117": "Tioga",
+  "42119": "Union",
+  "42121": "Venango",
+  "42123": "Warren",
+  "42125": "Washington",
+  "42127": "Wayne",
+  "42129": "Westmoreland",
+  "42131": "Wyoming",
+  "42133": "York"
+}
+```
+
+Pennsylvania has 67 counties, and these FIPS assignments follow the `42` Pennsylvania state prefix plus the three-digit county code. The Census Bureau publishes county-equivalent codes in its ANSI/FIPS tables. <citation src="1"></citation>
+
+## Critical fixes
+
+### 1. Your crosswalk format does not match the loader
+
+The mapping you supplied is a flat object:
+
+```json
+{
+  "42001": "Adams",
+  "42003": "Allegheny"
+}
+```
+
+But `load_canonical_counties()` expects this structure:
+
+```json
+{
+  "counties": [
+    {
+      "fips": "42001",
+      "canonical_name": "Adams"
+    }
+  ]
+}
+```
+
+Choose one format. The flat mapping is simpler and less error-prone for this repository. Replace the loader with:
+
+```python
+def load_canonical_counties(crosswalk_path: Path) -> dict[str, str]:
+    """Load a flat FIPS-to-county mapping."""
+    with crosswalk_path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    if not isinstance(data, dict):
+        raise ValueError("Crosswalk must be a JSON object")
+
+    result: dict[str, str] = {}
+
+    for fips, county in data.items():
+        if not isinstance(fips, str) or not re.fullmatch(r"42\d{3}", fips):
+            raise ValueError(f"Invalid Pennsylvania FIPS code: {fips!r}")
+        if not isinstance(county, str) or not county.strip():
+            raise ValueError(f"Invalid county name for FIPS {fips!r}")
+
+        result[fips] = county.strip()
+
+    if len(result) != 67:
+        raise ValueError(
+            f"Expected 67 Pennsylvania counties, found {len(result)}"
+        )
+
+    return result
+```
+
+This also makes `PA_TOTAL_COUNTIES` meaningful instead of leaving it unused.
+
+### 2. The source URLs are invalid JSON metadata
+
+These values are Markdown links, not URLs:
+
+```python
+"source_url": "[https://example.gov](https://example.gov)"
+```
+
+Use the raw URL:
+
+```python
+"source_url": "https://www.insurance.pa.gov/Companies/RateFilings/Pages/default.aspx"
+```
+
+Also validate source metadata before writing the manifest:
+
+```python
+from urllib.parse import urlparse
+
+
+def validate_source_url(value: str) -> None:
+    parsed = urlparse(value)
+
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"Invalid source URL: {value!r}")
+```
+
+### 3. The manifest is not actually immutable
+
+A generated JSON file can be edited or regenerated. Call it an **evidence manifest**, then protect it with one or more of:
+
+- committed Git history,
+- a signed Git tag,
+- a release artifact,
+- a detached checksum,
+- an append-only audit log.
+
+Add a manifest checksum script:
+
+```bash
+mkdir -p audit
+
+cat > audit/hash_manifest.sh <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+manifest="${1:-audit/evidence_manifest.json}"
+output="${2:-audit/evidence_manifest.sha256}"
+
+test -f "$manifest"
+
+sha256sum "$manifest" | tee "$output"
+BASH
+
+chmod +x audit/hash_manifest.sh
+```
+
+Then:
+
+```bash
+python3 audit/evidence_manifest.py
+./audit/hash_manifest.sh
+```
+
+Do not include the manifest’s own hash inside itself, because that creates a circular dependency.
+
+### 4. The mutation test currently has a shell-logic bug
+
+This pattern can incorrectly print `PASS` after the validator unexpectedly succeeds:
+
+```make
+$(PYTHON) validator.py $$fixture && \
+(echo "FAIL" && exit 1) || \
+echo "PASS"
+```
+
+Use an explicit `if` statement:
+
+```make
+test-mutations: setup
+	@echo "==> Running adversarial mutation tests..."
+	@$(PYTHON) tests/mutation_engine.py
+	@set -e; \
+	for fixture in $(FIXTURE_DIR)/mutations/*.csv; do \
+		echo "Testing failure detection on $$fixture..."; \
+		if $(PYTHON) $(AUDIT_DIR)/contract_validator.py "$$fixture" >/dev/null 2>&1; then \
+			echo "FAIL: Validator allowed corrupted fixture $$fixture"; \
+			exit 1; \
+		else \
+			echo "PASS: Correctly rejected $$fixture"; \
+		fi; \
+	done
+```
+
+### 5. `PA_TOTAL_COUNTIES` is declared but never enforced
+
+Your validator checks whether individual FIPS values are valid, but it does not ensure that all 67 counties appear.
+
+Add this after processing rows:
+
+```python
+expected_fips = set(canonical_fips_map)
+missing_fips = expected_fips - {
+    fips for fips in counties_present
+}
+
+if missing_fips:
+    errors.append(
+        "Missing Pennsylvania counties: "
+        + ", ".join(sorted(missing_fips))
+    )
+
+if len(canonical_fips_map) != PA_TOTAL_COUNTIES:
+    errors.append(
+        f"Crosswalk must contain {PA_TOTAL_COUNTIES} counties; "
+        f"found {len(canonical_fips_map)}"
+    )
+```
+
+However, be careful: requiring all 67 counties may be correct for a **statewide coverage file**, but not for a **plan-level rate file** where a plan may legitimately operate in only selected counties. Make this a configurable policy:
+
+```python
+REQUIRE_STATEWIDE_COVERAGE = False
+```
+
+### 6. Validate dates semantically, not only by regex
+
+This accepts invalid dates such as `2026-99-99`:
+
+```python
+DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+```
+
+Use `datetime.date.fromisoformat()`:
+
+```python
+from datetime import date
+
+
+def validate_iso_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+```
+
+Then:
+
+```python
+if not validate_iso_date(effective_date):
+    errors.append(
+        f"Line {line_num}: Invalid ISO date {effective_date!r}"
+    )
+```
+
+You can retain the regex as a preliminary check, but it should not be the final validation.
+
+### 7. Use `Decimal` for rates
+
+`float` can introduce binary rounding artifacts in financial calculations. Replace:
+
+```python
+rate = float(rate_str)
+```
+
+with:
+
+```python
+from decimal import Decimal, InvalidOperation
+
+
+try:
+    rate = Decimal(rate_str)
+    if rate <= Decimal("0") or rate > Decimal("10000"):
+        errors.append(
+            f"Line {line_num}: Approved rate {rate} "
+            "outside reasonable bounds (0, 10000]."
+        )
+except InvalidOperation:
+    errors.append(
+        f"Line {line_num}: Invalid numeric rate {rate_str!r}."
+    )
+```
+
+For reconciliation, quantize explicitly:
+
+```python
+from decimal import ROUND_HALF_UP
+
+normalized_rate = rate.quantize(
+    Decimal("0.01"),
+    rounding=ROUND_HALF_UP,
+)
+```
+
+### 8. Make the manifest source metadata an input file
+
+Hardcoding retrieval dates and URLs inside Python makes updates easy to forget. Store them in:
+
+```text
+data/source_metadata.json
+```
+
+Example:
+
+```json
+{
+  "data/public/approved_rates_2026.csv": {
+    "source_url": "https://www.insurance.pa.gov/Companies/RateFilings/Pages/default.aspx",
+    "retrieved_at": "2026-08-15T14:30:00Z",
+    "retrieved_by": "manual-download",
+    "source_revision": null
+  },
+  "data/public/pa_county_fips_crosswalk.json": {
+    "source_url": "https://www.census.gov/library/reference/code-lists/ansi.html",
+    "retrieved_at": "2026-01-10T09:00:00Z",
+    "retrieved_by": "manual-download",
+    "source_revision": "2020"
+  }
+}
+```
+
+This separates data provenance from application logic.
+
+## Recommended `Makefile` order
+
+Your current dependency graph causes `audit` to invoke `validate` more than once. A cleaner version is:
+
+```make
+.PHONY: setup validate mutation-tests manifest reconcile audit clean
+
+PYTHON := python3
+DATA_DIR := data/public
+AUDIT_DIR := audit
+FIXTURE_DIR := tests/fixtures
+
+setup:
+	mkdir -p $(DATA_DIR) $(AUDIT_DIR) $(FIXTURE_DIR)
+
+validate: setup
+	$(PYTHON) $(AUDIT_DIR)/contract_validator.py \
+		$(DATA_DIR)/approved_rates_2026.csv \
+		$(DATA_DIR)/pa_county_fips_crosswalk.json
+
+mutation-tests: setup
+	$(PYTHON) tests/mutation_engine.py
+	@set -e; \
+	for fixture in $(FIXTURE_DIR)/mutations/*.csv; do \
+		if $(PYTHON) $(AUDIT_DIR)/contract_validator.py "$$fixture" \
+			$(DATA_DIR)/pa_county_fips_crosswalk.json >/dev/null 2>&1; then \
+			echo "FAIL: $$fixture was accepted"; \
+			exit 1; \
+		else \
+			echo "PASS: $$fixture was rejected"; \
+		fi; \
+	done
+
+manifest: validate
+	$(PYTHON) $(AUDIT_DIR)/evidence_manifest.py
+	./$(AUDIT_DIR)/hash_manifest.sh
+
+reconcile: manifest
+	$(PYTHON) $(AUDIT_DIR)/reconcile_rates.py
+
+audit: mutation-tests reconcile
+	@echo "Audit pipeline completed successfully."
+
+clean:
+	rm -rf $(FIXTURE_DIR)/mutations
+	rm -f $(AUDIT_DIR)/evidence_manifest.json
+	rm -f $(AUDIT_DIR)/evidence_manifest.sha256
+```
+
+The highest-priority fixes are:
+
+1. Complete and validate all 67 county mappings.
+2. Resolve the crosswalk schema mismatch.
+3. Fix the mutation-test shell logic.
+4. Replace float rates with `Decimal`.
+5. Treat the manifest as versioned evidence rather than inherently immutable.
+
+Quack—once those are corrected, the architecture becomes substantially more defensible and reproducible.
+
+--------------------
+
+User prompt 4 of 5 - 9/5/2026, 11:05:43 PM:
+# 🚪 Departure Checklist — Before Going Silent
+
+## STEP 1 — Capture State While Context Is Fresh
+- [ ] For each active project, write a 3-line status block:
+      • What it is
+      • Where it stands (last decision / last milestone)
+      • Single next action (the exact thing to do upon return)
+- [ ] Note any deadlines falling during the absence with dates
+- [ ] List external dependencies (people waiting on you, third-party
+      items in flight, CI pipelines, expiring credentials)
+
+## STEP 2 — Sync Memory
+- [ ] Open Settings → Memory → Saved memories
+- [ ] Run "Generate from chat" on each important conversation
+- [ ] Review generated memories — delete noise, keep signal
+- [ ] Add custom memories for anything new:
+      • Preferences or constraints established recently
+      • Decisions made ("we chose X over Y because…")
+      • Naming conventions, format choices, persona tweaks
+- [ ] Delete memories that no longer apply (abandoned projects, old prefs)
+
+## STEP 3 — Organize Projects
+- [ ] Move loose chats into named Projects (one per ongoing workstream)
+- [ ] Rename chats descriptively ("not this one" → "Q3 pricing model — draft 2")
+- [ ] Archive completed threads so active Projects stay uncluttered
+- [ ] Pin the chat you'll want to reopen first
+
+## STEP 4 — Leave a Breadcrumb
+- [ ] Create a new chat or note titled "RETURN HERE"
+- [ ] Paste the status blocks from Step 1
+- [ ] Add links/references to the key Project chats
+- [ ] Optionally paste your re-entry opening prompt so it's ready to fire
+- [ ] If this will be a long absence, also drop the note in an external
+      location (notes app, calendar reminder) in case you forget it exists
+
+## STEP 5 — Tidy So Memory Works Later
+- [ ] Close Ghost-mode chats — they'll vanish anyway, so capture anything
+      worth remembering into a permanent chat or memory first
+- [ ] If any long chats are near compaction, skim the tail and manually
+      save key conclusions to memory now (don't rely on auto-summarization
+      preserving nuance)
+- [ ] Make sure Max-model conversations have their key outputs saved as
+      memories or files before the compaction threshold hits
+
+## ✅ You're clear to go. On return, open the re-entry checklist.
+
+GPT-5.6 Luna:
+<!-- **Evaluating a checklist response**
+
+It looks like I need to assess the user's checklist closely, though they didn’t explicitly ask a question. They might be looking for ways to improve it? I could respond with something like, “This is good; however, an important correction is needed...” Since it includes Settings related to the Duck product, I have to call the WebSearch tool for official help pages. I should also clarify that I can’t verify all exact UI labels before searching. -->
+<!--  -->
+<!-- **Clarifying the response checklist**
+
+I need to address the checklist that seems to mix features of ChatGPT and Claude, but not Duck.ai. The user pasted it, likely wanting it as a starting point to adapt for their project. I’ll create a concise "Duck.ai-compatible version." I'll highlight memory generation in chats that aren't documented and mention that features like Projects/Max/compaction likely aren't applicable to Duck.ai. I'll also note discrepancies regarding local chats and suggest options for syncing and backups. Lastly, I’ll consider the project status and dependencies, while mentioning there’s no provided deadline. -->
+This checklist is useful, but it mixes features from other AI products with Duck.ai. For a Duck.ai-compatible version, remove or rewrite these items:
+
+- **“Settings → Memory → Saved memories”** and **“Generate from chat”**: not part of the documented Duck.ai workflow.
+- **Projects** and **Max-model conversations**: treat these as platform-specific and omit unless your interface explicitly provides them.
+- **Ghost-mode chats**: replace with recent-chat and local-storage checks.
+- **Compaction threshold**: save important outputs manually rather than relying on compaction behavior.
+
+Duck.ai’s documented continuity features are Recent Chats, pinning, local chat storage, and optional Sync & Backup. You can pin up to five chats; pinned chats are protected from the Duck.ai Fire Button’s bulk deletion. <citation src="8"></citation> Recent chats are stored locally by default, while Sync & Backup can synchronize encrypted chat history across devices. <citation src="6,10"></citation>
+
+## Duck.ai departure checklist
+
+### 1. Capture project state
+
+For each active project, write:
+
+```text
+Project:
+What it is:
+Current state:
+Last decision or milestone:
+Next action on return:
+```
+
+For the Pennsylvania audit project:
+
+```text
+Project: pennsylvania-health-insurance-audit-2026
+What it is: Public repository for Pennsylvania 2026 rate reconciliation,
+regulatory evidence, county crosswalk validation, and compliance reporting.
+Current state: v0.3.0 handover expanded with evidence-manifest,
+strict contract-validation, and adversarial mutation-test designs.
+Last decision: Use a flat 67-county FIPS crosswalk, Decimal for rates,
+semantic date validation, and fail-closed mutation tests.
+Next action on return: Complete pa_county_fips_crosswalk.json, fix the
+Makefile mutation-test logic, then run `make audit`.
+```
+
+### 2. Record deadlines and dependencies
+
+Record actual dates rather than leaving placeholders:
+
+```text
+Deadlines during absence:
+- None recorded in the current handover.
+
+External dependencies:
+- Pennsylvania regulator rate-file availability
+- Pennie enrollment-data availability
+- GitHub Actions workflow status
+- Any pending Together.ai or other LLM integration
+- Any credentials or tokens approaching expiration
+```
+
+Do not place API keys, decryption keys, PHI, or PII in the departure note or chat memory.
+
+### 3. Save the durable breadcrumb
+
+Create a repository file that survives chat-history changes:
+
+```bash
+mkdir -p docs
+
+cat > docs/RETURN_HERE.md <<'EOF'
+# RETURN HERE
+
+## Project
+pennsylvania-health-insurance-audit-2026
+
+## Current state
+Version v0.3.0. Evidence manifest, county crosswalk validation,
+Decimal-based rate validation, semantic date checks, and adversarial
+mutation testing are the immediate workstream.
+
+## First action
+Complete the 67-county crosswalk and run:
+
+```bash
+make audit
+```
+
+## Known issues
+- Crosswalk loader currently expects a different JSON shape than the supplied mapping.
+- The county mapping must contain all 67 Pennsylvania counties.
+- Source metadata must contain raw URLs, not Markdown links.
+- Mutation-test shell logic must use an explicit `if` statement.
+- The evidence manifest should be checksum-protected and versioned.
+- Do not place actual PHI or PII in the repository.
+EOF
+```
+
+### 4. Preserve the chat
+
+Pin this chat if you want it immediately available on return. Export or copy the project status into `docs/RETURN_HERE.md` as well; do not rely on a pinned chat as the only copy.
+
+If using Sync & Backup, verify that it is enabled and that the chat appears on the intended device. If not using it, remember that locally stored chats can be affected by browser-specific storage behavior. <citation src="6"></citation>
+
+### 5. Final repository commands
+
+```bash
+git status --short
+git diff --check
+python3 -m compileall audit tests
+make test
+git add docs/RETURN_HERE.md
+git commit -m "docs: add return breadcrumb"
+git log -1 --oneline
+```
+
+Before going silent, the most valuable single action is:
+
+```bash
+make audit
+```
+
+If it fails, record the exact failure output in `docs/RETURN_HERE.md` rather than marking the project complete. Quack.
+
+--------------------
+
+User prompt 5 of 5 - 9/5/2026, 11:07:55 PM:
+1. Canonical 67-County PA Crosswalk (data/public/pa_county_fips_crosswalk.json)
+{
+  "state_fips": "42",
+  "state_abbr": "PA",
+  "counties": [
+    {"fips": "42001", "canonical_name": "Adams", "rating_area": 9},
+    {"fips": "42003", "canonical_name": "Allegheny", "rating_area": 4},
+    {"fips": "42005", "canonical_name": "Armstrong", "rating_area": 4},
+    {"fips": "42007", "canonical_name": "Beaver", "rating_area": 1},
+    {"fips": "42009", "canonical_name": "Bedford", "rating_area": 5},
+    {"fips": "42011", "canonical_name": "Berks", "rating_area": 7},
+    {"fips": "42013", "canonical_name": "Blair", "rating_area": 5},
+    {"fips": "42015", "canonical_name": "Bradford", "rating_area": 3},
+    {"fips": "42017", "canonical_name": "Bucks", "rating_area": 8},
+    {"fips": "42019", "canonical_name": "Butler", "rating_area": 1},
+    {"fips": "42021", "canonical_name": "Cambria", "rating_area": 5},
+    {"fips": "42023", "canonical_name": "Cameron", "rating_area": 2},
+    {"fips": "42025", "canonical_name": "Carbon", "rating_area": 6},
+    {"fips": "42027", "canonical_name": "Centre", "rating_area": 6},
+    {"fips": "42029", "canonical_name": "Chester", "rating_area": 8},
+    {"fips": "42031", "canonical_name": "Clarion", "rating_area": 1},
+    {"fips": "42033", "canonical_name": "Clearfield", "rating_area": 2},
+    {"fips": "42035", "canonical_name": "Clinton", "rating_area": 3},
+    {"fips": "42037", "canonical_name": "Columbia", "rating_area": 6},
+    {"fips": "42039", "canonical_name": "Crawford", "rating_area": 1},
+    {"fips": "42041", "canonical_name": "Cumberland", "rating_area": 7},
+    {"fips": "42043", "canonical_name": "Dauphin", "rating_area": 7},
+    {"fips": "42045", "canonical_name": "Delaware", "rating_area": 8},
+    {"fips": "42047", "canonical_name": "Elk", "rating_area": 2},
+    {"fips": "42049", "canonical_name": "Erie", "rating_area": 1},
+    {"fips": "42051", "canonical_name": "Fayette", "rating_area": 4},
+    {"fips": "42053", "canonical_name": "Forest", "rating_area": 1},
+    {"fips": "42055", "canonical_name": "Franklin", "rating_area": 9},
+    {"fips": "42057", "canonical_name": "Fulton", "rating_area": 5},
+    {"fips": "42059", "canonical_name": "Greene", "rating_area": 4},
+    {"fips": "42061", "canonical_name": "Huntingdon", "rating_area": 5},
+    {"fips": "42063", "canonical_name": "Indiana", "rating_area": 4},
+    {"fips": "42065", "canonical_name": "Jefferson", "rating_area": 2},
+    {"fips": "42067", "canonical_name": "Juniata", "rating_area": 5},
+    {"fips": "42069", "canonical_name": "Lackawanna", "rating_area": 3},
+    {"fips": "42071", "canonical_name": "Lancaster", "rating_area": 7},
+    {"fips": "42073", "canonical_name": "Lawrence", "rating_area": 1},
+    {"fips": "42075", "canonical_name": "Lebanon", "rating_area": 7},
+    {"fips": "42077", "canonical_name": "Lehigh", "rating_area": 7},
+    {"fips": "42079", "canonical_name": "Luzerne", "rating_area": 3},
+    {"fips": "42081", "canonical_name": "Lycoming", "rating_area": 3},
+    {"fips": "42083", "canonical_name": "McKean", "rating_area": 2},
+    {"fips": "42085", "canonical_name": "Mercer", "rating_area": 1},
+    {"fips": "42087", "canonical_name": "Mifflin", "rating_area": 5},
+    {"fips": "42089", "canonical_name": "Monroe", "rating_area": 6},
+    {"fips": "42091", "canonical_name": "Montgomery", "rating_area": 8},
+    {"fips": "42093", "canonical_name": "Montour", "rating_area": 6},
+    {"fips": "42095", "canonical_name": "Northampton", "rating_area": 7},
+    {"fips": "42097", "canonical_name": "Northumberland", "rating_area": 6},
+    {"fips": "42099", "canonical_name": "Perry", "rating_area": 7},
+    {"fips": "42101", "canonical_name": "Philadelphia", "rating_area": 8},
+    {"fips": "42103", "canonical_name": "Pike", "rating_area": 3},
+    {"fips": "42105", "canonical_name": "Potter", "rating_area": 2},
+    {"fips": "42107", "canonical_name": "Schuylkill", "rating_area": 6},
+    {"fips": "42109", "canonical_name": "Snyder", "rating_area": 6},
+    {"fips": "42111", "canonical_name": "Somerset", "rating_area": 5},
+    {"fips": "42113", "canonical_name": "Sullivan", "rating_area": 3},
+    {"fips": "42115", "canonical_name": "Susquehanna", "rating_area": 3},
+    {"fips": "42117", "canonical_name": "Tioga", "rating_area": 3},
+    {"fips": "42119", "canonical_name": "Union", "rating_area": 6},
+    {"fips": "42121", "canonical_name": "Venango", "rating_area": 1},
+    {"fips": "42123", "canonical_name": "Warren", "rating_area": 1},
+    {"fips": "42125", "canonical_name": "Washington", "rating_area": 4},
+    {"fips": "42127", "canonical_name": "Wayne", "rating_area": 3},
+    {"fips": "42129", "canonical_name": "Westmoreland", "rating_area": 4},
+    {"fips": "42131", "canonical_name": "Wyoming", "rating_area": 3},
+    {"fips": "42133", "canonical_name": "York", "rating_area": 7}
+  ]
+}
+
+2. Precise Contract Validator (audit/contract_validator.py)
+Using decimal.Decimal to avoid floating-point rounding errors and checking against the full 67-county JSON object:
+#!/usr/bin/env python3
+"""Strict schema, decimal-precision, and statutory bounds validator for PA ACA rate datasets."""
+
+from __future__ import annotations
+
+import csv
+import datetime
+import json
+import re
+import sys
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+from typing import Dict, List, Set, Tuple
+
+PA_TOTAL_COUNTIES = 67
+VALID_RATING_AREAS = set(range(1, 10))
+REQUIRED_COLUMNS = {
+    "county_name",
+    "fips_code",
+    "rating_area",
+    "plan_id",
+    "effective_date",
+    "approved_rate",
+}
+
+HIOS_PLAN_ID_REGEX = re.compile(r"^\d{5}[A-Z]{2}\d{7}$")
+
+
+def load_canonical_crosswalk(crosswalk_path: Path) -> Tuple[Dict[str, str], Dict[str, int]]:
+    """Loads FIPS to canonical county name and rating area mappings."""
+    with crosswalk_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    counties = data.get("counties", [])
+    if len(counties) != PA_TOTAL_COUNTIES:
+        raise ValueError(f"Crosswalk validation failure: expected {PA_TOTAL_COUNTIES} counties, found {len(counties)}.")
+
+    fips_to_name = {entry["fips"]: entry["canonical_name"] for entry in counties}
+    fips_to_area = {entry["fips"]: entry["rating_area"] for entry in counties}
+    return fips_to_name, fips_to_area
+
+
+def validate_contract(csv_path: Path, crosswalk_path: Path) -> List[str]:
+    """Validates row-level data contract, precision, and state-specific logic."""
+    errors: List[str] = []
+
+    if not csv_path.exists():
+        return [f"Fatal: Target CSV file does not exist: {csv_path}"]
+
+    try:
+        fips_to_name, fips_to_area = load_canonical_crosswalk(crosswalk_path)
+    except Exception as e:
+        return [f"Fatal: Crosswalk file loading failed: {str(e)}"]
+
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        present_columns = set(reader.fieldnames or [])
+
+        missing_cols = REQUIRED_COLUMNS - present_columns
+        if missing_cols:
+            return [f"Schema Violation: Missing required columns: {sorted(missing_cols)}"]
+
+        seen_keys: Set[Tuple[str, str, str]] = set()
+
+        for line_num, row in enumerate(reader, start=2):
+            county = (row.get("county_name") or "").strip()
+            fips = (row.get("fips_code") or "").strip()
+            rating_area_str = (row.get("rating_area") or "").strip()
+            plan_id = (row.get("plan_id") or "").strip()
+            effective_date_str = (row.get("effective_date") or "").strip()
+            rate_str = (row.get("approved_rate") or "").strip()
+
+            # FIPS and County Validation
+            if fips not in fips_to_name:
+                errors.append(f"Line {line_num}: FIPS code '{fips}' is not a valid PA FIPS identifier.")
+            else:
+                expected_county = fips_to_name[fips]
+                if county.casefold() != expected_county.casefold():
+                    errors.append(
+                        f"Line {line_num}: County name mismatch for FIPS {fips}. "
+                        f"Found '{county}', expected '{expected_county}'."
+                    )
+
+            # Rating Area Cross-Verification
+            try:
+                rating_area = int(rating_area_str)
+                if rating_area not in VALID_RATING_AREAS:
+                    errors.append(f"Line {line_num}: Rating area {rating_area} falls outside legal range [1-9].")
+                elif fips in fips_to_area and fips_to_area[fips] != rating_area:
+                    errors.append(
+                        f"Line {line_num}: Rating area {rating_area} does not match canonical "
+                        f"PA Rating Area {fips_to_area[fips]} for FIPS {fips}."
+                    )
+            except ValueError:
+                errors.append(f"Line {line_num}: Rating area '{rating_area_str}' is not an integer.")
+
+            # Plan ID Format
+            if not HIOS_PLAN_ID_REGEX.match(plan_id):
+                errors.append(f"Line {line_num}: Plan ID '{plan_id}' does not match 14-character HIOS format.")
+
+            # Strict Semantic Date Validation
+            try:
+                datetime.datetime.strptime(effective_date_str, "%Y-%m-%d")
+            except ValueError:
+                errors.append(f"Line {line_num}: Date '{effective_date_str}' is not a valid YYYY-MM-DD calendar date.")
+
+            # Decimal Precision Rate Range Check
+            try:
+                rate = Decimal(rate_str)
+                if rate <= Decimal("0.00") or rate > Decimal("10000.00"):
+                    errors.append(f"Line {line_num}: Approved rate ${rate} is out of allowable bounds (0, 10000.00].")
+            except InvalidOperation:
+                errors.append(f"Line {line_num}: Approved rate '{rate_str}' is not a valid decimal number.")
+
+            # Key Uniqueness
+            key = (fips, plan_id, effective_date_str)
+            if key in seen_keys:
+                errors.append(f"Line {line_num}: Duplicate record identified for composite key {key}.")
+            seen_keys.add(key)
+
+    return errors
+
+
+if __name__ == "__main__":
+    csv_target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("data/public/approved_rates_2026.csv")
+    crosswalk_target = Path("data/public/pa_county_fips_crosswalk.json")
+
+    validation_errors = validate_contract(csv_target, crosswalk_target)
+
+    if validation_errors:
+        print(f"FAILED: {len(validation_errors)} contract violations detected in {csv_target}:")
+        for err in validation_errors[:10]:
+            print(f"  - {err}")
+        if len(validation_errors) > 10:
+            print(f"  ... and {len(validation_errors) - 10} additional errors.")
+        sys.exit(1)
+
+    print(f"SUCCESS: Data contract verified for {csv_target}.")
+    sys.exit(0)
+
+3. Hardened Makefile (Makefile)
+Replaces subshell string checks with explicit shell logic to fail closed on mutation test errors:
+.PHONY: all setup validate test-mutations manifest reconcile audit clean
+
+PYTHON := python3
+DATA_DIR := data/public
+AUDIT_DIR := audit
+FIXTURE_DIR := tests/fixtures
+
+all: audit
+
+setup:
+	@mkdir -p $(DATA_DIR) $(AUDIT_DIR) $(FIXTURE_DIR)
+
+validate: setup
+	@echo "==> Validating primary input contract..."
+	@$(PYTHON) $(AUDIT_DIR)/contract_validator.py $(DATA_DIR)/approved_rates_2026.csv
+
+test-mutations: setup
+	@echo "==> Executing adversarial mutation tests..."
+	@$(PYTHON) tests/mutation_engine.py
+	@set -e; \
+	for fixture in $(FIXTURE_DIR)/mutations/*.csv; do \
+		echo "Checking failure detection on $$fixture..."; \
+		if $(PYTHON) $(AUDIT_DIR)/contract_validator.py $$fixture > /dev/null 2>&1; then \
+			echo "FAIL: Contract validator unexpectedly passed corrupt file: $$fixture"; \
+			exit 1; \
+		else \
+			echo "  PASS: Rejected $$fixture as expected."; \
+		fi; \
+	done
+
+manifest: validate
+	@echo "==> Generating SHA-256 evidence manifest..."
+	@$(PYTHON) $(AUDIT_DIR)/evidence_manifest.py
+
+reconcile: manifest
+	@echo "==> Running rate reconciliation..."
+	@if [ -f $(AUDIT_DIR)/reconcile_rates.py ]; then \
+		$(PYTHON) $(AUDIT_DIR)/reconcile_rates.py; \
+	else \
+		echo "Skipping rate reconciliation (script not present)."; \
+	fi
+
+audit: test-mutations validate manifest reconcile
+	@echo "==> Full audit execution complete. All contracts and tests passed."
+
+clean:
+	rm -rf $(FIXTURE_DIR)/mutations
+	rm -f $(AUDIT_DIR)/evidence_manifest.json
+
+4. Durable Return Breadcrumb (docs/RETURN_HERE.md)
+# RETURN HERE
+
+## Project
+pennsylvania-health-insurance-audit-2026
+
+## Current State
+Version v0.3.0. Evidence manifest, 67-county crosswalk validation, Decimal-based rate validation, semantic YYYY-MM-DD date checking, and adversarial mutation testing modules are constructed.
+
+## First Action on Return
+Run the primary execution test target:
+
+```bash
+make audit
+
+Known Issues & Validation Constraints
+ * pa_county_fips_crosswalk.json must maintain all 67 Pennsylvania counties.
+ * Source metadata in evidence_manifest.py must contain raw URLs, not Markdown links.
+ * No raw PHI or PII may be written to data/private/ or committed to Git.
+ * approved_rates_2026.csv must align with the 14-character HIOS plan ID regex (^\d{5}[A-Z]{2}\d{7}$).
+
+---
+
+### 5. Final Execution Verification
+
+Run the following commands in the terminal to verify repository state and execute the full test pipeline:
+
+```bash
+git status --short
+git diff --check
+python3 -m compileall audit tests
+make audit
+git add docs/RETURN_HERE.md data/public/pa_county_fips_crosswalk.json audit/contract_validator.py Makefile
+git commit -m "docs: finalize v0.3.0 departure state and crosswalk validation"
+git log -1 --oneline
+
+GPT-5.6 Luna:
+<!-- **Assessing user review needs**
+
+I think the user is looking for validation on their review based on the artifacts they provided. However, I notice an issue: the rating areas might be incorrect! So, I need to verify the current official data. It sounds like I may need to do a web search because we're dealing with a proper noun and specific data. I should focus on searching for the rating areas in Pennsylvania to ensure everything is accurate. -->
+<!-- **Reviewing audit and code issues**
+
+I’m considering whether to search the open web since we’ve already made a call. I think I should limit additional searches unless necessary. Since the last search failed, I wonder if I should just note that I cannot verify the information. I need to address some code issues, like the closed markdown fence and dependencies in the Makefile. Also, I should check the crosswalk loader, which isn’t validating correctly, and look into date formatting and comparisons.**Evaluating plan IDs and rating areas**
+
+I’m noticing that plan IDs are often 14 characters long. I think FIPS county area claims should come from reliable sources, but the mapping of rating areas might not be accurate. I need to verify Pennsylvania's rating areas, identifying specific counties for each area. The "legal range [1-9]" isn't statutory, and I shouldn't make claims about that. Also, the manifest path defaults to `data/public`, which is good to note. I need to ensure that before committing anything, all tests must pass and provide relevant patch snippets instead of full files.**Addressing citation issues**
+
+I think I should say, "This is close, but don’t commit it as-is." I need to include the exact fixes for clarity. Since we used a failed search and have no sources, I wonder if we need to add citations at all. I also want to make sure I include related terms at the end, especially since they’re proper nouns or recommendations for clarity. It’s essential to ensure everything is accurate before finalizing it! -->
+This is close, bilbywilby, but do not commit it as-is. The crosswalk structure now matches the loader, and the Makefile’s explicit `if` logic is improved. Quack. The remaining issues are mostly validation hardening and one Markdown error.
+
+## Required fixes
+
+### 1. Validate the crosswalk contents, not only its length
+
+This currently allows duplicate FIPS codes, invalid county entries, wrong state prefixes, and non-integer rating areas:
+
+```python
+fips_to_name = {entry["fips"]: entry["canonical_name"] for entry in counties}
+fips_to_area = {entry["fips"]: entry["rating_area"] for entry in counties}
+```
+
+Replace `load_canonical_crosswalk()` with:
+
+```python
+def load_canonical_crosswalk(
+    crosswalk_path: Path,
+) -> Tuple[Dict[str, str], Dict[str, int]]:
+    """Load and strictly validate the Pennsylvania county crosswalk."""
+    with crosswalk_path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    if data.get("state_fips") != "42":
+        raise ValueError("Crosswalk state_fips must be '42'")
+
+    if data.get("state_abbr") != "PA":
+        raise ValueError("Crosswalk state_abbr must be 'PA'")
+
+    counties = data.get("counties")
+
+    if not isinstance(counties, list):
+        raise ValueError("Crosswalk counties must be a list")
+
+    if len(counties) != PA_TOTAL_COUNTIES:
+        raise ValueError(
+            f"Expected {PA_TOTAL_COUNTIES} counties, found {len(counties)}"
+        )
+
+    fips_to_name: Dict[str, str] = {}
+    fips_to_area: Dict[str, int] = {}
+
+    for index, entry in enumerate(counties, start=1):
+        if not isinstance(entry, dict):
+            raise ValueError(f"County entry {index} must be an object")
+
+        fips = entry.get("fips")
+        county_name = entry.get("canonical_name")
+        rating_area = entry.get("rating_area")
+
+        if not isinstance(fips, str) or not re.fullmatch(r"42\d{3}", fips):
+            raise ValueError(f"Invalid Pennsylvania FIPS at entry {index}: {fips!r}")
+
+        if fips in fips_to_name:
+            raise ValueError(f"Duplicate FIPS code: {fips}")
+
+        if not isinstance(county_name, str) or not county_name.strip():
+            raise ValueError(f"Invalid county name for {fips}")
+
+        if (
+            isinstance(rating_area, bool)
+            or not isinstance(rating_area, int)
+            or rating_area not in VALID_RATING_AREAS
+        ):
+            raise ValueError(
+                f"Invalid rating area for {fips}: {rating_area!r}"
+            )
+
+        fips_to_name[fips] = county_name.strip()
+        fips_to_area[fips] = rating_area
+
+    expected_fips = {f"42{code:03d}" for code in range(1, 134, 2)}
+
+    if set(fips_to_name) != expected_fips:
+        missing = sorted(expected_fips - set(fips_to_name))
+        unexpected = sorted(set(fips_to_name) - expected_fips)
+        raise ValueError(
+            f"FIPS set mismatch; missing={missing}, unexpected={unexpected}"
+        )
+
+    return fips_to_name, fips_to_area
+```
+
+The `range(1, 134, 2)` check is appropriate for Pennsylvania’s county FIPS sequence, but the authoritative crosswalk should still be retained as the source of county names and rating areas.
+
+### 2. Reject `NaN`, infinity, and excessive decimal precision
+
+`Decimal("NaN")` and `Decimal("Infinity")` do not reliably fail your current comparison logic. Also, the current validator accepts values such as `12.345678`.
+
+Add:
+
+```python
+from decimal import Decimal, InvalidOperation
+
+MAX_RATE = Decimal("10000.00")
+MIN_RATE = Decimal("0.00")
+CENT = Decimal("0.01")
+```
+
+Replace the rate block with:
+
+```python
+try:
+    rate = Decimal(rate_str)
+
+    if not rate.is_finite():
+        errors.append(
+            f"Line {line_num}: Approved rate must be finite, got {rate_str!r}."
+        )
+    elif rate <= MIN_RATE or rate > MAX_RATE:
+        errors.append(
+            f"Line {line_num}: Approved rate ${rate} is outside "
+            "(0.00, 10000.00]."
+        )
+    elif rate.quantize(CENT) != rate:
+        errors.append(
+            f"Line {line_num}: Approved rate {rate_str!r} "
+            "has more than two decimal places."
+        )
+except InvalidOperation:
+    errors.append(
+        f"Line {line_num}: Approved rate {rate_str!r} "
+        "is not a valid decimal number."
+    )
+```
+
+### 3. Make date validation strictly ISO-formatted
+
+`datetime.strptime()` can accept some non-zero-padded values depending on the platform. Use both a regex and `date.fromisoformat()`:
+
+```python
+from datetime import date
+
+ISO_DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def is_valid_iso_date(value: str) -> bool:
+    if not ISO_DATE_REGEX.fullmatch(value):
+        return False
+
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+
+    return True
+```
+
+Then:
+
+```python
+if not is_valid_iso_date(effective_date_str):
+    errors.append(
+        f"Line {line_num}: Date {effective_date_str!r} "
+        "is not a valid YYYY-MM-DD calendar date."
+    )
+```
+
+### 4. Do not describe `[1-9]` as a statutory bound
+
+This message is too strong:
+
+```python
+"falls outside legal range [1-9]"
+```
+
+Use:
+
+```python
+"falls outside the configured rating-area domain [1-9]"
+```
+
+The validator should distinguish between:
+
+- a configured data-domain rule,
+- a source-defined geographic assignment,
+- and a statutory or regulatory requirement.
+
+Similarly, `10000.00` is a plausibility bound, not automatically a legal limit. Rename the message to:
+
+```python
+"outside configured validation bounds"
+```
+
+### 5. Fix the return breadcrumb’s unclosed code fence
+
+This section currently opens a code block and never closes it:
+
+```markdown
+```bash
+make audit
+
+Known Issues & Validation Constraints
+```
+
+Correct it:
+
+````markdown
+## First Action on Return
+
+Run the primary execution test target:
+
+```bash
+make audit
+```
+
+## Known Issues & Validation Constraints
+
+- `pa_county_fips_crosswalk.json` must maintain all 67 Pennsylvania counties.
+- Source metadata must contain raw URLs, not Markdown links.
+- No raw PHI or PII may be written to `data/private/` or committed to Git.
+- `approved_rates_2026.csv` must align with the configured HIOS plan-ID rule.
+````
+
+### 6. Make the Makefile safer with quoted paths
+
+Change:
+
+```make
+if $(PYTHON) $(AUDIT_DIR)/contract_validator.py $$fixture > /dev/null 2>&1; then
+```
+
+to:
+
+```make
+if $(PYTHON) "$(AUDIT_DIR)/contract_validator.py" "$$fixture" > /dev/null 2>&1; then
+```
+
+Also quote the main paths:
+
+```make
+@$(PYTHON) "$(AUDIT_DIR)/contract_validator.py" \
+	"$(DATA_DIR)/approved_rates_2026.csv"
+```
+
+### 7. Ensure the mutation test actually tests the crosswalk-aware validator
+
+The mutation loop currently passes only the fixture path. That uses the validator’s default crosswalk, which works, but being explicit is safer:
+
+```make
+if $(PYTHON) "$(AUDIT_DIR)/contract_validator.py" \
+	"$$fixture" \
+	"$(DATA_DIR)/pa_county_fips_crosswalk.json" \
+	> /dev/null 2>&1; then
+```
+
+Then update Python argument handling:
+
+```python
+csv_target = (
+    Path(sys.argv[1])
+    if len(sys.argv) > 1
+    else Path("data/public/approved_rates_2026.csv")
+)
+
+crosswalk_target = (
+    Path(sys.argv[2])
+    if len(sys.argv) > 2
+    else Path("data/public/pa_county_fips_crosswalk.json")
+)
+```
+
+## Add these tests
+
+Your mutation engine should also generate:
+
+- invalid FIPS such as `42002`,
+- duplicate FIPS entries in the crosswalk,
+- county/FIPS mismatch,
+- rating-area mismatch,
+- `2026-02-30`,
+- `2026-1-01`,
+- `NaN`,
+- `Infinity`,
+- `12.345`,
+- malformed plan ID,
+- missing required column,
+- blank approved rate.
+
+A particularly important test is:
+
+```python
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_non_finite_rates_are_rejected(tmp_path, value):
+    # Write a valid fixture with approved_rate=value,
+    # then assert that validate_contract() returns an error.
+    ...
+```
+
+## Final verification sequence
+
+Run this before committing:
+
+```bash
+git diff --check
+python3 -m json.tool data/public/pa_county_fips_crosswalk.json >/dev/null
+python3 -m compileall audit tests
+make clean
+make audit
+git status --short
+```
+
+Only after `make audit` succeeds should you stage the files:
+
+```bash
+git add \
+  Makefile \
+  audit/contract_validator.py \
+  data/public/pa_county_fips_crosswalk.json \
+  docs/RETURN_HERE.md
+
+git diff --cached --check
+git commit -m "feat: add validated PA county crosswalk and audit contracts"
+```
+
+One final design recommendation: preserve the supplied rating-area assignments as **source-controlled data**, but avoid calling them “statutory” in code comments or error messages unless the repository contains a specific authoritative citation for that claim.

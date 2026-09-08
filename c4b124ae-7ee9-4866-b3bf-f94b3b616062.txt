@@ -1,0 +1,37 @@
+# src/paths.py
+"""
+Repo‑root path helpers – import this anywhere you need a file location.
+All helpers return **absolute Path objects** anchored at the repository root,
+independent of the current working directory.
+"""
+
+from pathlib import Path
+import os
+
+# ---------------------------------------------------------------
+# 1️⃣  Compute REPO_ROOT **once** – based on this file’s location.
+# ---------------------------------------------------------------
+REPO_ROOT: Path = Path(__file__).resolve().parents[1]
+
+# ---------------------------------------------------------------
+# 2️⃣  Input location – can be overridden by $COUNTY_CSV_PATH.
+# ---------------------------------------------------------------
+def data_input() -> Path:
+    """
+    Returns the CSV that the county‑termination ETL consumes.
+    Priority:
+      1️⃣  $COUNTY_CSV_PATH env var (absolute or relative to REPO_ROOT)
+      2️⃣  data/raw/county_termination.csv (default)
+    """
+    env_path = os.getenv("COUNTY_CSV_PATH")
+    if env_path:
+        p = Path(env_path)
+        return p if p.is_absolute() else REPO_ROOT / p
+    return REPO_ROOT / "data" / "raw" / "county_termination.csv"
+
+# ---------------------------------------------------------------
+# 3️⃣  Output location – **never** overridden by env (prevent provenance holes).
+# ---------------------------------------------------------------
+def data_output() -> Path:
+    """Where the ETL writes its JSON payload (always repo‑root anchored)."""
+    return REPO_ROOT / "data" / "quarantine" / "county_termination.json"

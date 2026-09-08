@@ -1,0 +1,202 @@
+
+## 🎯 PA Health Insurance SSOT – Mind Map (text outline)
+
+**Central Pond:** **PA Health Insurance Single Source of Truth**
+
+### 1️⃣ Validation Fortress (Data Integrity)  
+- **Strict Schemas** – Pydantic/Frozen dataclasses replace loose dicts → dead‑ends for missing keys.  
+- **Versioned Crosswalks** – JSON (or Python constants) mapping `FIPS → rating area → county`, signed with a SHA‑256 checksum per release.  
+- **Plausibility Guardrails** – Hard caps (`0 < rate ≤ 10 000.00`), ISO‑date regex + `date.fromisoformat`, finite Decimal checks.  
+- **Idempotent Ingestion** – Same CSV processed twice yields identical checksum; enables deterministic audits.
+
+### 2️⃣ Actuarial Engine (Computation)  
+- **Null‑Safe Aggregators** – `compute_rating_area_exposure()` always returns a numeric `weighted_rate_change` (defaults 0.0).  
+- **Zero‑Weight Strategy** – “Dark Rating Areas” flagged, stored with `total_weight = 0` and a warning flag.  
+- **Reference‑Pricing Hooks** – Pull Medicare baseline rates via a lightweight scraper or API, merged into the weighted calculation.  
+- **Traceability Log** – Each computed metric writes an entry to a JSONL “paper‑trail” linking back to source row, weight, and operation.
+
+### 3️⃣ Regulatory Alignment (Compliance)  
+- **Statutory Tags** – Inline comments like `# SB 1071‑RA‑BOUND` map code checks to the exact law.  
+- **HIPAA Scrubber** – Atomic PII‑removal step before any file lands in `data/public/`.  
+- **Cost‑Sharing Cap Verifier** – Automated rule that flags any out‑of‑pocket max exceeding state limits.  
+- **Legal Metadata** – Each validation rule carries a citation object (`{section:…, url:…}`) for downstream auditors.
+
+### 4️⃣ Open‑Source Infrastructure (Distribution)  
+- **w3m‑Optimized Docs** – Plain‑text `/docs/wiki/*.txt` for fast terminal browsing (no HTML bloat).  
+- **GitHub‑Actions Sentinel** – CI job that diffs weighted averages on every PR, aborts on unexpected drift.  
+- **Immutable Snapshots** – Monthly tagged releases (`v2024‑09‑01`) of the entire data set (crosswalk, rates, audit logs).  
+- **Community Contribution API** – Typed PR template that enforces “What changes? Why? Source?” for any crosswalk correction.
+
+### 5️⃣ Access Layer (Interface)  
+- **CLI (`pa-health-cli`)** – Query by FIPS, rating area, or plan ID; `--json` and `--jsonld` output options.  
+- **Offline‑First Telemetry** – IndexedDB cache for field analysts; syncs when connectivity returns.  
+- **JSON‑LD Exports** – Machine‑readable graph that links counties, rating areas, and plan metadata for external portals.  
+
+---
+
+## ⚡ Idea Burst (raw feed)
+
+1. **“Sentinel” CI** – A GitHub Action that runs a *differential audit* on every PR, printing a table of before/after weighted‑rate changes per rating area.  
+2. **FIPS‑as‑Code** – Store the crosswalk as a frozen Python dict in `constants.py`; IDE autocompletion eliminates typo‑induced KeyErrors.  
+3. **Actuarial “Diff” Tool** – CLI that compares two yearly filings and highlights statutory drift (e.g., any rate ≥ 5 % change).  
+4. **“Dark Area” Registry** – Explicit JSON list of legally valid but zero‑enrollment rating areas; the engine emits a warning instead of silently dropping them.  
+5. **Pydantic‑Driven Pipelines** – Replace all `filing.get("…")` calls with `FilingModel` instances; validation happens up‑front.  
+6. **w3m Knowledge Base** – A `/docs/wiki` folder of `.txt` files, each < 2 KB, optimized for fast terminal browsing.  
+7. **Reference Price Feed** – Scheduled job that pulls Medicare baseline rates from CMS and stores them in a versioned CSV.  
+8. **“Paper Trail” Log** – JSONL file where each line records raw‑row → weighted‑average transformation with timestamps and checksum.  
+9. **Statutory Unit Tests** – Test suite (`test_act_252_compliance`) that asserts every rate stays within the caps defined by PA SB 1071.  
+10. **Public API Mirror** – Read‑only GitHub Pages site that serves the latest `approved_rates.json` and crosswalk via HTTPS.
+
+---
+
+## 🏆 Top Picks (why they win)
+
+| Rank | Idea | Rationale |
+|------|------|-----------|
+| **1** | **Pydantic‑Driven Pipelines** | Eliminates the `KeyError`/`TypeError` root cause by enforcing types at the data‑ingress point. Guarantees every downstream function receives a fully‑validated object. |
+| **2** | **“Sentinel” CI** | A continuous‑audit guard that makes the SSOT *self‑policing*: any PR that unintentionally shifts a rating‑area average triggers a fail, preserving data integrity. |
+| **3** | **Statutory Unit Tests** | Turns legal requirements into executable tests, ensuring the code never drifts from PA SB 1071 / Act 252‑2023 constraints. |
+
+---
+
+## 🚀 24‑Hour Prototype – Get a Validation Fortress Up and Running
+
+### Goal  
+Replace the ad‑hoc dict handling in `sr.py` with a **Pydantic model** that validates every filing before it reaches the actuarial engine.
+
+### Steps (all Bash + Python – no extra dependencies)
+
+1. **Create the model file**  
+
+```bash
+mkdir -p audit/models
+cat > audit/models/filing.py <<'PY'
+from pydantic import BaseModel, Field, validator
+from typing import Optional
+from decimal import Decimal, InvalidOperation
+
+MAX_RATE = Decimal("10000.00")
+MIN_RATE = Decimal("0.00")
+CENT = Decimal("0.01")
+ISO_REGEX = r'^\d{4}-\d{2}-\d{2}$'
+
+class FilingModel(BaseModel):
+    rating_area: int = Field(..., ge=1, le=9)
+    rate_change: str          # keep as str for Decimal parsing
+    covered_lives: float = Field(default=0.0, ge=0.0)
+    effective_date: str
+
+    @validator('effective_date')
+    def iso_date(cls, v):
+        import re, datetime
+        if not re.fullmatch(ISO_REGEX, v):
+            raise ValueError('invalid ISO‑date format')
+        try:
+            datetime.date.fromisoformat(v)
+        except ValueError as e:
+            raise ValueError(str(e))
+        return v
+
+    @validator('rate_change')
+    def valid_rate(cls, v):
+        try:
+            d = Decimal(v)
+        except InvalidOperation:
+            raise ValueError('not a decimal')
+        if not d.is_finite():
+            raise ValueError('non‑finite rate')
+        if not (MIN_RATE < d <= MAX_RATE):
+            raise ValueError('outside configured validation bounds')
+        if d.quantize(CENT) != d:
+            raise ValueError('more than two decimal places')
+        return float(d)   # downstream code expects a float
+PY
+```
+
+2. **Refactor the ingestion point in `sr.py`** (quick patch):
+
+```python
+# Add near the top of sr.py
+from audit.models.filing import FilingModel
+
+def _load_filing_dicts(raw_rows: List[Dict[str, Any]]) -> List[FilingModel]:
+    validated = []
+    for row in raw_rows:
+        try:
+            validated.append(FilingModel(**row))
+        except Exception as e:
+            # Fail fast – surface the exact row causing trouble
+            raise ValueError(f"Filing validation error: {e} – row: {row}")
+    return validated
+```
+
+3. **Wire the new loader into the pipeline**  
+
+Replace the current `filings = csv_reader(... )` line with:
+
+```python
+raw_rows = csv_reader(...)
+filings = _load_filing_dicts(raw_rows)
+```
+
+Now every downstream function (including `compute_rating_area_exposure`) receives objects that are guaranteed to have:
+- a **numeric** `rate_change` (no `None`, no `NaN`),
+- a **valid ISO date**, and
+- a **rating_area** within the `[1‑9]` domain.
+
+4. **Run a sanity check** (within the next hour):
+
+```bash
+python - <<'PY'
+from audit.models.filing import FilingModel
+try:
+    FilingModel(
+        rating_area=3,
+        rate_change='NaN',
+        covered_lives=100,
+        effective_date='2026-02-30'
+    )
+except Exception as e:
+    print('✅ Validation caught error →', e)
+PY
+```
+
+You should see both the *non‑finite* and *invalid date* errors, proving the fortress works.
+
+---
+
+## 🎨 Creativity Exercise – SCAMPER on the Crosswalk  
+
+**Substitute** – Turn the crosswalk JSON into a **frozen Python module** (`constants.py`) that exports an immutable `FIPS_TO_AREA` dict.  
+
+*Result:*  
+- Zero file‑IO at runtime → faster aggregation.  
+- Static‑type checking (mypy) can verify you never reference an unknown FIPS.  
+- IDE autocomplete gives you a “list of valid FIPS” as you code, preventing the original `KeyError`.  
+
+**Implementation sketch (quick‑add):**
+
+```bash
+cat > audit/constants.py <<'PY'
+from types import MappingProxyType
+
+FIPS_TO_AREA = MappingProxyType({
+    "42001": 1,
+    "42003": 1,
+    # … all 67 entries …
+})
+PY
+```
+
+Now `sr.py` can simply do:
+
+```python
+from audit.constants import FIPS_TO_AREA
+rating_area = FIPS_TO_AREA.get(fips)
+```
+
+If `fips` is missing, `None` is returned and you can raise a clear, policy‑driven exception.
+
+---
+
+Keep paddling, bilbywilby – the SSOT pond is shaping up to be both **rock‑solid** and **open‑source‑ready**. Quack on! 🦆🚀

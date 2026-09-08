@@ -1,0 +1,28 @@
+
+Round two — moving from infrastructure to dominance. These assume the first ten exist where noted, but most stand alone.
+
+**11. Cryptographic audit-trail manifest.** Sign the frozen `HANDOVER.json` and every emitted CSV with an HMAC-SHA256 keyed digest appended as a trailer line, plus a `verify_capsule` command. If a county exposure number is questioned months later, you can prove byte-for-byte it came from the frozen pipeline run — turn your audit *into* an audit-proof artifact. Pairs naturally with #8's fingerprint triage.
+
+**12. Adversarial schema mutation tests.** Take `test_unverified_row_poisons_group`'s spirit and industrialize it: a fuzzer that programmatically corrupts valid fixtures — flips `verified` mid-group, transposes FIPS digits, injects `rate_change: "12,O"` (letter O), swaps rating areas 1↔7 — and asserts the pipeline *raises or warns*, never silently computes. Your session history is basically a pre-written corpus of these.
+
+**13. County-level topology graph.** Model the 67 FIPS nodes / 9 rating-area clusters as a graph with `networkx`-free adjacency (shared-boundary detection from FIPS ordering or a static neighbor table). Invariants: connectivity within each rating area, no orphan counties, contiguity violations flagged — catches a mistyped FIPS that lands Gettysburg in Rating Area 8 far earlier than any downstream reconciliation would.
+
+**14. Dual-grain reconciliation proof.** The core premise of the dossier: RA-weighted exposure × county weights must collapse to the statewide filed average. Add `verify_statewide_closure()` that sums your county matrix back up and asserts closure to within epsilon against the PID-approved statewide table. This turns "we think the aggregation is right" into a theorem the tests enforce on every run.
+
+**15. Carrier-alias dictionary with fuzzy ingestion.** Real PID drops won't spell "Highmark Inc." the same way twice ("HIGHMARK INC.", "Highmark Inc", "HM Insurance Co."). Build a canonical-alias map plus Levenshtein-based nearest-match resolution that logs every fuzzy correction, refusing to guess beyond an edit-distance threshold. This kills the future cousin of today's `carrier_name`→`carrier` problem — carrier *name* fragmentation.
+
+**16. Self-verifying figure generation.** `generate_figures.py` writes SVGs; make them carry embedded provenance — the exact filings hash, share basis, and run timestamp rendered into the corner caption. Any figure circulating without a verifiable watermark is automatically untrusted. Tests assert watermark presence, matching the repo's forensics brand.
+
+**17. YAML-driven policy layer.** Move every magic constant (SERFF regex, 67-county expectation, area counts {1:8, 2:3, ...}, alias map, cap thresholds) into `config/contract.yaml`, loaded and validated at import time. The change from freeze to freeze becomes a readable diff instead of a code archaeology dig — and your arrival checklist gains a "contract unchanged?" checkbox.
+
+**18. Red-team reproducibility drill.** A scripted end-to-end wipe test: clone the repo fresh into a temp dir, run `00_run_all.sh` with zero data present, and assert it either completes with clearly-watermarked fallback outputs or fails loudly — nothing in between. Today's bootstrap was tested in-place; a true fresh-clone smoke test guarantees a stranger (or a future you on a new laptop) hits zero undocumented coupling.
+
+**19. Rate-filing evidence bundle.** For every carrier row, auto-generate a citation block — SERFF ID, PID page URL snapshot date, approved %, effective date — exported as both JSON and a printable CSV appendix. When a claim decision gets challenged, the paper trail ships with the number. This composes with #1's collision detector so every disputed field carries its provenance lineage.
+
+**20. Continuous self-audit daemon.** The apex: a lightweight watchdog that runs `pytest`, `verify_statewide_closure`, the fingerprint triage, and the sentinel checks on a schedule or on every `git pull` via GitHub Actions, posting a single health verdict (green/yellow/red) into `health_badge.json`. The repo's state becomes continuously self-reported — no more session-ending debate over whether the summaries match reality, because the repo *is* its own auditor.
+
+---
+
+Meta-pattern across all twenty: fourteen of them are the same move — **take an error you actually hit and make it a permanent, executable invariant**. That's what distinguishes a repo that merely works from one that can't regress.
+
+Sequencing suggestion: 14 is the highest value-per-line-of-code of this whole list (closure math on data you already have), with 15 right behind it since carrier-name chaos is nearly certain in the first real extract. Want me to build #14 — it's maybe forty lines plus two tests, slots directly into `compute_rating_area_exposure`, and would've caught today's accumulation bug automatically?

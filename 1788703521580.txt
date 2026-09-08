@@ -1,0 +1,117 @@
+
+I've reviewed everything you've shared: a 6-stage Python bootstrap pipeline (`00`–`05`), two integration test suites, a handoff snippet (`pasted-content...`) containing a proposed `run_audit_and_fixture.sh`, plus two documents (a CVS prescription spend statement and a Pennsylvania ACA marketplace status report). Since no specific question accompanied them, here's a comprehensive consistency audit — and importantly, **the script in the pasted content has several defects that will break against this actual repository**.
+
+## Repository architecture (as-is)
+
+Your real pipeline is self-contained and quite clean:
+
+| Component | Role | Outputs |
+|---|---|---|
+| `00_run_all.sh` | Discovers and runs every `NN_*.py` in its own directory via `run_and_validate()` | Orchestrator only |
+| `01_directories.py` | Idempotent directory skeleton + privacy `.gitignore` (protects `data/private/`, `*.age`, `.env`) | None |
+| `02_crosswalk.py` | Validates PA's 67 counties across 9 rating areas, builds the JSON crosswalk atomically (temp-file + `rename`) | `data/public/pa_county_fips_crosswalk.json` |
+| `03_validate_csvs.py` | Strict schema gate on `data/approved_rates_2026.csv` (the old "existence-only fallback" bug is correctly removed) | Pass/fail |
+| `04_audit.py` | Core audit: case-insensitive county matching, rate sanitization, weighted aggregation, anomaly exports | `data/private/audit_anomalies_2026.csv`, `audit_aggregates_2026.csv` |
+| `05_ingest_carrier_extensions.py` | Carrier rate filings + county terminations, weighted by covered lives | 3 reports under `data/private/` |
+| `test_*_integration.py` | Temp-dir fixture tests that monkeypatch module path constants — well isolated | — |
+
+The good news: `04_audit.py` and `05_ingest_carrier_extensions.py` never call `sys.exit()` from library functions, which is exactly why your tests can import and drive them cleanly. The `raw_record` JSON round-trip in `test_audit_integration.py` is a nice touch many audits miss.
+
+## Problems with the script in `pasted-content-2026-09-06T13-40-47.txt`
+
+That snippet appears to come from a different conversation and describes a repo that doesn't match yours. Concretely:
+
+**1. Phantom files.** The `py_compile` step references `bootstrap/pa_crosswalk_data.py` and `scripts/validate_crosswalk.py`. Neither exists in what you've shown me — the crosswalk logic lives in `bootstrap/02_crosswalk.py`. With `set -euo pipefail`, this kills the script immediately.
+
+**2. Makefile targets don't exist here.** `make crosswalk-validate`, `make carrier-audit`, and `make full-audit` aren't defined by anything you've shared. If there's no `Makefile`, phase 1 dies at the first `make` call.
+
+**3. `04_audit.py` ignores the CLI path you pass it.** The snippet runs:
+
+```bash
+python3 bootstrap/04_audit.py data/fixtures/sample_approved_rates_2026.csv
+```
+
+But `04_audit.py`'s `main()` accepts **no arguments** — paths are module-level constants (`APPROVED_RATES_FILE = data/approved_rates_2026.csv`). Worse, the fixture CSV uses the *carrier* schema (`carrier_name, rating_areas, rate_change_percent, effective_date`), which fails `load_rates()`'s required-column check for `county, rate, age, plan_type` → `AuditSchemaError` → exit 1 → whole script aborts. The fixture contract would actually fit `05_ingest_carrier_extensions.py` far better (with slight renaming to `carrier_name, approved_rate_change, rating_area`).
+
+**4. Fixture directory mismatch.** `01_directories.py` creates `tests/fixtures/`, but the snippet writes to `data/fixtures/` — harmless, but inconsistent.
+
+Here's a corrected version aligned to the actual tree:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Phase 1: Syntax and data gates"
+python3 -m py_compile \
+  bootstrap/01_directories.py \
+  bootstrap/02_crosswalk.py \
+  bootstrap/03_validate_csvs.py \
+  bootstrap/04_audit.py \
+  bootstrap/05_ingest_carrier_extensions.py
+python3 -m json.tool <(true) >/dev/null 2>&1 || true
+
+python3 bootstrap/01_directories.py   # ensure skeleton exists
+python3 bootstrap/02_crosswalk.py     # regenerate crosswalk atomically
+
+pytest -q
+
+echo "Phase 2: Fixture generation (05-style schema)"
+mkdir -p data/fixtures
+cat > data/fixtures/sample_carrier_rates_2026.csv <<'CSVEOF'
+carrier_name,approved_rate_change,rating_area,covered_lives
+Highmark,10.0%,4,1000
+Geisinger,-2.5%,4,2000
+UPMC Health Plan,12.5%,1,1500
+CSVEOF
+
+# Phase 2 validation: drive the real ingestion function against a patched copy,
+# because 05's paths are module constants, not CLI args.
+python3 - <<'PYEOF'
+import csv, importlib.util, json, shutil, tempfile
+from pathlib import Path
+
+spec = importlib.util.spec_from_file_location("carrier_module", "bootstrap/05_ingest_carrier_extensions.py")
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+
+tmp = Path(tempfile.mkdtemp())
+(tmp / "private").mkdir()
+shutil.copy("data/public/pa_county_fips_crosswalk.json", tmp / "pa_county_fips_crosswalk.json")
+shutil.copy("data/fixtures/sample_carrier_rates_2026.csv", tmp / "carrier-rate-changes.csv")
+(tmp / "county-termination-rates.csv").write_text("county,termination_count\nAllegheny,10\nErie,5\n")
+
+mod.CROSSWALK_FILE = tmp / "pa_county_fips_crosswalk.json"
+mod.CARRIER_RATES_FILE = tmp / "carrier-rate-changes.csv"
+mod.COUNTY_TERMINATIONS_FILE = tmp / "county-termination-rates.csv"
+mod.CARRIER_ANOMALY_FILE = tmp / "private" / "anomalies.csv"
+mod.CARRIER_AGGREGATE_FILE = tmp / "private" / "carrier_agg.csv"
+mod.TERMINATION_AGGREGATE_FILE = tmp / "private" / "term_agg.csv"
+
+summary = mod.run_carrier_ingestion()
+assert summary["carrier_areas"] == 2, summary
+print(f"[OK] Fixture ingestion: {summary['carrier_areas']} carrier areas, "
+      f"{summary['anomalies_count']} anomalies")
+shutil.rmtree(tmp)
+PYEOF
+
+echo "Phase 3: Staging"
+git add data/fixtures/sample_carrier_rates_2026.csv tests/test_carrier_ingestion_integration.py
+git diff --cached --check && git diff --cached --stat
+
+echo "SUCCESS — commit with: git commit -m 'test: add sample carrier rate fixture'"
+```
+
+Key corrections: no `make` calls, compile against real filenames, and the fixture validation patches `05`'s module constants in a temp directory (mirroring your test suite's own pattern) instead of pretending the script takes a path argument.
+
+## Smaller observations worth noting
+
+On `00_run_all.sh`: the `run_and_validate()` guard is redundant-but-correct — with `set -euo pipefail`, `if python3 "$script"` suppresses errexit, so the explicit `[FAIL]/exit 1` branch is what actually handles failure. One fragility: scripts use **relative** paths (`Path("data")`), so they only work when the CWD is the project root. `00` handles this via `cd "$PROJECT_ROOT"`, but anyone invoking `bootstrap/04_audit.py` directly from another directory will hit `AuditSchemaError`. Consider anchoring paths to `Path(__file__).parent` or an env var.
+
+In `04_audit.py`, `validate_and_parse_rate` accepts embedded characters oddly — `"12-34"` becomes `-34` (negative → rejected, fine), but `"$..5"` → `..5` → `ValueError` → rejected, fine. It works, though `Decimal` parsing would be more defensible for currency than `float`. Your `test_carrier_ingestion` naming in the earlier snippet (`PaCrosswalkData`) suggests some modules were consolidated — the paths you pasted confirm the final layout.
+
+## A note on the two documents
+
+The **CVS financial summary** contains personal prescription history (medications, dates, spend for a named member). If this bundle gets committed anywhere near the repo — especially given your own `.gitignore` deliberately quarantines `data/private/` — keep it out; it has no relationship to the audit pipeline and shouldn't ride along in a fixture or commit.
+
+The **Pennsylvania status report** is a well-constructed document; notably, its "Methodological Rigor" section explicitly excludes unverifiable claims (the "33,000 Bronze downshift," fabricated expert quotes, unsourced ROI ratios), which is exactly the right discipline for policy work. It also aligns with your pipeline's purpose: the county termination data (Schuylkill at 24%) is precisely the kind of `county-termination-rates.csv` input `05_ingest_carrier_extensions.py` is built to ingest.
+
+Want me to turn any of this into concrete artifacts — e.g., a `Makefile` that actually defines `carrier-audit`/`full-audit`, a fixture-driven pytest file matching the real `05` schema, or a README documenting the bootstrap sequence?

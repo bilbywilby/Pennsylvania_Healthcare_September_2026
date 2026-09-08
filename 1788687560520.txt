@@ -1,0 +1,28 @@
+
+Fun prompt — here are ten wildcards, ordered from "strengthen the spine" to "genuinely omnipotent." Each builds on what's already in the tree, so none requires throwing away today's freeze.
+
+**1. Rating-area boundary collision detector.** Your crosswalk is schema-tolerant, but nothing verifies a *semantic* invariant: carriers whose filings claim disjoint FIPS sets. Add a `detect_footprint_overlaps()` that diffing all carriers' county lists against the real PID footprint table and emits a heat matrix of overlapping coverage per area. The Keystone collision was found by accident — make that class of error impossible to miss.
+
+**2. Covered-lives sanity forensics.** When the extract arrives, don't just weight by it — audit it. Validate monotonicity (statewide sum ≈ published enrollment), flag carriers whose covered lives imply impossible per-county densities, and cross-check against Highmark/UPMC's public market presence. A bogus weighting base silently corrupts every downstream number; this catches it at ingest.
+
+**3. Multi-year delta matrix.** Pull the 2025 filing table alongside 2026 and build `scripts/trend_reconciliation.py` producing carrier-level deltas, county-level swing maps, and a regression-testable baseline. The killer assertion: *"no county's weighted exposure swings > X pp year-over-year without a corresponding filing-fee event"* — an automated smell test for transcription errors.
+
+**4. Monte Carlo share uncertainty bands.** Placeholder shares are your biggest epistemic hole. Wrap `build_county_rate_matrix` in a sampler that draws market shares from Dirichlet priors seeded by your guesses and emits 5th/95th percentile county exposures. Output: not "Allegheny = 21.8%" but "Allegheny = 21.8% [95% CI: 18.4–26.1%]" — and tests pin the band width shrinks when real lives arrive.
+
+**5. Cross-grammar fixture harness.** Standardize a tiny DSL describing crosswalk shapes A/B/C, filings quirks (legacy aliases, missing serff_id, poisoned `verified`, collision rows), and spin N permutations deterministically. This grows your test suite combinatorially instead of hand-writing every quirk you've hit — including the placeholder-heredoc failure mode itself, now a fixture named `empty_shell_module`.
+
+**6. Statutory cap lint.** The separate claim-audit piece (SB 1071 coinsurance caps, preventive zero-cost-share, NSA disclosure rules) was real domain logic worth salvaging. Promote it to `scripts/statutory_checks.py` with a registry pattern, and have every audit rule carry a citation pointer so flag output is legally traceable. Then run it as a post-ingest hook in `00_run_all.sh`.
+
+**7. Rate-change volatility scoreboard.** Fold today's filed numbers (Ambetter +37.8% vs Geisinger +11.6%, Partners −10.12%) into a ranked, per-rating-area visualization with diverging bars. Cheap to implement (pure stdlib SVG already exists via `generate_figures.py`), high signal for spotting outliers worth manual PID verification first.
+
+**8. Fingerprint-based extract triage.** Before trusting a new drop of `carrier-rate-changes.csv`, hash it and diff against a stored manifest — SHA256 per file, column-order fingerprints, row counts, numeric ranges. Any deviation from the prior baseline logs a structural warning before the pipeline even parses. This is the checklist §1 automated.
+
+**9. Reproducibility capsule.** Tag the current state as `bootstrap-v1`, and add a `make capsule` that snapshots the exact contract (column set, SERFF regex, weighting rules) into a versioned schema file that loaders validate against at runtime. Future-you, or a collaborator in 2027, gets a hard error instead of silent drift when the contract moves.
+
+**10. Live PID scraper → arrival watch.** Invert your awaiting-data posture: `bootstrap/watch_pid.py` polls the PA PID table endpoint, detects newly-posted covered-lives extracts or SERFF amendments, and pre-populates `data/carrier-rate-changes.csv` with the quarantine-first convention. The repo stops waiting — it watches.
+
+---
+
+If you want a priority ranking rather than ambition ranking, I'd sequence 8 → 2 → 6 — they're all cheap, pure-stdlib, and directly strengthen the acceptance gate the PID extract will hit. 10 and 4 are the ones with genuine payoff multiplier but higher complexity, so save them for a second pass once `basis: covered_lives` fires.
+
+Want me to draft any of these as actual code — #8 and #2 would slot in naturally next to `load_filings_from_csv` and be testable with the same fixture discipline we've been running all day?
