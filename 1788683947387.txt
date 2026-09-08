@@ -1,0 +1,125 @@
+
+Good catch on the UPMC entities — and I owe you a correction of my own, because my last turn's "PID-corrected" chart asserted +8.22% as the individual-market figure with more confidence than the snippets justified. Let me verify your +24.78% claim against official sources before anything gets committed, since committing wrong rates would poison the same downstream numbers again:
+
+Verified — your correction stands, and I owe you a straight admission: **my previous turn's "correction" was wrong**. The witf report shows both figures, in different markets: individual-market UPMC Health Plan Inc. was approved at **24.8% (requested 16.3%)** — exactly your +24.78% — while the +8.22% I cited sits in the same article under the *small-group* list. I misattributed the section. Your +24.78%/+20.18% pair is the correct individual-market baseline, and my "PID-corrected ~15.06%" chart last turn was wrong and should not be referenced.
+
+```card-row
+[
+  { "type": "metric", "title": "UPMC HP Inc.", "value": "+24.78%", "delta": "Verified (requested 16.3%)", "direction": "up" },
+  { "type": "metric", "title": "UPMC Health Options", "value": "+20.18%", "delta": "Verified", "direction": "up" },
+  { "type": "metric", "title": "RA 4 exposure", "value": "~21–23%", "delta": "Double-digit upheld", "direction": "flat" },
+  { "type": "metric", "title": "Commit blockers", "value": "4", "delta": "See below", "direction": "down" }
+]
+```
+
+Before committing, though, four blockers in the proposed code — committing as-written would break the suite and the pipeline.
+
+**Blocker 1 — citation-marker garbage in the code.** Your filings list carries literal junk artifacts from whatever tool produced it: `# Statewide[span_15](start_span)[span_15](end_span)` etc. These are broken citation markers, not code. Strip every `span_*` remnant before commit — they'll rot greps and reviews forever otherwise.
+
+**Blocker 2 — duplicate SERFF ID on two different Keystone entities.** Both `Keystone Health Plan Central` and `Keystone Health Plan East` are assigned `INAC-134505843`. One SERFF ID can't belong to two issuers — per PID's filings page, `INAC-134505843` is Keystone **East** (and the dossier's old `KEYE-134505902` was actually QCC's ID, as we found). Central's true ID isn't in anything I've retrieved; mark it `"serff_id": None  # pending PID lookup` rather than guessing — your own `SERFF_REGEX` guard will then correctly force someone to fill it in.
+
+**Blocker 3 — the new orchestrator references five scripts that don't exist.** `scripts/01_validate_inputs.py`, `02_normalize_crosswalks.py`, `03_parse_rate_filings.py`, `04_build_baseline_metrics.py` aren't in the repo, and `data/carrier_rate_filings` / `bootstrap` aren't importable packages (`from bootstrap.crosswalk_lib import ...` fails without packaging work; `from data.carrier_rate_filings import ...` references a module that doesn't exist — the filings live in `scripts/schema_reconciliation.py`). Running your `00_run_all.sh` dies at step 01. Worse, it silently discards the *existing* working pipeline (`bootstrap/01–05`, the 31 passing tests). Corrected orchestrator:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> PA Health Insurance Audit Pipeline (2026)"
+declare -a SCRIPTS=(
+  "bootstrap/01_directories.py"
+  "bootstrap/02_crosswalk.py"
+  "bootstrap/03_validate_csvs.py"
+  "bootstrap/04_audit.py"
+  "bootstrap/05_ingest_carrier_extensions.py"
+)
+for i in "${!SCRIPTS[@]}"; do
+  printf '[Step %02d] %s\n' "$((i+1))" "${SCRIPTS[$i]}"
+  python3 "${SCRIPTS[$i]}"
+done
+
+echo "[Step 06] Writing county exposure outputs..."
+python3 scripts/06_write_county_exposure.py
+
+echo "[Tests] Running suite..."
+python3 -m pytest tests/ -q
+
+echo "==> Pipeline complete."
+```
+
+**Blocker 3 — the shared lib swallows bad rows.** Your `crosswalk_lib.normalize_crosswalk()` silently `continue`s on missing carrier/serff_id — violating the repo's own documented invariant (*"unknown records flagged, never silently kept"*), and it raises bare `ValueError` instead of the established `ReconciliationError`. Also it isn't a crosswalk normalizer at all — it validates carrier filings, while `schema_reconciliation.normalize_crosswalk` normalizes county crosswalks. Same name, two meanings, guaranteed confusion. Rename and harden:
+
+```python
+# bootstrap/crosswalk_lib.py
+import re
+from typing import Any, Dict, List
+
+SERFF_REGEX = re.compile(r"^[A-Z]{4}-\d{9}$")
+
+class FilingValidationError(Exception):
+    pass
+
+def normalize_carrier_filings(entries):
+    """Validate + dedupe carrier filings. Raises on missing/malformed fields — never drops silently."""
+    seen, out = set(), []
+    for item in entries:
+        carrier = str(item.get("carrier", "")).strip()
+        serff_id = str(item.get("serff_id", "")).strip()
+        if not carrier or not serff_id:
+            raise FilingValidationError(f"Missing carrier/serff_id in filing: {item!r}")
+        if not SERFF_REGEX.match(serff_id):
+            raise FilingValidationError(f"Malformed SERFF ID for '{carrier}': {serff_id}")
+        key = (carrier, serff_id)
+        if key not in seen:
+            seen.add(key)
+            out.append({
+                "carrier": carrier, "serff_id": serff_id,
+                "rate_change": float(item.get("rate_change", 0.0)),
+                "share": float(item.get("share", 0.0)),
+                "rating_areas": list(item.get("rating_areas", [])),
+            })
+    return out
+```
+
+**Blocker 4 — the test suite will fail on the UPMC attribution.** Your reconciled list drops Area 4 from UPMC Health Plan Inc. (`[1, 5]`), leaving `test_upmc_in_pittsburgh_metro` failing (it asserts UPMC HP in FIPS 42003) — the exact regression we added a guard for. Also note the label slip in your exposure blurb: Allegheny is Rating Area **4** in the validated crosswalk, not RA 1. Either restore Area 4 or change the test to accept either UPMC entity — pick deliberately and document which, because it's a data question, not a code question.
+
+## Real covered-lives extract: what we can and can't do
+
+I can't fabricate real enrollment data, and nothing in my search surfaced a public per-rating-area covered-lives file — PID publishes requested/approved percentages, while covered-lives detail lives inside the SERFF filings themselves. So the honest path is a loader that makes the swap automatic and *visible* when the real extract lands:
+
+```python
+# scripts/covered_lives.py
+import csv
+from pathlib import Path
+from typing import Dict, List
+
+CARRIER_RATES_CSV = Path(__file__).parent.parent / "data" / "carrier-rate-changes.csv"
+
+def derive_shares_from_covered_lives() -> Dict[str, Dict[int, float]]:
+    """Return {carrier: {rating_area: share}} derived from real covered_lives, or {} if absent."""
+    if not CARRIER_RATES_FILE.exists() if False else not CARRIER_RATES_FILE.exists():
+        return {}
+    agg: Dict[str, Dict[int, float]] = {}
+    with CARRIER_RATES_FILE.open(encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            try:
+                area, lives = int(row["rating_area"]), float(row["covered_lives"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            tot = agg.setdefault(row["carrier_name"], {})
+            tot[area] = tot.get(area, 0.0) + max(lives, 0.0)
+    return agg  # caller normalizes per county/area; empty dict → keep placeholders
+```
+
+Then in `build_county_rate_matrix()`, consult this before using hardcoded `share` values, and log loudly which basis was used. Once the real PID extract drops into `data/carrier-rate-changes.csv` (the format your `05_ingest` contract already defines), the placeholders vanish with zero code changes — and `test_weighted_engine_applies_shares` self-adjusts since it recomputes dynamically. Kill the stale `22.19`-style pins when you do.
+
+## Commit sequence
+
+```
+fix: verify UPMC individual-market rates at +24.78/+20.18 per PID final release
+feat: add bootstrap/crosswalk_lib.py with normalize_carrier_filings (raising, not silent)
+feat: add step 06 county exposure step; restore existing bootstrap orchestration
+feat: add covered-lives share loader with placeholder fallback and loud logging
+test: align UPMC attribution and exposure pins with PID-verified rates
+```
+
+After this lands, the remaining data debt is just two rows: Keystone Central's SERFF ID and confirmation of the UPMC/Keystone area footprints against the full PID decision tables. Want me to pull the full PID 2026 filings page to close those two out, or wire the covered-lives loader into `04_audit.py` next?

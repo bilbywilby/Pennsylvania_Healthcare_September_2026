@@ -1,0 +1,192 @@
+
+Good — this is exactly the artifact the covered-lives wiring needed, and the collision handling is smarter than my version: it only rejects a SERFF ID when reassigned to a *different* carrier, so grouped multi-area filings survive dedupe while genuine cross-carrier collisions (like the Keystone `INAC-134505843` problem) fail loud.
+
+The paste cuts off mid-function, so I'll finish `compute_rating_area_exposure` and wire it in — but first, four issues found tracing your code. Two are blocking.
+
+## Blocking issue 1: silent duplicate swallowing in `validate_filings`
+
+Your loop raises on a *cross-carrier* collision but silently absorbs an exact duplicate — same `serff_id` twice for the same carrier yields two entries, both appended:
+
+```python
+        if serff_id in seen_serff_ids and seen_serff_ids[serff_id] != carrier:
+            raise ...   # only fires when carriers differ
+        seen_serff_ids[serff_id] = carrier
+        ...
+        normalized.append(clean_item)   # duplicate (carrier, serff_id) still appended!
+```
+
+Per the README's own rule — anomalous records flagged, never silently kept — this should raise:
+
+```python
+        if serff_id in seen_serff_ids:
+            if seen_serff_ids[serff_id] != carrier:
+                raise FilingValidationError(
+                    f"SERFF ID collision: '{serff_id}' assigned to both "
+                    f"'{seen_serff_ids[serff_id]}' and '{carrier}'."
+                )
+            raise FilingValidationError(
+                f"Duplicate filing for ('{carrier}', '{serff_id}') at index {idx}."
+            )
+```
+
+(Alternatively allow exact duplicates and dedupe — but pick one behavior and pin it with a test; right now it's accidental.)
+
+## Blocking issue 2: the CSV loader silently swallows malformed rows
+
+`load_filings_from_csv` does `if not carrier or not serff_id: continue` — a row with a missing `carrier` field vanishes without a warning. Worse, malformed *numbers* crash with raw `ValueError` instead of a typed exception, contradicting your README's design ("missing columns raise typed exceptions... rather than exiting, so the modules are safe to import"). Route rows through the same discipline as `validate_filings`:
+
+```python
+        if not carrier or not serff_id:
+            raise FilingValidationError(
+                f"Row missing 'carrier'/'serff_id' in {csv_path.name}: {row!r}"
+            )
+        try:
+            rate_change = float(str(row.get("rate_change", "")).replace("%", "").replace(",", ""))
+            rating_area = int(float(row.get("rating_area", "")))
+            covered_lives = float(row.get("covered_lives", "0").replace(",", "") or 0.0)
+        except ValueError as exc:
+            raise FilingValidationError(f"Unparseable numeric in filings CSV row: {row!r}") from exc
+```
+
+## Bug 3: per-area `rate_change` gets overwritten
+
+When grouping, the last CSV row for a given `serff_id` wins for `rate_change` — but PID filings legitimately carry *per-area* rates (that's the whole point of a rating-area crosswalk). Keep it symmetric with `lives_by_area`:
+
+```python
+            filings_map[serff_id]["rate_by_area"][rating_area] = rate_change
+```
+
+…and store both accumulators in the initial dict, keeping scalar `rate_change` only as a convenience for the single-area case.
+
+## Issue 4: column contract mismatch vs README
+
+Your README's input contract for `data/carrier-rate-changes.csv` specifies `carrier_name, approved_rate_change, rating_area, covered_lives` — no `serff_id`, no `verified`, and different column spellings. Your loader expects `carrier` / `serff_id` / `rate_change`. Either the real extract breaks the loader or the loader silently skips every row (`continue` on missing serff_id). Decision needed before the extract lands: I'd extend the contract to add `serff_id` + `verified` as *optional* columns and key weighting on `carrier_name` when SERFF is absent, rather than silently skipping rows — a real PID extract will not ship a `verified` column.
+
+## Completed artifact: `compute_rating_area_exposure` + integration
+
+```python
+def compute_rating_area_exposure(
+    filings: List[Dict[str, Any]],
+) -> Dict[int, Dict[str, Any]]:
+    """
+    Weighted rate change per rating area using covered-lives weighting.
+    For area r, weights each filing's rate_change by that filing's covered_lives
+    in area r. Falls back to equal weighting with a warning when lives data is absent.
+    """
+    exposure: Dict[int, Dict[str, Any]] = {}
+
+    for area in range(1, 10):
+        covering = [f for f in filings if area in f.get("rating_areas", [])]
+
+        if not covering:
+            continue
+
+        lives_rows = [
+            (f["rate_change"], f["lives_by_area"][area])
+            for f in filings
+            if (lives := f.get("lives_by_area", {}).get(area, 0.0)) and lives > 0
+            for _ in [_]
+        ]
+        # simpler and correct:
+        rows = [(f["rate_change"], f.get("lives_by_area", {}).get(area, 0.0)) for f in covering]
+        total_lives = sum(lives for _, lives in rows)
+
+        if total_lives > 0:
+            weighted = sum(rate * lives for rate, lives in rows) / total_lives
+            basis = "covered_lives"
+        else:
+            logger.warning(
+                "Rating area %d has no covered-lives data; falling back to unweighted mean.", area
+            )
+            weighted = sum(rate for rate, _ in rows) / len(rows)
+            basis = "unweighted_fallback"
+        weighted = round(weighted, 2)
+        ...
+```
+
+Deleting my mid-stream draft noise before handing this over — final clean completion:
+
+```python
+def compute_rating_area_exposure(filings: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+    """Covered-lives weighted rate change per rating area; unweighted fallback + warning."""
+    exposure: Dict[int, Dict[str, Any]] = {}
+    for area in range(1, 10):
+        covering = [f for f in filings if area in f["rating_areas"]]
+        if not covering:
+            exposure[area] = {"weighted_rate_change": None, "basis": "no_active_carrier"}
+            continue
+        rows = [(f["rate_change"], f.get("lives_by_area", {}).get(area, 0.0)) for f in covering]
+        total_lives = sum(l for _, l in rows)
+        if total_lives > 0:
+            weighted = sum(r * l for r, l in rows) / total_lives
+            basis = "covered_lives"
+        else:
+            logger.warning("No covered-lives data for RA %d — falling back to unweighted mean.", area)
+            weighted = sum(r for r, _ in rows) / len(rows)
+            basis = "unweighted_fallback"
+        exposure[area] = {
+            "weighted_rate_change": round(weighted, 2),
+            "carrier_count": len(covering),
+            "total_covered_lives": int(total_lives),
+            "basis": basis,
+        }
+    return exposure
+```
+
+And to close the loop with the existing engine, `build_county_rate_matrix` should accept filings optionally instead of reading the global fixture:
+
+```python
+def build_county_rate_matrix(filings: Optional[List[Dict[str, Any]]] = None):
+    filings = validate_filings(filings or CARRIER_RATE_FILINGS)
+    # ... existing area->county binding unchanged, but weight by
+    # f["lives_by_area"] when present, else f["share"] with logger.warning
+```
+
+## Tests to add (`TestFilingLoader`)
+
+```python
+def test_cross_carrier_serff_collision_raises():
+    with pytest.raises(sr.FilingValidationError, match="collision"):
+        sr.validate_filings([
+            {"carrier": "Keystone Health Plan East", "serff_id": "INAC-134505843", "rating_areas": [8]},
+            {"carrier": "Keystone Health Plan Central", "serff_id": "INAC-134505843", "rating_areas": [6, 7, 9]},
+        ])
+
+def test_exact_duplicate_serff_id_raises(tmp_path):
+    with pytest.raises(sr.FilingValidationError, match="Duplicate"):
+        sr.validate_filings([
+            {"carrier": "A Corp", "serff_id": "ABCD-123456789", "rating_areas": [1]},
+            {"carrier": "A Corp", "serff_id": "ABCD-123456789", "rating_areas": [8]},
+        ])
+
+def test_csv_groups_by_serff_with_lives_by_area(tmp_path):
+    f = tmp_path / "filings.csv"
+    f.write_text(
+        "carrier,serff_id,rate_change,rating_area,covered_lives,verified\n"
+        "Highmark,HGHM-134504750,17.75,4,25000,true\n"
+        "Highmark,SE-123456789,17.75,1,8000,false\n"  # placeholder-avoid: use one valid row per test
+    )
+    filings = sr.load_filings_from_csv(f)
+    assert filings[0]["lives_by_area"][4] == 25000.0
+    assert filings[0]["verified"] is True
+
+def test_unparseable_rate_change_raises():
+    with pytest.raises(FilingValidationError):
+        # after adding parse guard for numeric cells
+        ...
+
+def test_grouping_by_carrier_not_serff_only():
+    # Two carriers cannot share an ID — asserted above; grouping by ID alone is safe
+    # because validate_filings has already failed on collisions before grouping.
+```
+
+## Commit sequence
+
+```
+feat: finish filing_loader — collision raise, numeric sanitizer, lives_by_area grouping
+feat: add per-(carrier, area) covered_lives weighting with unweighted fallback + warning
+refactor: build_county_rate_matrix accepts filings; single implementation in schema_reconciliation
+test: collision, duplicate-ID, per-area lives grouping, and basis-watermark tests
+```
+
+Last note on the stated goal: this still wires the *loader* — no real enrollment data has arrived yet, and I can't fabricate the extract. Once the actual PID covered-lives drop exists, `load_filings_from_csv(data/"carrier-rate-changes.csv")` slots straight into `build_county_rate_matrix` and the placeholder `share` scalars retire. Want the pytest block for `filing_loader` written out next, or the README pipeline-table update (documenting step 06 and the dual-consumer note) first?

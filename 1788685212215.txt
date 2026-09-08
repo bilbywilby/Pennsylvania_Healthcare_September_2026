@@ -1,0 +1,41 @@
+
+The checklist closes the loop, and the alias test completes the guarded-behavior set — the bootstrap freeze is now substantively ready. Tracing the checklist against the code surfaced two errors worth fixing before this becomes the frozen operating procedure, since the whole point of this document is to be trustworthy on the day you actually need it.
+
+## Fix 1: the acceptance criterion contradicts the repo's own key behavior
+
+Section 3 requires *"Non-null, positive float for all populated rating areas"* — but your README's Key behaviors explicitly documents that premium decreases are legitimate, and the frozen filings list contains Partners at −10.12%. A PID extract shipping a decrease could legitimately produce a negative *weighted* average for a dominated rating area (e.g., if Partners pulled enough covered lives in RA 3), and your own acceptance checklist would then flag healthy data as failing. Correct the target state:
+
+| Check Item | Target State |
+| :--- | :--- |
+| Weighted Rate Change | Non-null float for all populated rating areas; **sign preserved** (decreases legitimate — values remain in percentage points, never fractions) |
+
+## Fix 2: the rollback command doesn't do what section 4 claims
+
+`git checkout HEAD -- data/` only restores **tracked** files — and the entire point of this procedure is an *untracked* external drop at `data/carrier-rate-changes.csv` (your earlier `git status` showed exactly this pattern: data files untracked, `data/private/` gitignored). Running checkout will leave the corrupt extract sitting in place while looking like it did something. What section 4 actually needs is quarantine, not reversion:
+
+```bash
+# Quarantine the suspect drop (preserve for forensics, don't delete):
+mkdir -p data/private/quarantine
+mv data/carrier-rate-changes.csv data/private/carrier-rate-changes.quarantine.$(date +%Y%m%d_%H%M%S).csv
+python3 -m pytest tests/ -q
+```
+
+That honors your own pipeline philosophy — anomalous records quarantined, never silently destroyed — and the post-quarantine pytest confirms the tree returns to synthetic-fixture state.
+
+One minor consistency note: Section 4 references `COLUMN_ALIASES` in `scripts/filing_loader.py`, but your commit chain stages the aliasing in `scripts/schema_reconciliation.py` (where the tests import it). Whichever file holds the single implementation, the checklist should name that one — the checklist naming a module the repo doesn't have is the same class of drift as the `./00_run_all.sh` path error caught in the HANDOVER.
+
+## Then execute
+
+Your revised sequence is right. Run the suite first for the truthful count, then the chain with the fix-commit-first ordering from last round (the raise behavior must exist before the tests that pin it):
+
+```
+fix: raise on duplicate (carrier, serff_id) and malformed CSV numerics
+feat: per-(carrier, area) rate/lives accumulation with basis watermarking + verified propagation
+feat: legacy column aliasing in filings CSV loader
+test: filing_loader validation suite incl. legacy-column normalization
+docs: README step 06 + dual-consumer note, REAL_DATA_ARRIVAL_CHECKLIST, HANDOVER.json freeze
+```
+
+Apply the two checklist fixes above in the same `docs` commit so the freeze includes a corrected arrival procedure.
+
+With that: **bootstrap phase complete and genuinely frozen** — unified crosswalk normalization, adversarial filing validation, explicit weighting basis, guarded backward compatibility, an operational arrival checklist, and an authoritative handover whose every path points somewhere real. The repo's next state change is external: the PID extract, measured by `basis: covered_lives` in the step-06 logs, with quarantine as the failure path. Paste the terminal output after the commits and I'll verify the tree closes out the phase.
