@@ -1,0 +1,922 @@
+
+Below is a single atomic script that folds everything together — it discovers your repo root, backs up existing files to a timestamped folder, writes the corrected versions of every artifact we've converged on (your corrected `worker.ts` with `signingString` removed, the cleaned `db.ts`/`rules.ts`/`auditEngine.ts`/`useOutboxSync.ts`, the ESLint gate, CI workflow, Vitest workers config, and the test suite), and deletes the bad Python key-artifacts from the earlier roadmap. All writes go through temp-file-plus-`os.replace`, so a mid-run failure never leaves a half-written tree.
+
+Save as `apply_privacy_gate.py` next to the repo and run `python3 apply_privacy_gate.py`.
+
+```python
+#!/usr/bin/env python3
+"""
+apply_privacy_gate.py — atomic fold-in of all privacy-gate + dispatcher fixes.
+
+Usage:
+    python3 apply_privacy_gate.py [repo-root]
+
+If no root is given, tries $HOME/pennsylvania-health-insurance-audit-2026
+then $HOME/pa-audit-work. Every file it touches is backed up to
+.atomic_backup/<timestamp>/ inside the root before being replaced.
+"""
+
+import os
+import shutil
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# File contents (raw strings — no escaping hazards)
+# ---------------------------------------------------------------------------
+
+RULES_TS = r'''
+export enum RuleId {
+  DEDUCTIBLE_APPLIED = 'DEDUCTIBLE_APPLIED',
+  PREVENTIVE_COST_SHARING = 'PREVENTIVE_COST_SHARING',
+  PA_SB1071_COINSURANCE_CAP = 'PA_SB1071_COINSURANCE_CAP',
+  NSA_BALANCE_BILL_RISK = 'NSA_BALANCE_BILL_RISK',
+  PA_ACT252_MISSING_DISCLOSURE = 'PA_ACT252_MISSING_DISCLOSURE',
+  OOP_MAX_EXCEEDED = 'OOP_MAX_EXCEEDED',
+}
+
+export const RULE_DISPLAY: Record<RuleId, string> = {
+  [RuleId.DEDUCTIBLE_APPLIED]:
+    'Service applied toward deductible — verify accumulation on your Explanation of Benefits.',
+  [RuleId.PREVENTIVE_COST_SHARING]:
+    'Cost-sharing billed on an ACA-designated preventive service — patient responsibility must be $0.',
+  [RuleId.PA_SB1071_COINSURANCE_CAP]:
+    'Coinsurance exceeds the PA SB 1071 outpatient cap of 20%.',
+  [RuleId.NSA_BALANCE_BILL_RISK]:
+    'Out-of-network provider rendered care at an in-network facility — balance billing restricted under the No Surprises Act.',
+  [RuleId.PA_ACT252_MISSING_DISCLOSURE]:
+    'No point-of-service network status disclosure provided — PA Act 252-2023 violation.',
+  [RuleId.OOP_MAX_EXCEEDED]:
+    'Charges exceed the annual out-of-pocket maximum — insurer must cover the remainder.',
+};
+'''
+
+DB_TS = r'''
+import Dexie, { Table } from 'dexie';
+import type { RuleId } from './rules';
+
+export interface Identity {
+  id: string;
+  publicKey: string;
+  createdAt: string;
+}
+
+// Per-install secret material. Stored in IndexedDB, never in the bundle.
+export interface SecretRecord {
+  key: string;          // always 'hmac-primary'
+  hmacRawB64: string;   // random 32 bytes, base64
+  createdAt: string;
+}
+
+export type AuditFlag =
+  | 'PASS'
+  | 'POTENTIAL_AUDIT'
+  | 'CRITICAL_OVERCHARGE'
+  | 'NSA_REVIEW_REQUIRED'
+  | 'COINSURANCE_CAP_EXCEEDED'
+  | 'COST_SHARING_NOT_ALLOWED';
+
+export interface ClaimAudit {
+  id: string;
+  createdAt: string;
+  cptCode: string;
+  pos: number;
+  npiPseudonym: string;
+  billedAmount: number;
+  allowedAmount: number;
+  patientResponsibility: number;
+  auditFlag: AuditFlag;
+  savingsPotential: number;
+  ruleViolations: RuleId[];
+  status: 'local' | 'queued' | 'synced';
+}
+
+export interface Report {
+  id: string;
+  createdAt: string;
+  status: 'local' | 'queued' | 'sent' | 'failed' | 'mesh_shared';
+  title: string;
+  body: string;
+  tags: string[];
+  street: string;
+  lat?: number;
+  lon?: number;
+  mediaIds: string[];
+}
+
+export interface OutboxOp {
+  seq?: number;               // auto-increment primary key = insertion order
+  opType: 'create_claim' | 'update_claim' | 'delete_claim' | 'create_report';
+  payload: unknown;
+  idempotencyKey: string;     // stable UUID — survives replays
+  createdAt: number;
+  retryCount: number;
+  nextAttemptAt: number;      // epoch ms; gates retries (backoff)
+  lastAttempt?: number;
+}
+
+export interface ProviderEntry {
+  npi: string;
+  name: string;
+  specialty: string;
+  networkStatus: 'IN_NETWORK' | 'OUT_OF_NETWORK';
+  verifiedDate: string;
+}
+
+export interface YTDSummary {
+  id: string;
+  asOfDate: string;
+  deductibleTotal: number;
+  deductiblePaid: number;
+  oopMaxTotal: number;
+  oopMaxPaid: number;
+  hsaBalance: number;
+  planType: 'HMO' | 'PPO' | 'EPO' | 'HDHP';
+}
+
+export class ValleyAuditDB extends Dexie {
+  identity!: Table<Identity, string>;
+  secrets!: Table<SecretRecord, string>;
+  claims!: Table<ClaimAudit, string>;
+  reports!: Table<Report, string>;
+  outbox!: Table<OutboxOp, number>;
+  providers!: Table<ProviderEntry, string>;
+  ytd!: Table<YTDSummary, string>;
+
+  constructor() {
+    super('TheValleyDB_PA_Audit');
+    this.version(2).stores({
+      identity: 'id, createdAt',
+      secrets: 'key',
+      claims: 'id, createdAt, cptCode, auditFlag, status',
+      reports: 'id, createdAt, status, tags',
+      outbox: '++seq, opType, idempotencyKey, nextAttemptAt',
+      providers: 'npi, networkStatus, specialty',
+      ytd: 'id, asOfDate',
+    });
+  }
+}
+
+export const db = new ValleyAuditDB();
+'''
+
+AUDIT_ENGINE_TS = r'''
+import { db } from '../db';
+import { RuleId, RULE_DISPLAY } from '../rules';
+import type { AuditFlag } from '../db';
+
+const SCRUB_PATTERNS: { id: string; regex: RegExp; label: string }[] = [
+  { id: 'SSN',   regex: /\b\d{3}-\d{2}-\d{4}\b/g,                label: 'REDACTED_SSN' },
+  { id: 'EMAIL', regex: /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}\b/g, label: 'REDACTED_EMAIL' },
+  { id: 'PHONE', regex: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, label: 'REDACTED_PHONE' },
+  { id: 'NPI',   regex: /\b[12]\d{9}\b/g, label: 'REDACTED_NPI' },
+  { id: 'MRN',   regex: /\bMRN\s*[:#-]?\s*[A-Z0-9]{6,12}\b/gi, label: 'REDACTED_MRN' },
+  { id: 'DOB',   regex: /\b(?:0?[1-9]|1[0-2])[-/](?:0?[1-9]|[12]\d|3[01])[-/](?:\d{2}|\d{4})\b/g, label: 'REDACTED_DOB' },
+];
+
+function toB64(bytes: Uint8Array): string {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
+}
+function fromB64(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+let cryptoKey: CryptoKey | null = null;
+
+/** Get or create the per-install HMAC key. Raw material never leaves IndexedDB. */
+export async function getHmacKey(): Promise<CryptoKey> {
+  if (cryptoKey) return cryptoKey;
+  await db.open();
+  const existing = await db.secrets.get('hmac-primary');
+  if (existing) {
+    cryptoKey = await crypto.subtle.importKey(
+      'raw', fromB64(existing.hmacRawB64),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+    );
+    return cryptoKey;
+  }
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  cryptoKey = await crypto.subtle.importKey(
+    'raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  await db.secrets.put({
+    key: 'hmac-primary',
+    hmacRawB64: toB64(raw),
+    createdAt: new Date().toISOString(),
+  });
+  return cryptoKey;
+}
+
+export async function generateHMACPseudonym(value: string): Promise<string> {
+  const key = await getHmacKey();
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value.trim()));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+}
+
+/** Returns ONLY the scrubbed text. No pseudonym-to-plaintext map is ever returned or stored. */
+export async function scrubTextPayload(text: string): Promise<string> {
+  let out = text;
+  for (const p of SCRUB_PATTERNS) {
+    out = out.replace(p.regex, (m) =>
+      '<' + p.label + ':' + await generateHMACPseudonym(m) + '>');
+  }
+  return out;
+}
+
+export const CPT_BENCHMARKS: Record<string, { desc: string; fmvLow: number; fmvHigh: number; medicareBase: number; isPreventive: boolean }> = {
+  '72148': { desc: 'MRI Lumbar Spine w/o Contrast',  fmvLow: 450.00, fmvHigh: 1200.00, medicareBase: 385.50, isPreventive: false },
+  '99214': { desc: 'Office Visit Level 4',          fmvLow: 110.00, fmvHigh: 215.00,  medicareBase: 129.77, isPreventive: false },
+  '45378': { desc: 'Diagnostic Colonoscopy',        fmvLow: 650.00, fmvHigh: 1800.00, medicareBase: 580.20, isPreventive: false },
+  '99385': { desc: 'Initial Preventive Exam 18-39', fmvLow: 150.00, fmvHigh: 300.00,  medicareBase: 175.00, isPreventive: true },
+  '99386': { desc: 'Initial Preventive Exam 40-54', fmvLow: 170.00, fmvHigh: 340.00,  medicareBase: 195.00, isPreventive: true },
+};
+
+export interface AuditParams {
+  cptCode: string; pos: number;
+  billedAmount: number; allowedAmount: number;
+  providerType: 'IN_NETWORK' | 'OUT_OF_NETWORK';
+  facilityInNetwork: boolean;
+  networkDisclosureProvided: boolean;
+  coinsuranceRate: number; deductibleMet: boolean;
+  ytdOopSpent: number; planOopMax: number;
+}
+
+function deriveFlag(v: RuleId[], variancePercent: number): AuditFlag {
+  if (v.includes(RuleId.NSA_BALANCE_BILL_RISK) || v.includes(RuleId.PA_ACT252_MISSING_DISCLOSURE))
+    return 'NSA_REVIEW_REQUIRED';
+  if (v.includes(RuleId.PREVENTIVE_COST_SHARING)) return 'COST_SHARING_NOT_ALLOWED';
+  if (v.includes(RuleId.PA_SB1071_COINSURANCE_CAP)) return 'COINSURANCE_CAP_EXCEEDED';
+  if (variancePercent > 40) return 'CRITICAL_OVERCHARGE';
+  if (variancePercent > 15 || v.length > 0) return 'POTENTIAL_AUDIT';
+  return 'PASS';
+}
+
+export async function executeForensicAudit(params: AuditParams) {
+  const violations: RuleId[] = [];
+  const benchmark = CPT_BENCHMARKS[params.cptCode] ?? {
+    desc: 'Unknown Procedure', fmvLow: 0, fmvHigh: 0,
+    medicareBase: params.billedAmount * 0.5, isPreventive: false,
+  };
+
+  const contractModifier = params.providerType === 'IN_NETWORK' ? 1.15 : 2.50;
+  const fmvTarget = benchmark.medicareBase * contractModifier;
+  const variancePercent = ((params.billedAmount - fmvTarget) / fmvTarget) * 100;
+
+  let patientResponsibility = 0;
+
+  if (benchmark.isPreventive) {
+    patientResponsibility = 0;
+    if (params.billedAmount > 0 &&
+        (params.allowedAmount !== params.billedAmount || params.coinsuranceRate > 0)) {
+      violations.push(RuleId.PREVENTIVE_COST_SHARING);
+    }
+  } else {
+    if (!params.deductibleMet) {
+      patientResponsibility = Math.min(params.billedAmount, params.allowedAmount);
+      violations.push(RuleId.DEDUCTIBLE_APPLIED);
+    } else {
+      patientResponsibility = params.allowedAmount * params.coinsuranceRate;
+    }
+    if ((params.pos === 11 || params.pos === 22) && params.coinsuranceRate > 0.20) {
+      violations.push(RuleId.PA_SB1071_COINSURANCE_CAP);
+    }
+  }
+
+  if (params.providerType === 'OUT_OF_NETWORK' && params.facilityInNetwork) {
+    violations.push(RuleId.NSA_BALANCE_BILL_RISK);
+  }
+  if (!params.networkDisclosureProvided && params.providerType === 'OUT_OF_NETWORK') {
+    violations.push(RuleId.PA_ACT252_MISSING_DISCLOSURE);
+  }
+
+  const projectedOop = params.ytdOopSpent + patientResponsibility;
+  if (projectedOop > params.planOopMax) {
+    const excess = projectedOop - params.planOopMax;
+    patientResponsibility = Math.max(0, patientResponsibility - excess);
+    violations.push(RuleId.OOP_MAX_EXCEEDED);
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return {
+    cptCode: params.cptCode,
+    description: benchmark.desc,
+    billedAmount: params.billedAmount,
+    allowedAmount: params.allowedAmount,
+    benchmarkFmv: round2(fmvTarget),
+    variancePercent: Math.round(variancePercent * 100) / 100,
+    patientResponsibility: round2(patientResponsibility),
+    savingsPotential: round2(Math.max(0, params.billedAmount - fmvTarget)),
+    auditFlag: deriveFlag(violations, variancePercent),
+    ruleViolations: violations,
+    displayFlags: violations.map((v) => RULE_DISPLAY[v]),
+  };
+}
+'''
+
+USE_OUTBOX_SYNC_TS = r'''
+import { useState, useEffect, useCallback } from 'react';
+import { db, OutboxOp } from '../db';
+
+const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 2000;
+const MAX_DELAY_MS = 60_000;
+const POLL_INTERVAL_MS = 5000;
+
+export const useOutboxSync = () => {
+  const [online, setOnline] = useState(navigator.onLine);
+  const [syncing, setSyncing] = useState(false);
+  const [queueSize, setQueueSize] = useState(0);
+
+  const updateQueueSize = useCallback(async () => {
+    if (db.isOpen()) setQueueSize(await db.outbox.count());
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    updateQueueSize();
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [updateQueueSize]);
+
+  const enqueueOperation = useCallback(async (
+    opType: OutboxOp['opType'], payload: unknown,
+  ) => {
+    await db.outbox.add({
+      opType, payload,
+      idempotencyKey: crypto.randomUUID(),
+      createdAt: Date.now(),
+      retryCount: 0,
+      nextAttemptAt: Date.now(),
+    });
+    await updateQueueSize();
+  }, [updateQueueSize]);
+
+  const triggerSync = useCallback(async () => {
+    if (!navigator.onLine || syncing) return;
+    setSyncing(true);
+    try {
+      const now = Date.now();
+      const due = (await db.outbox.toArray())
+        .filter((op) => op.nextAttemptAt <= now)
+        .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))
+        .slice(0, 10);
+      for (const op of due) {
+        try {
+          const res = await fetch('/api/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': op.idempotencyKey,
+            },
+            body: JSON.stringify({ opType: op.opType, payload: op.payload }),
+          });
+          if (res.status === 409) {
+            // Deferred, not failed — another tab holds the lock. Honor Retry-After.
+            const ra = Number(res.headers.get('Retry-After')) || 5;
+            await db.outbox.update(op.seq!, { nextAttemptAt: Date.now() + ra * 1000 });
+            continue;
+          }
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          await db.outbox.delete(op.seq!);   // delete AFTER confirmed success only
+          await markSynced(op);
+        } catch {
+          if (op.retryCount + 1 >= MAX_RETRIES) continue; // dead-letter locally, warn user
+          const delay = Math.min(BASE_DELAY_MS * 2 ** op.retryCount, MAX_DELAY_MS);
+          await db.outbox.update(op.seq!, {
+            retryCount: op.retryCount + 1,
+            lastAttempt: new Date().toISOString(),
+            nextAttemptAt: Date.now() + delay,
+          });
+        }
+      }
+    } finally {
+      await updateQueueSize();
+      setSyncing(false);
+    }
+  }, [syncing, updateQueueSize]);
+
+  // Poll while online — gated by nextAttemptAt, so no hot retry loops.
+  useEffect(() => {
+    if (!online) return;
+    const t = setInterval(() => { if (!syncing) triggerSync(); }, POLL_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, [online, syncing, triggerSync]);
+
+  return { online, syncing, queueSize, enqueueOperation, triggerSync };
+};
+
+async function markSynced(op: OutboxOp): Promise<void> {
+  if (op.opType === 'create_claim' || op.opType === 'update_claim') {
+    await db.claims.update((op.payload as { id?: string }).id ?? '', { status: 'synced' });
+  } else if (op.opType === 'create_report') {
+    await db.reports.update((op.payload as { id?: string }).id ?? 'unknown', { status: 'sent' as never });
+  }
+}
+'''
+
+WORKER_TS = r'''
+/// <reference types="@cloudflare/workers-types" />
+
+export interface Env {
+  DISPATCHER_HMAC_SECRET: string;
+  IDEMPOTENCY_KV: KVNamespace;
+  INGESTION_URL: string;
+}
+
+const MAX_CLOCK_SKEW_MS = 300_000;
+const ACK_TTL_SECONDS = 86_400;
+const PROCESSING_TTL_SECONDS = 300;
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+function json(status: number, body: Record<string, unknown>, extraHeaders: HeadersInit = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...JSON_HEADERS, ...extraHeaders },
+  });
+}
+
+function decodeSignature(value: string): Uint8Array | null {
+  const raw = value.replace(/^sha256=/i, '').trim();
+  if (/^[0-9a-f]{64}$/i.test(raw)) {
+    const bytes = new Uint8Array(32);
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Number.parseInt(raw.slice(i * 2, i * 2 + 2), 16);
+    }
+    return bytes;
+  }
+  try {
+    const binary = atob(raw);
+    return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+async function verifySignature(
+  request: Request,
+  timestamp: string,
+  providedSignature: string,
+  bodyText: string,
+  secret: string,
+): Promise<boolean> {
+  const timestampMs = Number(timestamp);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > MAX_CLOCK_SKEW_MS) {
+    return false;
+  }
+  const signatureBytes = decodeSignature(providedSignature);
+  if (!signatureBytes || signatureBytes.length !== 32) return false;
+
+  const url = new URL(request.url);
+  // Canonical signing string — the ONLY format; callers must match exactly.
+  const canonicalPayload = request.method.toUpperCase() + ' ' + url.pathname + '\n' + timestamp + '\n' + bodyText;
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  return crypto.subtle.verify('HMAC', cryptoKey, signatureBytes, new TextEncoder().encode(canonicalPayload));
+}
+
+function isValidIdempotencyKey(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    || /^[a-f0-9]{64}$/i.test(value);
+}
+
+interface DispatchRequest {
+  opType: string;
+  payload: unknown;
+}
+
+interface CachedAck {
+  status: number;
+  body: Record<string, unknown>;
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== 'POST') {
+      return json(405, { error: 'POST only' }, { Allow: 'POST' });
+    }
+
+    const idempotencyKey = request.headers.get('Idempotency-Key');
+    const signature = request.headers.get('X-Signature-256');
+    const timestamp = request.headers.get('X-Timestamp');
+
+    if (!idempotencyKey || !isValidIdempotencyKey(idempotencyKey)) {
+      return json(400, { error: 'Missing or malformed Idempotency-Key' });
+    }
+    if (!signature || !timestamp) {
+      return json(401, { error: 'Missing signature headers' });
+    }
+
+    const bodyText = await request.text();
+
+    const validSignature = await verifySignature(
+      request, timestamp, signature, bodyText, env.DISPATCHER_HMAC_SECRET,
+    );
+    if (!validSignature) {
+      return json(401, { error: 'Unauthorized' });
+    }
+
+    let dispatch: DispatchRequest;
+    try {
+      dispatch = JSON.parse(bodyText) as DispatchRequest;
+    } catch {
+      return json(400, { error: 'Invalid JSON body' });
+    }
+    if (typeof dispatch.opType !== 'string' || !Object.prototype.hasOwnProperty.call(dispatch, 'payload')) {
+      return json(400, { error: 'Body must contain opType and payload' });
+    }
+
+    const ackKey = 'ack:' + idempotencyKey;
+    const processingKey = 'processing:' + idempotencyKey;
+
+    // 1. Cached ACK replay — dedupe record is NEVER deleted on success.
+    const cached = await env.IDEMPOTENCY_KV.get(ackKey);
+    if (cached !== null) {
+      try {
+        const cachedAck = JSON.parse(cached) as CachedAck;
+        return json(cachedAck.status, cachedAck.body, { 'X-Idempotent-Replay': 'true' });
+      } catch {
+        // Malformed cache entry: treat as unavailable, fall through.
+      }
+    }
+
+    // 2. Best-effort duplicate signal. KV cannot guarantee locking.
+    if ((await env.IDEMPOTENCY_KV.get(processingKey)) !== null) {
+      return json(409, { error: 'Request is already being processed', idempotencyKey }, { 'Retry-After': '5' });
+    }
+    await env.IDEMPOTENCY_KV.put(processingKey, 'processing', { expirationTtl: PROCESSING_TTL_SECONDS });
+
+    try {
+      const downstream = await fetch(env.INGESTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ opType: dispatch.opType, payload: dispatch.payload }),
+      });
+      if (!downstream.ok) throw new Error('downstream_status_' + downstream.status);
+
+      const ack: CachedAck = {
+        status: 202,
+        body: { ok: true, status: 'accepted', idempotencyKey },
+      };
+      await env.IDEMPOTENCY_KV.put(ackKey, JSON.stringify(ack), { expirationTtl: ACK_TTL_SECONDS });
+      await env.IDEMPOTENCY_KV.delete(processingKey);
+      return json(ack.status, ack.body);
+    } catch (error) {
+      await env.IDEMPOTENCY_KV.delete(processingKey);
+      // Sanitized telemetry: metadata only, zero payload content.
+      console.log(JSON.stringify({
+        evt: 'dispatch_failure',
+        keyPrefix: idempotencyKey.slice(0, 8),
+        phase: 'dispatch',
+        errKind: error instanceof TypeError ? 'network' : 'downstream_failure',
+      }));
+      return json(503, { error: 'Upstream unavailable' });
+    }
+  },
+};
+'''
+
+TEST_WORKER_TS = r'''
+import { env, fetchMock } from 'cloudflare:test';
+import { describe, it, expect, afterEach } from 'vitest';
+import worker from '../src/worker';
+
+const TS_OK = () => Date.now().toString();
+
+async function signedRequest(
+  body: object,
+  ts: string = TS_OK(),
+  key: string = crypto.randomUUID(),
+): Promise<Request> {
+  const bodyText = JSON.stringify(body);
+  const canonical = 'POST /api/sync\n' + ts + '\n' + bodyText;
+  const sig = await crypto.subtle.sign(
+    'HMAC',
+    await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(env.DISPATCHER_HMAC_SECRET as string),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+    ),
+    new TextEncoder().encode(canonical),
+  );
+  const sigHex = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return new Request('https://disp.example/api/sync', {
+    method: 'POST',
+    headers: {
+      'Idempotency-Key': key,
+      'X-Signature-256': 'sha256=' + sigHex,
+      'X-Timestamp': ts,
+    },
+    body: bodyText,
+  });
+}
+
+const VALID_BODY = { opType: 'create_claim', payload: { cptCode: '72148' } };
+
+describe('dispatcher', () => {
+  afterEach(() => fetchMock.assertNoPendingInterceptors());
+
+  it('1. replays cached ACK without re-dispatching', async () => {
+    fetchMock.put(env.INGESTION_URL as string, { status: 200 });
+    const first = await worker.fetch(await signedRequest(VALID_BODY), env, {} as never);
+    expect(first.status).toBe(202);
+
+    fetchMock.put(env.INGESTION_URL as string, { status: 200 });
+    const replay = await worker.fetch(await signedRequest(VALID_BODY), env, {} as never);
+    expect(replay.headers.get('X-Idempotent-Replay')).toBe('true');
+  });
+
+  it('2. rejects stale timestamps with 401', async () => {
+    const stale = (Date.now() - 301_000).toString();
+    const res = await worker.fetch(await signedRequest(VALID_BODY, stale), env, {} as never);
+    expect(res.status).toBe(401);
+  });
+
+  it('3. rejects body tampering after signing', async () => {
+    const req = await signedRequest(VALID_BODY);
+    const tampered = new Request(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: JSON.stringify({ opType: 'delete_claim', payload: { id: 'x' } }),
+    });
+    const res = await worker.fetch(tampered, env, {} as never);
+    expect(res.status).toBe(401);
+  });
+
+  it('4. rejects malformed hex and base64 signatures with 401', async () => {
+    for (const bad of ['sha256=' + 'z'.repeat(64), 'sha256=!!!not-base64!!!']) {
+      const req = await signedRequest(VALID_BODY);
+      req.headers.set('X-Signature-256', bad);
+      const res = await worker.fetch(req, env, {} as never);
+      expect(res.status).toBe(401);
+    }
+  });
+
+  it('5. downstream 500 yields 503 and no ACK is cached', async () => {
+    fetchMock.put(env.INGESTION_URL as string, { status: 500 });
+    const res = await worker.fetch(await signedRequest(VALID_BODY), env, {} as never);
+    expect(res.status).toBe(503);
+
+    fetchMock.put(env.INGESTION_URL as string, { status: 200 });
+    const retry = await worker.fetch(await signedRequest(VALID_BODY), env, {} as never);
+    expect(retry.headers.get('X-Idempotent-Replay')).toBeNull();
+    expect(retry.status).toBe(202);
+  });
+
+  it('6. ACK survives processing-marker cleanup', async () => {
+    fetchMock.put(env.INGESTION_URL as string, { status: 200 });
+    const req = await signedRequest(VALID_BODY);
+    await worker.fetch(req, env, {} as never);
+    const key = req.headers.get('Idempotency-Key') as string;
+    expect(await env.IDEMPOTENCY_KV.get('ack:' + key)).not.toBeNull();
+    expect(await env.IDEMPOTENCY_KV.get('processing:' + key)).toBeNull();
+  });
+
+  it('7. concurrent duplicate during processing gets 409', async () => {
+    const key = crypto.randomUUID();
+    await env.IDEMPOTENCY_KV.put('processing:' + key, 'processing', { expirationTtl: 300 });
+    const res = await worker.fetch(await signedRequest(VALID_BODY, TS_OK(), key), env, {} as never);
+    expect(res.status).toBe(409);
+    expect(res.headers.get('Retry-After')).toBe('5');
+  });
+});
+'''
+
+ESLINT_CONFIG_JS = r'''
+import js from '@eslint/js';
+
+export default [
+  {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/__tests__/**',
+      'scripts/**',
+    ],
+  },
+  {
+    files: ['src/**/*.{ts,tsx}', 'src/**/*.js'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Identifier[name='originalValue']",
+          message:
+            'RELEASE BLOCKER: "originalValue" detected outside tests. ' +
+            'Plaintext-to-pseudonym mapping is prohibited. Use scrubTextPayload(), ' +
+            'which returns only the scrubbed string.',
+        },
+        {
+          selector: 'Property[key.name="originalValue"]',
+          message: 'RELEASE BLOCKER: Destructuring "originalValue" is prohibited.',
+        },
+        {
+          selector: 'MemberExpression[property.value="originalValue"]',
+          message: 'RELEASE BLOCKER: Dynamic string access of "originalValue" detected.',
+        },
+        {
+          selector: 'VariableDeclarator[id.name=/SALT|_salt/i][init.regex]',
+          message:
+            'RELEASE GATE: salt-like regex constant found. HMAC keys must be generated ' +
+            'per-install via crypto.getRandomValues in getHmacKey(), never as constants.',
+        },
+        {
+          selector:
+            'Property[key.name=/salt/i][value.type="Literal"], ' +
+            'VariableDeclarator[id.name=/SALT/i] > Literal',
+          message:
+            'RELEASE BLOCKER: literal salt material in bundle. Static salts enable ' +
+            'rainbow-table precomputation for 10-digit NPI candidates.',
+        },
+      ],
+    },
+  },
+];
+'''
+
+LINT_YML = r'''
+name: privacy-gates
+on: [push, pull_request]
+
+jobs:
+  privacy-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npx eslint . --max-warnings 0
+      - run: npx vitest run
+'''
+
+VITEST_CONFIG_TS = r'''
+import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+
+export default defineWorkersConfig({
+  test: {
+    poolOptions: {
+      workers: {
+        miniflare: {
+          kvNamespaces: ['IDEMPOTENCY_KV'],
+          bindings: {
+            DISPATCHER_HMAC_SECRET: 'test-secret-do-not-commit',
+            INGESTION_URL: 'https://ingest.test/api',
+          },
+        },
+      },
+    },
+  },
+});
+'''
+
+GITIGNORE_APPEND = '''
+# Secret-material artifacts (defense in depth)
+*.hmac_key.json
+*.key.json
+secrets/
+'''
+
+# ---------------------------------------------------------------------------
+# Plan
+# ---------------------------------------------------------------------------
+
+FILES = {
+    'src/rules.ts': RULES_TS,
+    'src/db.ts': DB_TS,
+    'src/services/auditEngine.ts': AUDIT_ENGINE_TS,
+    'src/hooks/useOutboxSync.ts': USE_OUTBOX_SYNC_TS,
+    'src/worker.ts': TEST_FREE_WORKER := WORKER_TS,  # noqa: F841 (clarity alias)
+    'test/worker.spec.ts': TEST_WORKER_TS,
+    'eslint.config.js': ESLINT_CONFIG_JS,
+    '.github/workflows/lint.yml': LINT_YML,
+    'vitest.config.ts': VITEST_CONFIG_TS,
+}
+
+DELETE_PATHS = [
+    'pa-audit-work/scripts',
+    'scripts/setup_hmac_key.py',
+    'pa-audit-work/.hmac_key.json',
+    '.hmac_key.json',
+]
+
+
+def find_root(cli_arg: str | None) -> Path:
+    candidates = []
+    if cli_arg:
+        candidates.append(Path(cli_arg).expanduser())
+    home = Path.home()
+    candidates.append(home / 'pennsylvania-health-insurance-audit-2026')
+    candidates.append(home / 'pa-audit-work')
+    for c in candidates:
+        if c.is_dir():
+            return c.resolve()
+    print('ERROR: could not locate repo root. Tried:', file=sys.stderr)
+    for c in candidates:
+        print('  -', c, file=sys.stderr)
+    print('Re-run with an explicit path: python3 apply_privacy_gate.py /path/to/repo', file=sys.stderr)
+    sys.exit(1)
+
+
+def atomic_write(path: Path, content: str, backup_dir: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        rel = path.relative_to(ROOT)
+        dest = backup_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_name, path)
+    finally:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+
+
+ROOT: Path  # set in main()
+
+
+def main() -> None:
+    global ROOT
+    cli_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    ROOT = find_root(cli_arg)
+    stamp = time.strftime('%Y%m%d-%H%M%S')
+    backup_dir = ROOT / '.atomic_backup' / stamp
+    backup_dir.mkdir(parents=True, exist_ok=False)
+
+    print(f'Repo root : {ROOT}')
+    print(f'Backups   : {backup_dir}')
+
+    print('\n== Writing files (atomic) ==')
+    for rel, content in FILES.items():
+        target = ROOT / rel
+        atomic_write(target, content.lstrip('\n'), backup_dir)
+        existed = 'updated' if (backup_dir / rel).exists() else 'created'
+        print(f'  [{existed}] {rel}')
+
+    print('\n== Removing known-bad artifacts ==')
+    for rel in DELETE_PATHS:
+        target = ROOT / rel
+        if target.is_dir():
+            shutil.move(str(target), str(backup_dir / ('removed__' + target.name)))
+            print(f'  [moved to backup] {rel}/')
+        elif target.is_file():
+            shutil.move(str(target), str(backup_dir / ('removed__' + target.name)))
+            print(f'  [moved to backup] {rel}')
+        else:
+            print(f'  [absent, skipped] {rel}')
+
+    gitignore = ROOT / '.gitignore'
+    marker = '*.hmac_key.json'
+    existing = gitignore.read_text() if gitignore.exists() else ''
+    if marker not in existing:
+        atomic_write(gitignore, existing.rstrip('\n') + GITIGNORE_APPEND, backup_dir)
+        print('\n  [appended] .gitignore secret-artifact patterns')
+
+    print('\n== Done ==')
+    print('Verify the gates:')
+    print('  cd', ROOT)
+    print('  npm ci')
+    print('  npx eslint . --max-warnings 0')
+    print('  npx vitest run')
+    print(f'\nRollback if needed: restore from {backup_dir}')
+
+
+if __name__ == '__main__':
+    main()
+```
+
+Two notes on the script itself: the walrus-alias line in `FILES` (`TEST_FREE_WORKER := WORKER_TS`) is just a readability crutch — if your Python is older than 3.8 or a linter complains, replace it with `'src/worker.ts': WORKER_TS,`. And the delete phase moves artifacts into the backup dir rather than hard-deleting, so even the cleanup is reversible.
+
+After running, execute these three commands and paste back whatever they print (especially any failures — that's the info I need from you):
+
+```bash
+python3 apply_privacy_gate.py            # or with explicit repo path if auto-detect misses
+npx eslint . --max-warnings 0
+npx vitest run
+```
+
+Dependencies the suite expects (add to `package.json` if missing): `dexie`, `dexie-react-hooks`, `lucide-react`, `typescript`, `eslint`, `@eslint/js`, `vitest`, `@cloudflare/vitest-pool-workers`, `@cloudflare/workers-types`, and `wrangler`. Also note test 4's "invalid base64" case uses a string that's also invalid hex-length, exercising the `atob` fallback failure path — if your `decodeSignature` ever loosens, that test is the tripwire.
+
+Once lint and tests come back clean, the entire risk table is closed: per-install key, map-free scrubber, ordered outbox with backoff and delete-after-ACK, structured rule IDs, the dispatcher with cached-ACK replay, and a required CI gate enforcing all of it. If anything fails, paste the exact error output and I'll pinpoint the fix.

@@ -1,0 +1,16 @@
+
+I need to flag a session mix-up before anything else, because acting on this would mean role-playing context I don't actually have.
+
+This message reads like a reply to an "8-step plan" — referencing a `<userPreferences>` block, an RTK mailing, `fix_provenance_digest.sh` output, a provenance/`digest` test failure, SB 1071/Act 252 statute verification, and pending file uploads (Insurance Advocacy Templates, Clinical Appeal Letter, Legacy Navigator, etc.). None of that exists in *this* conversation. What we've actually built here is the PA audit PWA stack: the per-install HMAC scrubber, Dexie schema v2, the outbox hook with delete-after-ACK and 409 handling, the Cloudflare dispatcher, the ESLint privacy gate, the worker test suite, and the `apply_privacy_gate.py` fold-in script. The only file pasted with this message is a generic Mermaid CI/CD diagram reference — nothing about provenance digests, RTK letters, or PA statutes.
+
+So I can't evaluate your eight critiques against the plan they're critiquing — I never produced that plan, and I have no verified knowledge of SB 1071's actual subject matter, Act 252-2023's existence, or the digest test failures. Your statutory corrections may well be right, but I have no basis here to confirm or contradict them, and I won't co-sign claims about statutes or bill numbers I can't verify. If those matter (and for citations in a white paper they clearly do), the right move is a web search to confirm each one independently — happy to do that.
+
+Where this leaves us — pick a lane:
+
+1. **Continue this session's actual work.** Open threads here: running `apply_privacy_gate.py` and pasting back the `npx eslint` / `npx vitest` output; the client-side `409`/`Retry-After` handling (which, notably, your pasted `Outbox Sync Hook.ts` already implements correctly — the `parseRetryAfterHeader` and no-increment-on-409 logic are right); or wiring the Mermaid reference doc you just uploaded into the audit repo's `docs/` as architecture documentation.
+
+2. **Hand me the other thread's artifacts.** If the 8-step plan and the statute verification work belong in *this* project, paste the actual plan text and the terminal output from the digest failure as ordinary messages, and I'll work them properly — including searching for the real status of HB 2562/2563/2564 and Act 54 of 2024 before anything gets cited.
+
+3. **Merge the threads.** If the RTK/whysoquit work and the audit PWA are converging into one project, say so, and the first artifact I'd build is a single HANDOVER that separates *verified facts* (with sources) from *assumed facts* (currently just assertable strings) — because right now the biggest risk across both threads isn't code, it's plausible-looking citations.
+
+Which lane — and if it's 2 or 3, paste the plan and the digest test output.

@@ -1,0 +1,32 @@
+
+This whole message — the "document 5" review *and* the "here's the full revised script" that follows it — is pasted content, not something I wrote or reviewed. I didn't say "yes, ship it," and I haven't run a single line of that code. I'm not going to treat a confession like *"I couldn't execute it here, expect at least one syntax nit"* as good enough to hand you a release-blocking gate script. Let me actually run it.
+
+That "syntax check" the pasted text recommended (`ast.parse`) is exactly the wrong test — it passed, and the script is still completely broken. Real result:
+
+```
+SyntaxError: name 'ROOT' is used prior to global declaration
+```
+
+`selftest()` reads `ROOT` on its first line, then declares `global ROOT` several lines later — Python requires the `global` statement before any use of the name in that scope. This isn't a "nit," it's a fatal error. The script cannot run at all — not with `--selftest`, not with `--json`, not with no args. I also found the second bug I suspected from just reading it: `SKIP_DIRS` includes `"tests"`, but the selftest fixtures are required to live under `tests/fixtures/contaminated/` — so even once the syntax is fixed, self-test would skip every fixture file and report false failures. Let me fix both and actually prove it works this time, with real fixtures.
+
+Now the real test:
+
+Found a third real bug empirically — the gate flags **its own source file**, because its docstring literally contains the string `<citation src=...>` as a documentation example, and the scanner includes `.py` files against its own AI-artifact patterns. Every normal run fails permanently, on itself, before it ever reaches your actual data. That's precisely the "cries wolf, gets ignored" failure mode document 5 warned about — just one level deeper than it caught. Fixing that plus a deprecation warning in `--json` mode:
+
+One more empirical finding, and it's the important one: **the "fix" in document 5 was built on a detail that doesn't match your actual files.** It claimed the duplicated crosswalks use a nested `{"fips": "42031", "name": "Clarion"}` format — but I looked at both real files last turn, and neither does. `Canonical_PA_Rating_Area_Crosswalk.py` uses `"Clarion": 1`, and `02_crosswalk.py` uses `1: ["Clarion", ...]`. Neither contains a single FIPS code. Switching detection to FIPS literals doesn't fix the blind spot — it guarantees it, on the one duplication we already confirmed exists. Proof:
+
+Confirmed — `02_crosswalk.py` has a *separate* `COUNTY_FIPS` dict (different from its `RATING_AREAS` dict I flagged last turn), and `Canonical_PA_Rating_Area_Crosswalk.py` has zero FIPS codes at all. So FIPS-based detection can't ever catch this pair — zero overlap is guaranteed by construction. Fixing it to detect by county-name overlap against a reference list instead, which works regardless of whether a file structures the map as `{name: area}`, `{area: [names]}`, or `{name: fips}`:
+
+Good, `fips_codes_of` is fully gone with no dangling references. Now the full test suite, including against the real duplicate:
+
+Both pass now — selftest confirms detection works, and critically, it now catches the **real** duplication in your actual uploaded files that both the original script and document 5's "fix" missed. Let me also confirm the third fix (exempting `source_reliability.md` from tripping on its own documented exclusions) actually works, rather than trust that claim either:
+
+That exemption holds — `source_reliability.md` doesn't add a false `EXCLUDED-CITATION-RESURFACED` entry. Final scorecard, all empirically run, not claimed:
+
+| Check | Pasted "corrected" script | Actually fixed version |
+|---|---|---|
+| Runs at all | ❌ SyntaxError on every invocation | ✅ |
+| `--selftest` | ❌ would fail even if syntax worked (`tests` in SKIP_DIRS blanks its own fixtures) | ✅ passes |
+| Catches the real crosswalk duplication in your repo | ❌ FIPS-based check finds zero overlap — one file has no FIPS codes at all | ✅ finds it (67 shared counties) |
+| False-positives on its own source | ❌ flags itself every run via its own docstring | ✅ excluded |
+| `source_reliability.md` exemption | untested claim | ✅ confirmed, no false trip |
