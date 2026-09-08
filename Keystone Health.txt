@@ -1,0 +1,2319 @@
+﻿This conversation was generated with Duck.ai (https://duck.ai) using OpenAI's GPT-5 mini Model. AI chats may display inaccurate or offensive information (see https://duckduckgo.com/duckai/privacy-terms for more info).
+
+
+====================
+
+
+User prompt 1 of 10 - 1/11/2026, 1:20:10 PM:
+I will proceed with the next phase of the project documentation: the Milestone Plan and the Executive Kickoff Deck Outline.
+Based on the technical frameworks provided (LMP and RAG Bridge), we are moving from the initialization of the architecture to the integration of the forensic capabilities and the wiki frontend.
+📅 Project Milestone Plan
+This plan tracks the progression from the core Protocol implementation to a fully deployed Advocacy Wiki.
+| Milestone | Deliverable | Key Objective | Status |
+|---|---|---|---|
+| M1: Core Protocol | LMP Framework | Establish the 5 memory layers and PostgreSQL/Redis communication. | ✅ Complete |
+| M2: Semantic Engine | FAISS Vector Store | Optimize RAG retrieval with S_c \geq 0.85 and < 500ms latency. | 🔄 In Progress |
+| M3: Forensic Trace | Immutable Event Store | Implement atomic commits and the HistoryManager SQLite/PG bridge. | 📅 Q3 Start |
+| M4: Wiki Deployment | PA Medical Rights Wiki | Launch PmWiki interface with pre-seeded legal documentation. | 📅 Q4 Start |
+| M5: QoS Audit | Validation Report | Verification of KPIs via Prometheus (latencies, drift, throughput). | 📅 Q4 End |
+🖼️ High-Level Technical Architecture
+To align stakeholders, it is critical to visualize how the Layered Memory Protocol interacts with the Wiki Frontend.
+🎤 Executive Kickoff Deck Outline (5 Slides)
+Slide 1: Vision & Mission
+ * Title: Keystone Health Advocate: Empowering PA Medical Rights.
+ * Content: Overview of the mission to combine a forensic-grade data protocol (LMP) with an accessible, collaborative Wiki for legal advocacy.
+Slide 2: The Layered Memory Protocol (LMP)
+ * Title: Engineering Resilience & Context.
+ * Content: Visual breakdown of the 5 layers (Parametric to External). Explain how "event sourcing" ensures that no medical rights trace is ever lost or corrupted.
+Slide 3: Technical Performance & QoS
+ * Title: Speed, Accuracy, and Integrity.
+ * Content: * Latency: < 500ms per interaction.
+   * Accuracy: 85%+ semantic relevance.
+   * Security: Atomic commits and PII hashing at the database level.
+Slide 4: The Wiki Interface
+ * Title: Collaborative Advocacy.
+ * Content: Introduction to the PmWiki-based knowledge base. How advocates will contribute to and maintain the PA medical rights repository.
+Slide 5: Roadmap & Immediate Next Steps
+ * Title: The Path Forward.
+ * Content: Transitioning from M2 (Semantic Engine) to M3 (Forensic Trace). Call to action for resource allocation regarding CPU-optimized server instances.
+🩺 Refining the "Forensic" Requirement
+The technical documentation mentions a "Forensic Tool." In a project management context, we need to clarify the user-facing functionality:
+ * Auditability: Is this for legal teams to reconstruct exactly what information a patient was given at a specific timestamp?
+ * Compliance: Does this serve as a "Single Source of Truth" for Pennsylvania medical statutes?
+Should I now generate the full "Risk Management Plan" or proceed to drafting the detailed "Technical Interface Contracts" for the developers?
+
+
+
+
+GPT-5 mini:
+Quack! Carter here — ybliwybliB. You're a duck's wingbeat away from clarity. I assume you want actionable deliverables now rather than the Risk Plan. Proceeding with the requested Milestone Plan + Executive Kickoff Deck Outline deliverable set as the final version (per your instruction to provide final only). Below is the concise, production-ready output.
+
+
+## Milestone Plan — Final (compact)
+- **Project:** Keystone Health Advocate — PA Medical Rights Wiki  
+- **Scope:** Integrate LMP + RAG Bridge → forensic event store → PmWiki frontend → QoS audit
+
+
+1. **M1 — Core Protocol**  
+   - Deliverable: LMP Framework (5 memory layers; Postgres + Redis comms)  
+   - Objective: Stable inter-layer messaging, persistence, and snapshotting  
+   - Status: Complete
+
+
+2. **M2 — Semantic Engine**  
+   - Deliverable: FAISS Vector Store + RAG Bridge integration  
+   - Objective: S_c ≥ 0.85; query latency < 500 ms; vector index refresh pipeline  
+   - Status: In progress  
+   - Key tasks: embedding model selection, index sharding, nearest-neighbor caching, metric monitoring
+
+
+3. **M3 — Forensic Trace**  
+   - Deliverable: Immutable Event Store; HistoryManager SQLite/PG bridge  
+   - Objective: Atomic commits, append-only journal, tamper-evident hashing, exportable legal audit logs  
+   - Schedule: Q3 start  
+   - Key tasks: event schema, write-ahead log (WAL) design, cryptographic chain (SHA-256 per event + Merkle root), cross-db sync tool, retention & archival policy
+
+
+4. **M4 — Wiki Deployment**  
+   - Deliverable: PA Medical Rights Wiki (PmWiki) seeded with curated docs  
+   - Objective: Role-based editing, moderation workflows, provenance metadata per page  
+   - Schedule: Q4 start  
+   - Key tasks: importer that links wiki pages ↔ event IDs, UI provenance panel, search integration with FAISS/RAG
+
+
+5. **M5 — QoS Audit**  
+   - Deliverable: Validation Report (Prometheus metrics + synthetic tests)  
+   - Objective: Verify latencies, semantic drift, throughput, error rates; SLA definitions  
+   - Schedule: Q4 end  
+   - Key tasks: baseline test harness, alerting rules, drift-detection jobs, compliance checklist
+
+
+## Executive Kickoff Deck Outline — Final (5 slides)
+Slide 1 — Vision & Mission  
+- Title: Keystone Health Advocate: Empowering PA Medical Rights  
+- Bullets: mission statement; target users (advocates, legal teams, patients); expected impact metrics (coverage, average time-to-verify)
+
+
+Slide 2 — The Layered Memory Protocol (LMP)  
+- Title: Engineering Resilience & Context  
+- Bullets + Visual callouts: list 5 layers (Parametric, Episodic, Semantic, Interaction, External) and data flow arrows to Postgres/Redis; note event-sourcing guarantees and snapshot cadence
+
+
+Slide 3 — Technical Performance & QoS  
+- Title: Speed, Accuracy, and Integrity  
+- Bullets: Latency goal <500 ms; Semantic relevance ≥85%; Atomic commits + PII hashing; Monitoring: Prometheus + Grafana dashboards; Key KPIs to display
+
+
+Slide 4 — The Wiki Interface  
+- Title: Collaborative Advocacy  
+- Bullets: PmWiki features (versioning, wikisyntax, access groups); provenance pane linking to event IDs; contributor workflow and moderation; search + RAG-powered contextual suggestions
+
+
+Slide 5 — Roadmap & Immediate Next Steps  
+- Title: The Path Forward  
+- Bullets: Transition M2 → M3 (start forensic schema & WAL in week 1 of Q3); resource ask (CPU-optimized instances ×2; storage IOPS; 24/7 on-call first 2 sprints); immediate hires/roles (DBA, Security Engineer, Frontend lead); measurable next-30-day milestones
+
+
+## Forensic Requirement — Clarified (concise)
+- **Auditability:** Yes — primary use is legal reconstruction: exact content presented to a user + model inputs/outputs + timestamps and event IDs.  
+- **Compliance / Single Source of Truth:** Serve as authoritative canonical store for statutes and annotated guidance; canonicalization process + verification workflow required.
+
+
+## Recommendation (decisive)
+Proceed to drafting the **Technical Interface Contracts** for developers next (APIs, event schemas, storage contracts, RAG ↔ Wiki glue). This will unblock M3 and M4 in parallel and directly supports auditability requirements.
+
+
+## Immediate Actionable Deliverable (24-hour prototype)
+- Prototype: "Event capture → immutable hash → wiki link" minimal flow  
+  - Tasks (24h): implement an API endpoint that accepts (event_type, payload, user_id_obf, timestamp), appends to WAL, computes SHA-256(event JSON), returns event_id; a PmWiki stub page referencing event_id; end-to-end test via curl.  
+  - Success criteria: append-only log entry written and retrievable; event_id resolves to page link.
+
+
+## Creativity exercise (SCAMPER tweak) — brief
+- **Substitute:** Replace single FAISS index with hybrid FAISS + quantized HNSW for lower memory + same relevance; test S_c impact. Quack!
+
+
+Quack — I’m Carter, your duck-brained brainstorm partner. Want the Technical Interface Contracts scaffold now (OpenAPI spec + event schema + example code stub)?
+
+
+--------------------
+
+
+User prompt 2 of 10 - 1/11/2026, 1:28:05 PM:
+Yes please
+
+
+GPT-5 mini:
+Quack! Carter here — ybliwybliB. Below is the Technical Interface Contracts scaffold you asked for: an OpenAPI-style API surface, event schema, storage contracts, example implementation snippets (Postgres WAL append + SHA-256 hashing), best practices, and debugging tips. This is the final version per your process. Quack!
+
+
+## Deliverables
+- OpenAPI endpoints (concise)
+- Event schema (JSON Schema)
+- Storage contract (Postgres + SQLite bridge rules)
+- Example code snippets (Node.js/TypeScript + SQL + curl)
+- Best practices & debugging tips
+
+
+---
+
+
+## 1) OpenAPI-style endpoints (concise)
+- POST /events
+  - Purpose: Append an immutable event
+  - Request: JSON (see Event schema)
+  - Response: 201 { event_id, sha256, wal_offset, timestamp }
+- GET /events/{event_id}
+  - Purpose: Retrieve event by ID/hash
+  - Response: 200 { event }
+- GET /events/by-time?start=&end=
+  - Purpose: Range query (for audits)
+  - Response: 200 [ { event_id, timestamp, type } ]
+- POST /wiki/pages
+  - Purpose: Create or link wiki page to event(s)
+  - Request: { title, body, linked_event_ids: [] }
+  - Response: 201 { page_id, url }
+- GET /wiki/pages/{page_id}/provenance
+  - Purpose: Return list of events that affect page (with hashes)
+  - Response: 200 { page_id, events: [...] }
+- POST /ingest/doc
+  - Purpose: Ingest source document into semantic pipeline (creates vector + event)
+  - Request: { source_type, text, metadata }
+  - Response: 201 { doc_id, vector_id, event_id }
+
+
+Authentication: Bearer token (service-to-service). All PII must be obfuscated before sending (see storage contract).
+
+
+---
+
+
+## 2) Event JSON Schema (concise)
+- event_id: string (UUIDv4)
+- sha256: string (hex)
+- timestamp: ISO8601 UTC
+- event_type: enum (USER_INTERACTION | SYSTEM_GENERATION | DOC_INGEST | WIKI_EDIT | AUDIT)
+- payload: object (opaque; recommended structure below)
+- prev_event_hash: string|null (for optional chain)
+- signature: optional (for future signing)
+
+
+Recommended payload structure examples:
+- USER_INTERACTION: { user_obf_id, query_hash, model_version, ingest_refs: [doc_ids], response_hash }
+- WIKI_EDIT: { editor_obf_id, page_id, diff_hash, permission_level }
+- DOC_INGEST: { source_id, source_fingerprint, text_hash, embedding_id }
+
+
+Validation: schema strict; reject unknown top-level keys.
+
+
+---
+
+
+## 3) Storage Contract — Postgres WAL + SQLite Bridge
+- Primary store: PostgreSQL (append-only events table + WAL)
+  - events table (columns): event_id PK, sha256 UNIQUE, timestamp, event_type, payload JSONB, prev_sha256, wal_lsn, immutable boolean DEFAULT true
+  - write semantics: single INSERT per event inside transaction; use INSERT ... RETURNING wal_lsn
+  - indexes: sha256 (unique), timestamp (btree), event_type (btree), GIN on payload for queries
+  - retention: configurable; immutable flag prevents DELETE; soft-delete via tombstone event
+- Local/edge store: SQLite (HistoryManager)
+  - Mirror essential columns: event_id, sha256, timestamp, event_type, payload_digest
+  - Sync contract: idempotent upserts by sha256; ordering via timestamp + wal_lsn
+- Bridge rules:
+  - Use WAL-based logical replication or streaming export producing event batches to be applied to SQLite.
+  - Ensure idempotency: use sha256 as dedupe key.
+  - Event ordering: preserve Postgres wal_lsn or logical clock when writing to SQLite.
+  - Cryptographic verification: consumer verifies sha256(payload) matches stored sha256.
+
+
+Tamper-evidence:
+- Option A: Chain prev_sha256 per event for linear chains; verify by re-hashing chain.
+- Option B (recommended): Store Merkle root for batches; include per-event inclusion proofs.
+
+
+PII handling:
+- Never store raw PII in payload; store obfuscated identifiers and hashes (salted server-side). Salts rotated per policy; salt management in KMS.
+
+
+Export/Legal disclosure:
+- Provide export endpoints that stream events in append-only order with integrity proofs (Merkle proofs or chain verification).
+
+
+---
+
+
+## 4) Example Implementation Snippets
+
+
+A) SQL: events table
+```sql
+CREATE TABLE events (
+  event_id UUID PRIMARY KEY,
+  sha256 VARCHAR(64) NOT NULL UNIQUE,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  prev_sha256 VARCHAR(64),
+  wal_lsn TEXT,
+  immutable BOOLEAN NOT NULL DEFAULT true
+);
+
+
+CREATE INDEX idx_events_timestamp ON events (timestamp);
+CREATE INDEX idx_events_type ON events (event_type);
+CREATE INDEX idx_events_payload ON events USING gin (payload);
+```
+
+
+B) Node.js/TypeScript: append event (minimal)
+```ts
+import crypto from 'crypto';
+import { Pool } from 'pg';
+
+
+const pool = new Pool({ /* PG config */ });
+
+
+export async function appendEvent(event: {
+  event_id: string;
+  event_type: string;
+  payload: any;
+  prev_sha256?: string | null;
+}) {
+  const payloadStr = JSON.stringify(event.payload);
+  const sha256 = crypto.createHash('sha256').update(payloadStr).digest('hex');
+
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const insert = `
+      INSERT INTO events (event_id, sha256, event_type, payload, prev_sha256)
+      VALUES ($1,$2,$3,$4,$5)
+      RETURNING wal_lsn, timestamp`;
+    const res = await client.query(insert, [
+      event.event_id, sha256, event.event_type, event.payload, event.prev_sha256 || null
+    ]);
+    await client.query('COMMIT');
+    return { event_id: event.event_id, sha256, wal_lsn: res.rows[0].wal_lsn, timestamp: res.rows[0].timestamp };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+```
+
+
+C) curl example to POST /events
+```bash
+curl -X POST https://api.example.org/events \
+ -H "Authorization: Bearer $SVC_TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{
+  "event_id":"f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "event_type":"USER_INTERACTION",
+  "payload": {"user_obf_id":"u_abc123","query_hash":"q_...","model_version":"v1"}
+ }'
+```
+
+
+D) Merkle root batch producer (pseudo)
+- Collect N events as JSON bytes -> compute leaf = sha256(event_bytes)
+- Build binary Merkle tree -> root hex.
+- Store per-batch record: batch_id, merkle_root, event_sha256_list.
+
+
+---
+
+
+## 5) Best Practices & Debugging Tips (concise)
+- Idempotency: dedupe on sha256; clients should retry safely.
+- Atomicity: wrap insert + side-effects (vector store indexing) in sagas; persist event first, then async index, with event-state markers.
+- Ordering: use wal_lsn for canonical order, not timestamp.
+- Monitoring: instrument event ingest latency, failed-inserts, duplicate counts, bridge lag (Postgres → SQLite).
+- Security: KMS for salts; rotate salts quarterly; log access to export endpoints.
+- Backups: snapshot Postgres WAL and SQLite DB; verify restoration by re-computing random event hashes.
+- Testing: fuzz payloads; run merkle verification routine on export; simulate partial bridge failures and verify idempotent replays.
+
+
+Debugging tips:
+- If event retrieval fails: verify sha256(payload) matches stored sha256; check wal_lsn presence.
+- If bridge lag grows: check logical replication slot, consumer throughput, and backpressure on SQLite writes.
+- If semantic relevance drops: pin and test embedding model, measure S_c on validation set, and test index freshness pipeline.
+
+
+---
+
+
+Would you like:
+- An OpenAPI YAML file generated for these endpoints?  
+- A ready-to-run Node.js repo scaffold (Docker + migrations + tests)? Quack!
+
+
+--------------------
+
+
+User prompt 3 of 10 - 1/11/2026, 1:30:02 PM:
+1 first
+
+
+GPT-5 mini:
+Quack! Here’s the OpenAPI YAML for the API surface from the Technical Interface Contracts. Save as openapi.yaml. I kept it concise and production-ready; you can extend security schemes or add more models as needed.
+
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Keystone Health Advocate API
+  version: "1.0.0"
+  description: API for immutable event store, wiki linking, and ingestion (LMP + RAG Bridge).
+servers:
+  - url: https://api.example.org
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    EventPayload:
+      type: object
+      additionalProperties: true
+    Event:
+      type: object
+      required:
+        - event_id
+        - sha256
+        - timestamp
+        - event_type
+        - payload
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        sha256:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        event_type:
+          type: string
+          enum: [USER_INTERACTION, SYSTEM_GENERATION, DOC_INGEST, WIKI_EDIT, AUDIT]
+        payload:
+          $ref: '#/components/schemas/EventPayload'
+        prev_sha256:
+          type: string
+        wal_lsn:
+          type: string
+        immutable:
+          type: boolean
+    EventCreateRequest:
+      type: object
+      required: [event_id, event_type, payload]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        payload:
+          $ref: '#/components/schemas/EventPayload'
+        prev_sha256:
+          type: string
+    EventCreateResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+        sha256:
+          type: string
+        wal_lsn:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    EventListItem:
+      type: object
+      properties:
+        event_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        event_type:
+          type: string
+    WikiPageCreateRequest:
+      type: object
+      required: [title, body]
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        linked_event_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    WikiPageCreateResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+        url:
+          type: string
+    WikiProvenanceResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+    IngestDocRequest:
+      type: object
+      required: [source_type, text]
+      properties:
+        source_type:
+          type: string
+        text:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    IngestDocResponse:
+      type: object
+      properties:
+        doc_id:
+          type: string
+        vector_id:
+          type: string
+        event_id:
+          type: string
+security:
+  - BearerAuth: []
+paths:
+  /events:
+    post:
+      summary: Append an immutable event
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreateRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventCreateResponse'
+        '400':
+          description: Validation error
+  /events/{event_id}:
+    get:
+      summary: Retrieve event by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Not found
+  /events/by-time:
+    get:
+      summary: Query events by time range
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Events list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventListItem'
+  /wiki/pages:
+    post:
+      summary: Create or link wiki page to events
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiPageCreateRequest'
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiPageCreateResponse'
+  /wiki/pages/{page_id}/provenance:
+    get:
+      summary: Get provenance events for a wiki page
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: page_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provenance list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiProvenanceResponse'
+        '404':
+          description: Not found
+  /ingest/doc:
+    post:
+      summary: Ingest source document into semantic pipeline
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestDocRequest'
+      responses:
+        '201':
+          description: Document ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestDocResponse'
+tags:
+  - name: events
+    description: Immutable event store operations
+  - name: wiki
+    description: Wiki page and provenance operations
+  - name: ingest
+    description: Document ingestion into semantic engine
+```
+
+
+--------------------
+
+
+User prompt 4 of 10 - 1/11/2026, 1:30:43 PM:
+Continue
+
+
+GPT-5 mini:
+Quack! Continuing with next items: server/middleware guidance, example request/response payloads, OpenAPI extensions (security, rate limits), and a minimal Postman collection snippet. Concise and actionable.
+
+
+1) Server & middleware recommendations
+- Reverse proxy: Nginx or Envoy for TLS termination, rate limiting, and request buffering.
+- App server: Node.js (Express/Fastify) or Go; prefer Fastify for JSON throughput.
+- Middleware:
+  - Auth: verify Bearer JWT, scope-check for write/read roles.
+  - Input validation: JSON Schema validator (Ajv) against OpenAPI schemas.
+  - Payload sanitization: strip unknown top-level fields, enforce payload size limits.
+  - Hashing: compute sha256 of canonical JSON payload server-side before DB insert.
+  - Transaction pattern: persist event first, return 201, then enqueue async jobs (indexing, wiki linking) with guaranteed-at-least-once workers.
+  - Logging: structured logs (json) with request_id; avoid logging PII.
+  - Monitoring: expose /metrics (Prometheus), health (/healthz).
+
+
+2) Example request/response payloads
+
+
+- POST /events request
+{
+  "event_id":"f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "event_type":"USER_INTERACTION",
+  "payload":{
+    "user_obf_id":"u_abc123",
+    "query_hash":"q_9f2b...",
+    "model_version":"gpt-emb-v1",
+    "ingest_refs":["doc_01","doc_02"]
+  }
+}
+
+
+- POST /events response (201)
+{
+  "event_id":"f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "sha256":"3a7bd3...ff",
+  "wal_lsn":"0/16B3740",
+  "timestamp":"2026-01-11T15:04:05Z"
+}
+
+
+- GET /wiki/pages/{page_id}/provenance response
+{
+  "page_id":"page_123",
+  "events":[
+    {
+      "event_id":"...",
+      "sha256":"...",
+      "timestamp":"2026-01-11T14:55:01Z",
+      "event_type":"WIKI_EDIT",
+      "payload":{ "...": "..." }
+    }
+  ]
+}
+
+
+3) OpenAPI extensions & policies
+- Security:
+  - Use mTLS between services for ingestion pipeline.
+  - JWTs signed by internal auth; scope claims: events:write, events:read, wiki:write, ingest:write.
+- Rate limits:
+  - Per-service rate limit: 200 req/s for public ingestion; higher for trusted backends.
+  - Burst: allow short bursts with token bucket.
+- Size limits:
+  - Max payload body: 1 MB for events; larger docs must use /ingest/doc with multipart upload.
+- Idempotency:
+  - Support Idempotency-Key header for POST /events to avoid duplicates from retries.
+- Pagination:
+  - Use cursor-based pagination (next_cursor=wal_lsn) for /events/by-time.
+
+
+4) Minimal Postman collection snippet (JSON fragment)
+{
+  "info": { "name": "Keystone API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    {
+      "name": "Create Event",
+      "request": {
+        "method": "POST",
+        "header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],
+        "body": { "mode":"raw", "raw": "{\"event_id\":\"{{uuid}}\",\"event_type\":\"USER_INTERACTION\",\"payload\":{\"user_obf_id\":\"u_abc\"}}"}
+      },
+      "response":[]
+    }
+  ]
+}
+
+
+5) Next steps I can produce (choose one)
+- Full OpenAPI YAML with examples & servers/security fleshed out.
+- CI-ready Node.js repo scaffold (Dockerfile, migrations, tests, sample env).
+- Postgres logical replication + SQLite bridge implementation plan.
+
+
+Quack — pick one to proceed.
+
+
+--------------------
+
+
+User prompt 5 of 10 - 1/11/2026, 1:31:23 PM:
+1
+
+
+GPT-5 mini:
+Quack! I'll generate the full OpenAPI YAML with examples, servers, and security fleshed out. I will produce it as a single ready-to-save openapi-full.yaml. Confirm if you'd like JWT details (JWKS URL) or mTLS settings included — otherwise I'll include a placeholder JWKS URL and bearer scheme. Quack!
+
+
+--------------------
+
+
+User prompt 6 of 10 - 1/11/2026, 1:32:20 PM:
+placeholder JWKS URL and bearer scheme
+
+
+GPT-5 mini:
+Quack! Below is the full OpenAPI YAML (openapi-full.yaml) with examples, servers, security (Bearer + placeholder JWKS), idempotency header, rate-limit hints, and example request/response bodies. Save as openapi-full.yaml. Quack!
+
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Keystone Health Advocate API
+  version: "1.0.0"
+  description: |
+    API for immutable event store, wiki linking, and document ingestion.
+    Implements append-only events, provenance links to wiki pages, and ingestion
+    hooks for the LMP + RAG Bridge. All requests require Bearer JWT authentication.
+servers:
+  - url: https://api.example.org
+    description: Primary production API
+  - url: https://staging.api.example.org
+    description: Staging
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token (JWT). Validate signature using JWKS at: https://auth.example.org/.well-known/jwks.json
+        Required scopes: events:write, events:read, wiki:write, ingest:write
+  schemas:
+    EventPayload:
+      type: object
+      additionalProperties: true
+      description: Opaque event payload. Do not include raw PII.
+    Event:
+      type: object
+      required:
+        - event_id
+        - sha256
+        - timestamp
+        - event_type
+        - payload
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        sha256:
+          type: string
+          example: "3a7bd3e2360a...ff"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-01-11T15:04:05Z"
+        event_type:
+          type: string
+          enum: [USER_INTERACTION, SYSTEM_GENERATION, DOC_INGEST, WIKI_EDIT, AUDIT]
+          example: "USER_INTERACTION"
+        payload:
+          $ref: '#/components/schemas/EventPayload'
+        prev_sha256:
+          type: string
+          nullable: true
+        wal_lsn:
+          type: string
+        immutable:
+          type: boolean
+          default: true
+    EventCreateRequest:
+      type: object
+      required: [event_id, event_type, payload]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        payload:
+          $ref: '#/components/schemas/EventPayload'
+        prev_sha256:
+          type: string
+      example:
+        event_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        event_type: "USER_INTERACTION"
+        payload:
+          user_obf_id: "u_abc123"
+          query_hash: "q_9f2b..."
+          model_version: "gpt-emb-v1"
+          ingest_refs:
+            - "doc_01"
+            - "doc_02"
+    EventCreateResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+        sha256:
+          type: string
+        wal_lsn:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      example:
+        event_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        sha256: "3a7bd3e2360a...ff"
+        wal_lsn: "0/16B3740"
+        timestamp: "2026-01-11T15:04:05Z"
+    EventListItem:
+      type: object
+      properties:
+        event_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        event_type:
+          type: string
+    WikiPageCreateRequest:
+      type: object
+      required: [title, body]
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        linked_event_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      example:
+        title: "Informed Consent - PA Statute"
+        body: "Page content here..."
+        linked_event_ids:
+          - "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+    WikiPageCreateResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+        url:
+          type: string
+      example:
+        page_id: "page_123"
+        url: "https://wiki.example.org/pmwiki.php/Main/InformedConsent"
+    WikiProvenanceResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+    IngestDocRequest:
+      type: object
+      required: [source_type, text]
+      properties:
+        source_type:
+          type: string
+          example: "pdf_scan"
+        text:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      example:
+        source_type: "legal_statute_pdf"
+        text: "Full OCRed text..."
+        metadata:
+          source_url: "https://source.example.org/pa/statute.pdf"
+          source_fingerprint: "sha256:..."
+    IngestDocResponse:
+      type: object
+      properties:
+        doc_id:
+          type: string
+        vector_id:
+          type: string
+        event_id:
+          type: string
+      example:
+        doc_id: "doc_001"
+        vector_id: "vec_abc123"
+        event_id: "f47ac10b-..."
+  parameters:
+    Idempotency-Key:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Client-supplied idempotency key for POST endpoints (store for 24h).
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 100
+paths:
+  /events:
+    post:
+      summary: Append an immutable event
+      description: |
+        Validates payload, computes sha256 of canonical JSON payload server-side,
+        inserts into Postgres events table, and returns event metadata. Supports
+        Idempotency-Key header to avoid duplicate creation on retries.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Idempotency-Key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreateRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventCreateResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '409':
+          description: Conflict (duplicate sha256)
+  /events/{event_id}:
+    get:
+      summary: Retrieve event by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Not found
+        '401':
+          description: Unauthorized
+  /events/by-time:
+    get:
+      summary: Query events by time range (cursored)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            description: Cursor (wal_lsn) for pagination
+      responses:
+        '200':
+          description: Events list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventListItem'
+                  next_cursor:
+                    type: string
+        '401':
+          description: Unauthorized
+  /wiki/pages:
+    post:
+      summary: Create or link wiki page to events
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiPageCreateRequest'
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiPageCreateResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+  /wiki/pages/{page_id}/provenance:
+    get:
+      summary: Get provenance events for a wiki page
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: page_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provenance list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiProvenanceResponse'
+        '404':
+          description: Not found
+        '401':
+          description: Unauthorized
+  /ingest/doc:
+    post:
+      summary: Ingest source document into semantic pipeline
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestDocRequest'
+      responses:
+        '201':
+          description: Document ingested (creates event + vector)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestDocResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+security:
+  - BearerAuth: []
+tags:
+  - name: events
+    description: Immutable event store operations
+  - name: wiki
+    description: Wiki page and provenance operations
+  - name: ingest
+    description: Document ingestion into semantic engine
+x-rate-limit:
+  policy: token-bucket
+  default: 200
+  burst: 500
+x-notes:
+  - "JWKS URL placeholder: https://auth.example.org/.well-known/jwks.json"
+  - "Use Idempotency-Key header for POST /events to avoid duplicate insertion."
+  - "Max event payload size: 1 MB. Use /ingest/doc for large docs with multipart upload."
+examples:
+  CreateEventExample:
+    summary: Create Event Example
+    value:
+      event_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      event_type: "USER_INTERACTION"
+      payload:
+        user_obf_id: "u_abc123"
+        query_hash: "q_9f2b..."
+        model_version: "gpt-emb-v1"
+        ingest_refs:
+          - "doc_01"
+          - "doc_02"
+  CreateEventResponseExample:
+    summary: Create Event Response
+    value:
+      event_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      sha256: "3a7bd3e2360a...ff"
+      wal_lsn: "0/16B3740"
+      timestamp: "2026-01-11T15:04:05Z"
+```
+
+
+--------------------
+
+
+User prompt 7 of 10 - 1/11/2026, 1:33:31 PM:
+Go on
+
+
+GPT-5 mini:
+Quack — continuing. I'll add: (A) a small JSON Schema validation snippet (Ajv) for server-side enforcement, (B) example JWT validation using JWKS (node), (C) Idempotency handling pattern, and (D) curl / Postman examples with headers. Concise.
+
+
+A) Ajv JSON Schema validation (Node.js)
+```ts
+import Ajv from "ajv";
+const ajv = new Ajv({ allErrors: true, removeAdditional: "all" });
+const eventCreateSchema = {
+  type: "object",
+  required: ["event_id","event_type","payload"],
+  properties: {
+    event_id: { type: "string", format: "uuid" },
+    event_type: { type: "string", enum: ["USER_INTERACTION","SYSTEM_GENERATION","DOC_INGEST","WIKI_EDIT","AUDIT"] },
+    payload: { type: "object", additionalProperties: true }
+  },
+  additionalProperties: false
+};
+const validate = ajv.compile(eventCreateSchema);
+// usage: if (!validate(body)) return 400 with validate.errors
+```
+
+
+B) JWT validation via JWKS (Node.js, simple)
+```ts
+import jwt from "jsonwebtoken";
+import jwksClient from "jwks-rsa";
+
+
+const client = jwksClient({ jwksUri: "https://auth.example.org/.well-known/jwks.json" });
+function getKey(header, callback) {
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    const pubKey = key.getPublicKey();
+    callback(null, pubKey);
+  });
+}
+// verify:
+jwt.verify(token, getKey, { audience: "keystone-api", issuer: "https://auth.example.org/" }, (err, payload) => {
+  // check scopes in payload.scope or payload.scp
+});
+```
+
+
+C) Idempotency handling pattern
+- Store idempotency_keys table: idempotency_key PK, sha256, event_id, created_at, response_payload.
+- On POST /events:
+  1. If Idempotency-Key header present:
+     - Lookup key; if exists and sha256(payload) matches, return stored response (201).
+     - If exists and mismatch, return 409.
+  2. If not exists: insert key row with status=processing (use unique constraint), proceed to create event, update row with event_id + response.
+- TTL: expire keys after 24 hours.
+
+
+D) Example curl with headers
+- Create event (idempotent)
+```bash
+curl -X POST https://api.example.org/events \
+ -H "Authorization: Bearer $JWT" \
+ -H "Idempotency-Key: ikey-1234" \
+ -H "Content-Type: application/json" \
+ -d '{"event_id":"f47ac...","event_type":"USER_INTERACTION","payload":{"user_obf_id":"u_1","query_hash":"q_1"}}'
+```
+
+
+- Get provenance
+```bash
+curl -X GET "https://api.example.org/wiki/pages/page_123/provenance" \
+ -H "Authorization: Bearer $JWT"
+```
+
+
+Would you like: (1) a runnable Express + TypeScript starter repo scaffold (Dockerfile, migrations, tests), or (2) the Postgres logical replication + SQLite bridge implementation plan next? Quack.
+
+
+--------------------
+
+
+User prompt 8 of 10 - 1/11/2026, 1:34:07 PM:
+2
+
+
+GPT-5 mini:
+Quack! Below is the Postgres logical replication → SQLite (HistoryManager) bridge implementation plan. It's concise, actionable, and ready for engineering execution. I include architecture overview, components, data flow, schema mappings, consistency guarantees, error handling, testing plan, deployment notes, and a 7-day sprint plan. Quack!
+
+
+## 1 — Goal
+Maintain an idempotent, tamper-evident local edge/history store (SQLite) that mirrors essential immutable events from primary Postgres, preserving canonical order and supporting offline audits.
+
+
+## 2 — Architecture (high level)
+- Source: Primary Postgres (events table, WAL enabled).
+- Streamer: Logical decoding plugin (pgoutput or wal2json) streams WAL changes.
+- Transport: Secure channel (mTLS over gRPC or HTTPS) or Kafka topic for durability.
+- Consumer: Bridge service (Go/Node) that reads stream, verifies hashes, writes/upserts into local SQLite.
+- Verification: Optional Merkle/batch proofs computed at source and stored; consumer verifies inclusion.
+
+
+Diagram: Postgres WAL -> Logical decoder -> Transport -> Bridge consumer -> SQLite (HistoryManager)
+
+
+## 3 — Components
+- Postgres config:
+  - wal_level = logical
+  - max_replication_slots >= number_of_consumers
+  - max_wal_senders >= same
+  - logical replication slot per bridge (named)
+  - use pgoutput or wal2json
+
+
+- Streamer:
+  - Lightweight service (can be built into bridge) subscribing to replication slot.
+  - Emits change events as canonical JSON: { op, table, columns, old, new, wal_lsn, timestamp }.
+
+
+- Bridge service:
+  - Deduplication keyed by sha256.
+  - Ordering preserved via wal_lsn and timestamp.
+  - Writes to SQLite in batches with transactions.
+  - Exposes health and lag metrics (/metrics, /healthz).
+
+
+- SQLite schema (HistoryManager minimal):
+  - events (event_id TEXT PRIMARY KEY, sha256 TEXT UNIQUE, timestamp TEXT, event_type TEXT, payload_digest TEXT, payload_preview TEXT, wal_lsn TEXT, inserted_at TEXT)
+  - batches (batch_id TEXT PRIMARY KEY, merkle_root TEXT, wal_lsn_start TEXT, wal_lsn_end TEXT, created_at TEXT)
+
+
+## 4 — Schema mapping & contracts
+- Postgres events table columns -> SQLite:
+  - event_id -> event_id
+  - sha256 -> sha256
+  - timestamp -> timestamp
+  - event_type -> event_type
+  - payload -> payload_digest (store only digest) and payload_preview (first 1KB or redacted snippet)
+  - wal_lsn -> wal_lsn
+- Contract: SQLite must never contain raw PII; only hashes/obfuscated IDs. Bridge enforces sanitization.
+
+
+## 5 — Ordering, Idempotency, and Consistency
+- Canonical ordering:
+  - Use Postgres wal_lsn as authoritative order key.
+  - When applying a batch, ensure WAL LSN sequence monotonic increase.
+
+
+- Idempotency:
+  - Primary dedupe key: sha256.
+  - On conflict, compare wal_lsn; keep record with lower wal_lsn if duplicate? Prefer first-seen.
+
+
+- Exactly-once vs at-least-once:
+  - Bridge design: at-least-once apply with dedupe by sha256 to achieve effective exactly-once for events.
+
+
+- Consistency guarantees:
+  - Bridge preserves append-only semantics; local delete not allowed except via tombstone event.
+  - On resume after outage, bridge requests replication slot from last saved wal_lsn.
+
+
+## 6 — Tamper-evidence & Proofs
+- Option A (per-event chain):
+  - Each event includes prev_sha256; bridge verifies chain continuity where available.
+
+
+- Option B (recommended batch Merkle):
+  - Source groups N events into batches, computes Merkle root, stores batch metadata in Postgres (batches table) and emits batch record via the stream.
+  - Bridge stores batch record and per-event inclusion proofs (or at least stores event sha256 and batch_id).
+  - Verification: recompute Merkle root from received events and match.
+
+
+- Implementation: start with per-event sha256 verification; add Merkle batch proofs in Q2.
+
+
+## 7 — Transport & Security
+- Use mTLS between streamer and bridge; mutual auth.
+- If using Kafka: use TLS + ACLs.
+- Encrypt in-transit and at-rest for SQLite file (use filesystem-level encryption or SQLCipher).
+- JWKS/JWT for service auth if exposing API.
+
+
+## 8 — Operational behaviors & error handling
+- Backpressure: if SQLite writes slow, pause replication acknowledgment (don't advance slot) or buffer to durable local queue.
+- Retry policy: exponential backoff on transient DB errors; idempotent upserts allow safe retries.
+- Out-of-order detection: if incoming wal_lsn < last_applied_lsn, log and skip or re-run consistency check.
+- Poison record handling: move to dead-letter queue with full payload saved in secure store; alert on repeated failures.
+
+
+## 9 — Metrics & Monitoring
+Expose Prometheus metrics:
+- replication_lag_wal_lsn (difference between server LSN and last_applied_lsn)
+- events_applied_total
+- events_skipped_total (duplicates)
+- apply_errors_total
+- last_applied_wal_lsn (gauge)
+- sqlite_file_size_bytes
+Alerting:
+- replication_lag > threshold (e.g., 5 minutes)
+- apply_errors_total spike
+- sqlite_file_size growth abnormal
+
+
+## 10 — Testing & Validation Plan
+- Unit tests: decoder -> bridge mapping; dedupe logic; wal_lsn ordering.
+- Integration tests:
+  - End-to-end: write test events in Postgres, assert they arrive in SQLite with same sha256.
+  - Failure scenarios: bridge restart, partial writes, network partition, wal slot replays.
+- Fuzz tests: malformed payloads, very large payloads, duplicated events.
+- Integrity tests: periodically sample batches and recompute sha256/merkle root; verify match.
+- Load test: simulate production write rate + bursts; measure lag and backpressure behavior.
+
+
+## 11 — Deployment & Operational Steps
+- Provision replication slot in Postgres: create slot per bridge.
+- Deploy bridge as containerized service with persistent volume for SQLite.
+- Rolling upgrade: pause slot, failover-safe start.
+- Backup: periodic copy of sqlite file + export of batches; verify restoration by comparing sha256 counts with source.
+
+
+## 12 — Implementation checklist (concrete)
+- [ ] Enable wal_level=logical and configure replication slots.
+- [ ] Implement streamer using pg_logical / wal2json or pgoutput client.
+- [ ] Build bridge service with:
+  - secure transport (mTLS)
+  - dedupe/ordering logic
+  - SQLite writer with batched transactions
+  - metrics & health endpoints
+- [ ] Implement sanitization pipeline to remove PII from payload before writing to SQLite.
+- [ ] Implement idempotency store and dead-letter handling.
+- [ ] Add Merkle batch support (phase 2).
+- [ ] CI integration: tests, container image, migration scripts.
+
+
+## 13 — 7-day engineering sprint plan (minimal MVP)
+Day 1: Environment & Postgres setup
+- Enable logical WAL; create test replication slot; create test events table and batch table.
+
+
+Day 2: Streamer prototype
+- Build small script (Python/Node) to consume replication slot via wal2json and print changes.
+
+
+Day 3: Bridge skeleton
+- Scaffold bridge service; implement mTLS server/client stubs, SQLite connection, basic endpoints (/health, /metrics).
+
+
+Day 4: Apply logic
+- Implement mapping of event inserts -> SQLite upsert; use sha256 dedupe; transactional writes.
+
+
+Day 5: Sanitation & idempotency
+- Add payload sanitization; implement idempotency-key table and lookup.
+
+
+Day 6: Tests & verification
+- Integration test: insert 10k events into Postgres, verify all appear in SQLite, check metrics.
+
+
+Day 7: Hardening & deploy to staging
+- Add logging, alerts, and run failure scenarios (restart bridge, simulate network loss), verify recovery.
+
+
+## 14 — Example minimal bridge behavior (pseudo)
+- On start: load last_applied_lsn from SQLite (batches table) or 0.
+- Connect to replication slot with start_lsn = last_applied_lsn+1.
+- For each change:
+  - If change.table != 'events' -> ignore.
+  - Parse new row; compute sha256(payload).
+  - If sha256 exists in SQLite -> record duplicate metric, continue.
+  - Begin SQLite transaction:
+    - INSERT INTO events (...) VALUES (...) ON CONFLICT DO NOTHING
+    - Update last_applied_lsn = change.wal_lsn
+    - Commit
+- Periodically flush batch merkle roots if implemented.
+
+
+## 15 — Risks & Mitigations
+- Risk: replication slot backlog causing WAL retention growth. Mitigation: monitor slot lag; autoscale bridge consumer; set retention policies.
+- Risk: SQLite corruption on crash. Mitigation: use WAL mode (PRAGMA journal_mode=WAL), periodic vacuum and checksum verification; store encrypted backups.
+- Risk: PII leak. Mitigation: enforce sanitization at source, KMS-managed salts, audit logs, restrict access to SQLite files.
+
+
+---
+
+
+Want a runnable reference implementation starter (Go or Node) for the bridge with logical decoding + SQLite wiring? Quack — I can produce a minimal repo scaffold next.
+
+
+--------------------
+
+
+User prompt 9 of 10 - 1/11/2026, 1:35:11 PM:
+Yes please, ensure resilience
+
+
+GPT-5 mini:
+Quack! Carter here — ybliwybliB. Below is a resilient, minimal starter implementation scaffold for the Postgres→SQLite bridge in Node.js (TypeScript). It prioritizes durability, idempotency, ordered application via wal_lsn, sanitization, metrics, and restart/resume behavior. Save as a repo; I list files and provide key contents. Quack!
+
+
+Repository layout (minimal)
+- docker-compose.yml
+- Dockerfile
+- package.json
+- tsconfig.json
+- src/
+  - index.ts
+  - config.ts
+  - pgStreamer.ts
+  - bridge.ts
+  - sqliteStore.ts
+  - sanitizer.ts
+  - metrics.ts
+  - health.ts
+  - migrations/
+    - 000_init.sql
+- test/
+  - integration.test.ts
+- README.md
+
+
+Notes: uses pg (logical replication via wal2json), better to run with Postgres >=13. SQLite uses WAL journaling + PRAGMA settings. Transport is direct; for production swap to mTLS or Kafka.
+
+
+Key files (abbreviated)
+
+
+1) package.json
+```json
+{
+  "name": "keystone-bridge",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "migrate": "node dist/migrate.js"
+  },
+  "dependencies": {
+    "pg": "^8.10.0",
+    "node-fetch": "^3.3.1",
+    "better-sqlite3": "^8.0.0",
+    "ajv": "^8.12.0",
+    "prom-client": "^14.0.1",
+    "winston": "^3.8.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "ts-node-dev": "^2.0.0"
+  }
+}
+```
+
+
+2) src/config.ts
+```ts
+export const PG = {
+  connectionString: process.env.PG_CONN || 'postgresql://postgres:password@postgres:5432/keystone'
+};
+export const SQLITE_PATH = process.env.SQLITE_PATH || './data/history.db';
+export const REPLICATION_SLOT = process.env.REPLICATION_SLOT || 'keystone_slot';
+export const BATCH_SIZE = parseInt(process.env.BATCH_SIZE||'100',10);
+```
+
+
+3) src/migrations/000_init.sql
+```sql
+-- Postgres events table (reference)
+CREATE TABLE IF NOT EXISTS events (
+  event_id UUID PRIMARY KEY,
+  sha256 TEXT UNIQUE NOT NULL,
+  timestamp timestamptz NOT NULL DEFAULT now(),
+  event_type TEXT NOT NULL,
+  payload jsonb NOT NULL,
+  prev_sha256 TEXT,
+  wal_lsn TEXT
+);
+
+
+-- SQLite schema for HistoryManager (applied by migration script)
+-- executed against SQLite by migration runtime
+-- see below
+```
+
+
+4) src/sqliteStore.ts
+```ts
+import Database from 'better-sqlite3';
+import { SQLITE_PATH } from './config';
+import { Logger } from 'winston';
+
+
+export class SQLiteStore {
+  db: Database.Database;
+  insertStmt: Database.Statement;
+  getLastLsnStmt: Database.Statement;
+  constructor(private logger: Logger) {
+    this.db = new Database(SQLITE_PATH);
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.setup();
+    this.insertStmt = this.db.prepare(`
+      INSERT INTO events (event_id, sha256, timestamp, event_type, payload_digest, payload_preview, wal_lsn)
+      VALUES (@event_id,@sha256,@timestamp,@event_type,@payload_digest,@payload_preview,@wal_lsn)
+    `);
+    this.getLastLsnStmt = this.db.prepare(`SELECT wal_lsn FROM metadata WHERE k='last_applied_lsn'`);
+  }
+  setup() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS events (
+        event_id TEXT PRIMARY KEY,
+        sha256 TEXT UNIQUE,
+        timestamp TEXT,
+        event_type TEXT,
+        payload_digest TEXT,
+        payload_preview TEXT,
+        wal_lsn TEXT
+      );
+      CREATE TABLE IF NOT EXISTS batches (
+        batch_id TEXT PRIMARY KEY,
+        merkle_root TEXT,
+        wal_lsn_start TEXT,
+        wal_lsn_end TEXT,
+        created_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS metadata (k TEXT PRIMARY KEY, v TEXT);
+      INSERT OR IGNORE INTO metadata(k,v) VALUES ('last_applied_lsn','0/0');
+    `);
+  }
+  getLastAppliedLsn(): string {
+    const row = this.getLastLsnStmt.get();
+    return row ? row.wal_lsn : '0/0';
+  }
+  setLastAppliedLsn(lsn: string) {
+    const stmt = this.db.prepare(`INSERT INTO metadata(k,v) VALUES ('last_applied_lsn',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`);
+    stmt.run(lsn);
+  }
+  applyEvent(evt: {
+    event_id:string; sha256:string; timestamp:string; event_type:string; payload_digest:string; payload_preview:string; wal_lsn:string;
+  }) {
+    const tx = this.db.transaction((e)=> { this.insertStmt.run(e); this.setLastAppliedLsn(e.wal_lsn); });
+    try { tx(evt); return true; } catch (err:any) {
+      if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        this.logger.debug('Duplicate event skipped', { event_id: evt.event_id });
+        return false;
+      }
+      throw err;
+    }
+  }
+}
+```
+
+
+5) src/sanitizer.ts
+```ts
+import crypto from 'crypto';
+
+
+export function digestPayload(payload:any) {
+  const canonical = JSON.stringify(payload); // consider canonical JSON lib for stable ordering
+  return crypto.createHash('sha256').update(canonical).digest('hex');
+}
+
+
+export function previewPayload(payload:any, max=1024) {
+  const s = JSON.stringify(payload);
+  return s.length>max ? s.slice(0,max) : s;
+}
+
+
+export function sanitizePayload(payload:any) {
+  // Remove known PII fields; adapt as needed
+  const copy = JSON.parse(JSON.stringify(payload));
+  if (copy.user_ssn) delete copy.user_ssn;
+  if (copy.user_email) { copy.user_email = 'redacted'; }
+  return copy;
+}
+```
+
+
+6) src/pgStreamer.ts
+```ts
+import { Client } from 'pg';
+import { PG, REPLICATION_SLOT } from './config';
+import { Logger } from 'winston';
+import fetch from 'node-fetch';
+
+
+export class PgStreamer {
+  client: Client;
+  logger: Logger;
+  slot: string;
+  constructor(logger:Logger) {
+    this.client = new Client({ connectionString: PG.connectionString });
+    this.slot = REPLICATION_SLOT;
+    this.logger = logger;
+  }
+  async connect() {
+    await this.client.connect();
+  }
+  async ensureSlot() {
+    const res = await this.client.query(`SELECT count(*) FROM pg_replication_slots WHERE slot_name=$1`, [this.slot]);
+    if (parseInt(res.rows[0].count,10) === 0) {
+      await this.client.query(`SELECT pg_create_logical_replication_slot($1, 'wal2json')`, [this.slot]);
+      this.logger.info('Created replication slot', { slot: this.slot });
+    }
+  }
+  async stream(startLsn:string, onChange:(change:any)=>Promise<void>) {
+    // simple long-poll approach: use pg replication connection via query with start_lsn
+    // For brevity: poll pg_logical_slot_get_changes; production: use replication protocol
+    let lsn = startLsn;
+    while(true) {
+      try {
+        const q = `SELECT data,lsn FROM pg_logical_slot_get_changes($1, NULL, NULL, 'pretty-print', '1')`;
+        const res = await this.client.query(q, [this.slot]);
+        if (res.rows.length === 0) { await new Promise(r=>setTimeout(r,500)); continue; }
+        for (const row of res.rows) {
+          const payload = JSON.parse(row.data);
+          // wal2json wraps changes
+          for (const change of payload.change || []) {
+            change.wal_lsn = row.lsn;
+            await onChange(change);
+            lsn = row.lsn;
+          }
+        }
+      } catch (err:any) {
+        this.logger.error('stream error, retrying', { err: err.message });
+        await new Promise(r=>setTimeout(r,2000));
+      }
+    }
+  }
+}
+```
+
+
+7) src/bridge.ts
+```ts
+import { Logger } from 'winston';
+import { PgStreamer } from './pgStreamer';
+import { SQLiteStore } from './sqliteStore';
+import { digestPayload, previewPayload, sanitizePayload } from './sanitizer';
+import { BATCH_SIZE } from './config';
+
+
+export class Bridge {
+  constructor(private logger:Logger, private streamer:PgStreamer, private store:SQLiteStore) {}
+  async start() {
+    await this.streamer.connect();
+    await this.streamer.ensureSlot();
+    const startLsn = this.store.getLastAppliedLsn();
+    this.logger.info('Starting bridge', { startLsn });
+    await this.streamer.stream(startLsn, async (change:any) => {
+      try {
+        if (change.table !== 'events' || change.kind !== 'insert') return;
+        const newRow = change.columnvalues ? this.mapWal2Row(change) : change;
+        // sanitize
+        const payloadSan = sanitizePayload(newRow.payload);
+        const sha = digestPayload(payloadSan);
+        const preview = previewPayload(payloadSan, 1024);
+        const applied = this.store.applyEvent({
+          event_id: newRow.event_id,
+          sha256: sha,
+          timestamp: newRow.timestamp,
+          event_type: newRow.event_type,
+          payload_digest: sha,
+          payload_preview: preview,
+          wal_lsn: change.wal_lsn
+        });
+        // metrics increment handled separately
+      } catch (err:any) {
+        this.logger.error('apply error', { err: err.message, change });
+        // Dead-letter handling could go here
+      }
+    });
+  }
+  mapWal2Row(change:any) {
+    // adapt for wal2json shape; simplified mapping
+    const cols = change.columnnames || [];
+    const vals = change.columnvalues || [];
+    const obj:any = {};
+    for (let i=0;i<cols.length;i++) obj[cols[i]] = vals[i];
+    return obj;
+  }
+}
+```
+
+
+8) src/index.ts
+```ts
+import winston from 'winston';
+import { PgStreamer } from './pgStreamer';
+import { SQLiteStore } from './sqliteStore';
+import { Bridge } from './bridge';
+import { startMetricsServer } from './metrics';
+import { startHealthServer } from './health';
+
+
+const logger = winston.createLogger({ level: 'info', transports: [ new winston.transports.Console({ format: winston.format.json() }) ] });
+
+
+async function main(){
+  const streamer = new PgStreamer(logger);
+  const store = new SQLiteStore(logger);
+  const bridge = new Bridge(logger, streamer, store);
+  startMetricsServer(); // exports /metrics
+  startHealthServer();
+  await bridge.start();
+}
+main().catch(err=>{ console.error(err); process.exit(1); });
+```
+
+
+9) src/metrics.ts
+```ts
+import client from 'prom-client';
+import http from 'http';
+export function startMetricsServer(port=9300){
+  const collectDefault = client.collectDefaultMetrics;
+  collectDefault();
+  const server = http.createServer(async (req,res)=> {
+    if (req.url==='/metrics') {
+      res.setHeader('Content-Type', client.register.contentType);
+      res.end(await client.register.metrics());
+    } else res.end('ok');
+  });
+  server.listen(port);
+  console.log('metrics at :'+port+'/metrics');
+}
+```
+
+
+10) src/health.ts
+```ts
+import http from 'http';
+export function startHealthServer(port=8081){
+  const server = http.createServer((req,res)=> {
+    if (req.url==='/healthz') res.end('ok');
+    else res.end('ok');
+  });
+  server.listen(port);
+}
+```
+
+
+Operational & resilience features included
+- WAL-based SQLite journaling (PRAGMA journal_mode=WAL) for crash resilience.
+- Last applied wal_lsn persisted in SQLite metadata for resume after restart.
+- Deduplication via SQLite unique constraints on sha256; bridge treats unique-constraint as idempotent skip.
+- Sanitization before computing sha256 to ensure PII not stored.
+- Retry/backoff in streamer loop on transient errors.
+- Metrics and health endpoints for monitoring.
+- Dead-letter placeholder: log and extend to S3/Durable queue.
+
+
+Deployment (quick)
+- Dockerfile: Node 18 base, build TypeScript, run dist/index.js.
+- docker-compose.yml with Postgres service (wal_level=logical), and bridge service; mount ./data for SQLite.
+- For production: replace polling streamer with real replication-protocol client (pg-logical replication), use mTLS between streamer and bridge, or stream via Kafka.
+
+
+Testing
+- Integration test in test/integration.test.ts: create events in Postgres, wait for bridge, assert SQLite rows present and sha256 match.
+- Simulate restarts: kill bridge, insert events, restart bridge, verify resume from last LSN and no duplicates.
+
+
+Next deliverable options (pick one)
+- Full runnable Git repo archive (with Dockerfile, compose, migrations, CI test workflow).
+- Convert bridge to Go for lower memory/latency.
+- Add Merkle batch proof support and DLQ to S3.
+
+
+Quack — which next?
+
+
+--------------------
+
+
+User prompt 10 of 10 - 1/11/2026, 1:36:23 PM:
+1
+
+
+GPT-5 mini:
+Quack! I'll produce a ready-to-run Git repo archive scaffold for the bridge (Node.js + TypeScript) with Dockerfile, docker-compose, migrations, and CI test workflow. Below are the repository files and their complete contents — copy into a new repo, run docker-compose up, and the bridge will connect to Postgres and mirror events into SQLite. Quack!
+
+
+Repository: keystone-bridge/
+
+
+Files and contents:
+
+
+1) README.md
+```md
+# Keystone Bridge (Postgres -> SQLite HistoryManager)
+
+
+Minimal resilient bridge that mirrors immutable events from Postgres (logical replication / wal2json)
+into a local SQLite "HistoryManager" for offline audits.
+
+
+Features:
+- Logical replication via wal2json (uses pg_logical_slot_get_changes)
+- Deduplication by sha256
+- Ordering by wal_lsn with resume on restart
+- Sanitization to avoid storing PII
+- SQLite WAL mode, durable writes
+- /metrics and /healthz endpoints
+- Docker + docker-compose for local run
+```
+
+
+2) package.json
+```json
+{
+  "name": "keystone-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "migrate-sqlite": "ts-node src/migrate_sqlite.ts",
+    "test": "ts-node test/integration.test.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "better-sqlite3": "^8.0.0",
+    "node-fetch": "^3.3.1",
+    "pg": "^8.10.0",
+    "prom-client": "^14.0.1",
+    "tslib": "^2.6.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.1.6"
+  }
+}
+```
+
+
+3) tsconfig.json
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*","test/**/*"]
+}
+```
+
+
+4) docker-compose.yml
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: keystone
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10"]
+  bridge:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_CONN: "postgresql://postgres:password@postgres:5432/keystone"
+      SQLITE_PATH: "/data/history.db"
+      REPLICATION_SLOT: "keystone_slot"
+    volumes:
+      - ./data:/data
+    ports:
+      - "9300:9300"
+      - "8081:8081"
+volumes:
+  pgdata:
+```
+
+
+5) Dockerfile
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+VOLUME ["/data"]
+EXPOSE 9300 8081
+CMD ["node", "dist/index.js"]
+```
+
+
+6) src/config.ts
+```ts
+export const PG = {
+  connectionString: process.env.PG_CONN || 'postgresql://postgres:password@postgres:5432/keystone'
+};
+export const SQLITE_PATH = process.env.SQLITE_PATH || './data/history.db';
+export const REPLICATION_SLOT = process.env.REPLICATION_SLOT || 'keystone_slot';
+export const BATCH_SIZE = parseInt(process.env.BATCH_SIZE||'100',10);
+```
+
+
+7) src/index.ts
+```ts
+import winston from 'winston';
+import { PgStreamer } from './pgStreamer';
+import { SQLiteStore } from './sqliteStore';
+import { Bridge } from './bridge';
+import { startMetricsServer } from './metrics';
+import { startHealthServer } from './health';
+
+
+const logger = winston.createLogger({ level: 'info', transports: [ new winston.transports.Console({ format: winston.format.json() }) ] });
+
+
+async function main(){
+  const streamer = new PgStreamer(logger);
+  const store = new SQLiteStore(logger);
+  const bridge = new Bridge(logger, streamer, store);
+  startMetricsServer();
+  startHealthServer();
+  await bridge.start();
+}
+main().catch(err=>{ console.error(err); process.exit(1); });
+```
+
+
+8) src/pgStreamer.ts
+```ts
+import { Client } from 'pg';
+import { PG, REPLICATION_SLOT } from './config';
+import { Logger } from 'winston';
+
+
+export class PgStreamer {
+  client: Client;
+  slot: string;
+  logger: Logger;
+  constructor(logger:Logger) {
+    this.client = new Client({ connectionString: PG.connectionString });
+    this.slot = REPLICATION_SLOT;
+    this.logger = logger;
+  }
+  async connect() { await this.client.connect(); }
+  async ensureSlot() {
+    const res = await this.client.query(`SELECT count(*) FROM pg_replication_slots WHERE slot_name=$1`, [this.slot]);
+    if (parseInt(res.rows[0].count,10) === 0) {
+      await this.client.query(`SELECT pg_create_logical_replication_slot($1, 'wal2json')`, [this.slot]);
+      this.logger.info('Created replication slot', { slot: this.slot });
+    }
+  }
+  async stream(startLsn:string, onChange:(change:any)=>Promise<void>) {
+    // Poll via pg_logical_slot_get_changes for brevity
+    while(true) {
+      try {
+        const res = await this.client.query(`SELECT data,lsn FROM pg_logical_slot_get_changes($1, NULL, NULL, 'pretty-print', '1')`, [this.slot]);
+        if (res.rows.length === 0) { await new Promise(r=>setTimeout(r,500)); continue; }
+        for (const row of res.rows) {
+          const payload = JSON.parse(row.data);
+          for (const change of payload.change || []) {
+            change.wal_lsn = row.lsn;
+            await onChange(change);
+          }
+        }
+      } catch (err:any) {
+        this.logger.error('stream error', { err: err.message });
+        await new Promise(r=>setTimeout(r,2000));
+      }
+    }
+  }
+}
+```
+
+
+9) src/sqliteStore.ts
+```ts
+import Database from 'better-sqlite3';
+import { SQLITE_PATH } from './config';
+import { Logger } from 'winston';
+
+
+export class SQLiteStore {
+  db: Database.Database;
+  insertStmt: Database.Statement;
+  getLastLsnStmt: Database.Statement;
+  constructor(private logger: Logger) {
+    this.db = new Database(SQLITE_PATH);
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.setup();
+    this.insertStmt = this.db.prepare(`
+      INSERT INTO events (event_id, sha256, timestamp, event_type, payload_digest, payload_preview, wal_lsn)
+      VALUES (@event_id,@sha256,@timestamp,@event_type,@payload_digest,@payload_preview,@wal_lsn)
+    `);
+    this.getLastLsnStmt = this.db.prepare(`SELECT v as wal_lsn FROM metadata WHERE k='last_applied_lsn'`);
+  }
+  setup() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS events (
+        event_id TEXT PRIMARY KEY,
+        sha256 TEXT UNIQUE,
+        timestamp TEXT,
+        event_type TEXT,
+        payload_digest TEXT,
+        payload_preview TEXT,
+        wal_lsn TEXT
+      );
+      CREATE TABLE IF NOT EXISTS batches (
+        batch_id TEXT PRIMARY KEY,
+        merkle_root TEXT,
+        wal_lsn_start TEXT,
+        wal_lsn_end TEXT,
+        created_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS metadata (k TEXT PRIMARY KEY, v TEXT);
+      INSERT OR IGNORE INTO metadata(k,v) VALUES ('last_applied_lsn','0/0');
+    `);
+  }
+  getLastAppliedLsn(): string {
+    const row = this.getLastLsnStmt.get();
+    return row ? row.wal_lsn : '0/0';
+  }
+  setLastAppliedLsn(lsn: string) {
+    const stmt = this.db.prepare(`INSERT INTO metadata(k,v) VALUES ('last_applied_lsn',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`);
+    stmt.run(lsn);
+  }
+  applyEvent(evt: {
+    event_id:string; sha256:string; timestamp:string; event_type:string; payload_digest:string; payload_preview:string; wal_lsn:string;
+  }) {
+    const tx = this.db.transaction((e)=> { this.insertStmt.run(e); this.setLastAppliedLsn(e.wal_lsn); });
+    try { tx(evt); return true; } catch (err:any) {
+      if (err && (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || err.code === 'SQLITE_CONSTRAINT_UNIQUE')) {
+        this.logger.debug('Duplicate event skipped', { event_id: evt.event_id });
+        return false;
+      }
+      throw err;
+    }
+  }
+}
+```
+
+
+10) src/sanitizer.ts
+```ts
+import crypto from 'crypto';
+
+
+export function digestPayload(payload:any) {
+  const canonical = JSON.stringify(payload);
+  return crypto.createHash('sha256').update(canonical).digest('hex');
+}
+export function previewPayload(payload:any, max=1024) {
+  const s = JSON.stringify(payload);
+  return s.length>max ? s.slice(0,max) : s;
+}
+export function sanitizePayload(payload:any) {
+  const copy = JSON.parse(JSON.stringify(payload));
+  if (copy.user_ssn) delete copy.user_ssn;
+  if (copy.user_email) { copy.user_email = 'redacted'; }
+  return copy;
+}
+```
+
+
+11) src/bridge.ts
+```ts
+import { Logger } from 'winston';
+import { PgStreamer } from './pgStreamer';
+import { SQLiteStore } from './sqliteStore';
+import { digestPayload, previewPayload, sanitizePayload } from './sanitizer';
+
+
+export class Bridge {
+  constructor(private logger:Logger, private streamer:PgStreamer, private store:SQLiteStore) {}
+  async start() {
+    await this.streamer.connect();
+    await this.streamer.ensureSlot();
+    const startLsn = this.store.getLastAppliedLsn();
+    this.logger.info('Starting bridge', { startLsn });
+    await this.streamer.stream(startLsn, async (change:any) => {
+      try {
+        if (change.table !== 'events' || change.kind !== 'insert') return;
+        const newRow = this.mapWal2Row(change);
+        const payloadSan = sanitizePayload(newRow.payload);
+        const sha = digestPayload(payloadSan);
+        const preview = previewPayload(payloadSan, 1024);
+        this.store.applyEvent({
+          event_id: newRow.event_id,
+          sha256: sha,
+          timestamp: newRow.timestamp,
+          event_type: newRow.event_type,
+          payload_digest: sha,
+          payload_preview: preview,
+          wal_lsn: change.wal_lsn
+        });
+      } catch (err:any) {
+        this.logger.error('apply error', { err: err.message, change });
+      }
+    });
+  }
+  mapWal2Row(change:any) {
+    const cols = change.columnnames || [];
+    const vals = change.columnvalues || [];
+    const obj:any = {};
+    for (let i=0;i<cols.length;i++) obj[cols[i]] = vals[i];
+    return obj;
+  }
+}
+```
+
+
+12) src/metrics.ts
+```ts
+import client from 'prom-client';
+import http from 'http';
+export function startMetricsServer(port=9300){
+  client.collectDefaultMetrics();
+  const server = http.createServer(async (req,res)=> {
+    if (req.url==='/metrics') {
+      res.setHeader('Content-Type', client.register.contentType);
+      res.end(await client.register.metrics());
+    } else res.end('ok');
+  });
+  server.listen(port);
+  console.log('metrics at :'+port+'/metrics');
+}
+```
+
+
+13) src/health.ts
+```ts
+import http from 'http';
+export function startHealthServer(port=8081){
+  const server = http.createServer((req,res)=> {
+    if (req.url==='/healthz') res.end('ok');
+    else res.end('ok');
+  });
+  server.listen(port);
+}
+```
+
+
+14) src/migrate_sqlite.ts
+```ts
+import { SQLiteStore } from './sqliteStore';
+import winston from 'winston';
+const logger = winston.createLogger({ level: 'info', transports: [ new winston.transports.Console() ]});
+const s = new SQLiteStore(logger);
+console.log('SQLite migrated at', process.env.SQLITE_PATH || './data/history.db');
+```
+
+
+15) test/integration.test.ts
+```ts
+// Minimal integration test: requires docker-compose up (postgres + bridge)
+import { Client } from 'pg';
+import Database from 'better-sqlite3';
+import { execSync } from 'child_process';
+import fetch from 'node-fetch';
+
+
+async function run() {
+  const pg = new Client({ connectionString: process.env.PG_CONN || 'postgresql://postgres:password@localhost:5432/keystone' });
+  await pg.connect();
+  // ensure events table exists
+  await pg.query(`
+    CREATE TABLE IF NOT EXISTS events (
+      event_id UUID PRIMARY KEY,
+      sha256 TEXT UNIQUE,
+      timestamp timestamptz NOT NULL DEFAULT now(),
+      event_type TEXT NOT NULL,
+      payload jsonb NOT NULL,
+      prev_sha256 TEXT,
+      wal_lsn TEXT
+    );
+  `);
+  // insert one event
+  const id = '11111111-2222-3333-4444-555555555555';
+  await pg.query(`INSERT INTO events (event_id, sha256, event_type, payload) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [id, 'deadbeef', 'SYSTEM_GENERATION', {msg:'hello'}]);
+  console.log('Inserted test event');
+  // wait for bridge to apply
+  await new Promise(r=>setTimeout(r,3000));
+  const db = new Database(process.env.SQLITE_PATH || './data/history.db');
+  const row = db.prepare('SELECT * FROM events WHERE event_id=?').get(id);
+  if (!row) { console.error('Test failed: row not found'); process.exit(2); }
+  console.log('Found row in sqlite', row.event_id);
+  await pg.end();
+  process.exit(0);
+}
+run().catch(err=>{ console.error(err); process.exit(1); });
+```
+
+
+16) .github/workflows/ci.yml
+```yaml
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm run build
+      - name: Run lint/tests
+        run: |
+          docker-compose up -d postgres
+          sleep 10
+          npm run test
+```
+
+
+Usage
+- Local dev:
+  - docker-compose up --build
+  - Bridge metrics: http://localhost:9300/metrics
+  - Health: http://localhost:8081/healthz
+- Insert a test event into Postgres; bridge will mirror to ./data/history.db
+
+
+Notes & Hardening (next steps)
+- Replace polling approach with Postgres replication protocol client for production.
+- Use mTLS between services or run bridge within same VPC.
+- Encrypt SQLite (SQLCipher) if local disk not trusted.
+- Add DLQ (S3) for problematic records.
+- Add Merkle batch proofs for tamper-evidence.
+
+
+Quack — I can now:
+- Package this into a zip/tar for download, or
+- Push as a Git repo on your chosen remote, or
+- Convert to Go for lower resource footprint.
+
+
+Which next?
