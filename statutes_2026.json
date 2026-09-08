@@ -1,0 +1,64 @@
+{
+  "project": "Pennsylvania Health Insurance Audit & Rate Analysis (2026)",
+  "verified_statutes": [
+    {
+      "citation": "40 P.S. § 991.2101 et seq.",
+      "short_title": "Act 68 of 1998",
+      "official_name": "Quality Health Care Accountability and Protection Act",
+      "scope": "Managed care protections, clean claim definitions, 45-day prompt payment mandates.",
+      "status": "Active / Verified"
+    },
+    {
+      "citation": "40 P.S. § 991.2164 et seq.",
+      "short_title": "Act 146 of 2022",
+      "official_name": "Independent External Review Act",
+      "scope": "State-administered external review process for denied health insurance claims.",
+      "status": "Active / Verified"
+    },
+    {
+      "citation": "40 Pa.C.S. § 4501 et seq.",
+      "short_title": "Act 2 of 2023",
+      "official_name": "Insurance Data Security Act",
+      "scope": "Cybersecurity standards, risk assessments, and breach notification for licensees.",
+      "status": "Active / Verified"
+    }
+  ],
+  "excluded_citations": [
+    {
+      "citation": "SB 1071 (2024)",
+      "claimed_scope": "Coinsurance and pharmacy cost-sharing",
+      "actual_scope": "University of Pennsylvania Appropriations (Title 24)",
+      "reason": "Hallucinated Context"
+    },
+    {
+      "citation": "Act 252-2023",
+      "claimed_scope": "Network Disclosure",
+      "actual_scope": "Non-existent legislation",
+      "reason": "Fabricated Citation"
+    },
+    {
+      "citation": "\u00a7 28-725 & \u00a7 29-8719",
+      "claimed_scope": "Insurance Code Sections",
+      "actual_scope": "Non-existent code numbers",
+      "reason": "Invalid Formatting (PA Insurance law uses Title 40 P.S. or Title 40 Pa.C.S.)"
+    },
+    {
+      "citation": "40 P.S. \u00a7 4001 et seq.",
+      "claimed_scope": "Act 2 of 2023 codification",
+      "actual_scope": "Act 2 of 2023 is codified at 40 Pa.C.S. \u00a7 4501 et seq.",
+      "reason": "Mis-codified Section (wrong series and wrong section number)"
+    }
+  ],
+  "open_verification_items": [
+    {
+      "item": "Per-carrier rating-area assignments in approved_rates_2026.csv",
+      "status": "Unresolved",
+      "note": "Currently sourced in aggregate to WITF (2025); needs cross-check against individual PID rate-filing decision letters before use as a standalone citation."
+    },
+    {
+      "item": "Outpatient coinsurance caps / pharmacy deductible statutes (Lehigh County context)",
+      "status": "Unresolved - do not cite",
+      "note": "No verified, currently-enacted PA statute has been matched to this claim yet."
+    }
+  ]
+}
