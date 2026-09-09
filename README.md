@@ -92,6 +92,27 @@ pennsylvania-health-insurance-audit-2026/
     └── source_reliability.md           # Exclusions Appendix & Source Verification Audit
 ```
 
+## Terminal Interface
+
+The dependency-free terminal interface is the easiest way to use the project
+from a shell:
+
+```bash
+python3 pa_audit_tui.py
+```
+
+It provides menu actions for running the numbered audit pipeline, checking
+required files, browsing the wiki, and searching wiki pages. The same checks
+are available for scripts and automation:
+
+```bash
+python3 pa_audit_tui.py --health
+python3 pa_audit_tui.py --run
+python3 pa_audit_tui.py --search provenance
+```
+
+The wiki starts at [`docs/wiki/index.md`](docs/wiki/index.md).
+
 ---
 
 ## 📝 Citation Guide (APA 7th Edition)
